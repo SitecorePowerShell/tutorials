@@ -54,7 +54,7 @@ export const gradients = {
 };
 
 export const fonts = {
-  sans: "'Instrument Sans', 'DM Sans', system-ui, sans-serif",
+  sans: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
   mono: "'JetBrains Mono', 'Cascadia Code', monospace",
   monoFull: "'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace",
   monoShort: "'JetBrains Mono', monospace",
