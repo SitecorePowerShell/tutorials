@@ -244,9 +244,10 @@ tasks:                        # Array of tasks within the lesson
 ### Quick Start
 
 1. Fork the repo
-2. Add a new lesson object to the `LESSONS` array (or YAML file when migrated)
-3. Test locally — `npm start` and verify your lesson works
-4. Submit PR
+2. Create a new YAML file in `src/lessons/` and register it in `src/lessons/loader.ts`
+3. Test locally — `bun run dev` and verify your lesson works
+4. Run `bun run test` to ensure existing tests still pass
+5. Submit PR
 
 ### Guidelines
 
@@ -260,8 +261,8 @@ tasks:                        # Array of tasks within the lesson
 
 To add a new simulated command:
 
-1. Add a handler in `executeCommand()`:
-```javascript
+1. Add a handler in `executeCommandWithContext()` in `src/engine/executor.ts`:
+```typescript
 } else if (cmdLower === "your-command") {
   // Access pipelineData for pipeline input
   // Access stage.params for named parameters
@@ -270,11 +271,13 @@ To add a new simulated command:
 }
 ```
 
-2. Add the command to the aliases table in `validateTask()` if it has aliases.
+2. Add the command to the `ALIASES` table in `src/validation/validator.ts` if it has aliases.
 
-3. Use `getItemProperty()` for any property access on items — don't inline your own resolution.
+3. Use `getItemProperty()` from `src/engine/properties.ts` for any property access — don't inline your own resolution.
 
-4. Add to the supported commands table in this document.
+4. Add tests in `src/engine/__tests__/executor.test.ts`.
+
+5. Add to the supported commands table in this document.
 
 ---
 

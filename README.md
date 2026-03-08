@@ -21,30 +21,67 @@ Users learn SPE commands against a **simulated Sitecore content tree** — no re
 
 ## Quick Start
 
-This is currently a single-file React prototype (`spe-tutorial-prototype.jsx`). To run it:
+**Prerequisites:** [Bun](https://bun.sh) (or Node.js 18+)
 
-1. Use in Claude.ai artifacts viewer (upload the JSX file)
-2. Or integrate into a React project and import as a component
+```bash
+# Clone and install
+git clone https://github.com/SitecorePowerShell/tutorials.git
+cd tutorials
+bun install
 
-## Architecture
+# Development
+bun run dev        # Start dev server at http://localhost:5173
+
+# Testing
+bun run test       # Run all 86 tests
+bun run test:watch # Watch mode
+
+# Production build
+bun run build      # Output to dist/ (deploy to Cloudflare Pages, etc.)
+bun run preview    # Preview the production build locally
+```
+
+> **Note:** `npm install` / `npm run dev` also work if you don't have Bun installed.
+
+## Project Structure
+
+```
+src/
+  engine/       # Simulation engine (pure TypeScript, no React deps)
+  validation/   # Task validation (structural + pipeline)
+  components/   # React UI components
+  lessons/      # 11 YAML lesson files + loader
+  types/        # Shared TypeScript interfaces
+```
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the full system design, contributor guide, and implementation roadmap.
 
+## Contributing Lessons
+
+Lessons are YAML files in `src/lessons/`. To add a new lesson:
+
+1. Create a new YAML file following the schema in [ARCHITECTURE.md](ARCHITECTURE.md#lesson-schema)
+2. Register it in `src/lessons/loader.ts`
+3. Run `bun run dev` and test your lesson
+4. Run `bun run test` to ensure nothing is broken
+5. Submit a PR
+
 ## Reference Data
 
-The `reference/` folder contains:
-- `spe-simulation-reference.ps1` — Diagnostic script (Part 1) for capturing real SPE output formatting
-- `spe-simulation-reference-part2.ps1` — Diagnostic script (Part 2) for Select-Object, editing context, and pipeline behaviors
-
-These scripts were run against a vanilla Sitecore instance to calibrate the simulation.
+The `reference/` folder contains calibration data from a real Sitecore instance:
+- `spe-simulation-reference.ps1` / `part2.ps1` — Diagnostic scripts for capturing real SPE output
+- `Sitecore_Views.ps1xml` — Default table column widths and headers
+- `Sitecore_Types.ps1xml` — DefaultDisplayPropertySet and ScriptProperty definitions
 
 ## Roadmap
 
-See the [Phase 2-4 roadmap in ARCHITECTURE.md](ARCHITECTURE.md#implementation-roadmap) for planned features including:
-- External YAML lesson files
+See the [implementation roadmap in ARCHITECTURE.md](ARCHITECTURE.md#implementation-roadmap). Key next steps:
+- BeginEdit/EndEdit simulation
+- Read-Variable interactive form
+- Calculated property support (`@{Label=...; Expression=...}`)
+- Cloudflare Pages CI/CD
+- GitBook iframe embed integration
 - localStorage progress persistence
-- GitHub Pages deployment
-- GitBook embed integration
 
 ## License
 
