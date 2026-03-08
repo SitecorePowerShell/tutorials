@@ -8,3 +8,9 @@ bun.lock
 .claude_worklog.md
 tsconfig.tsbuildinfo
 .claude/
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example
