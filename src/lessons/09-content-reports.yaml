@@ -1,0 +1,64 @@
+id: "content-reports"
+module: "Real-World Patterns"
+order: 8
+title: "Content Audit Reports"
+difficulty: "advanced"
+mode: "ise"
+description: |
+  Now let's build scripts based on the **real reports included with SPE**. These are found in the Sitecore content tree under:
+
+  `/sitecore/system/Modules/PowerShell/Script Library/SPE/Reporting/Content Reports`
+
+  The standard pattern for a content report is:
+
+  1. **Gather** — Get items from the content tree
+  2. **Filter** — Apply criteria (template, date, field values)
+  3. **Sort** — Order the results meaningfully
+  4. **Present** — Display with `Show-ListView` or export
+
+  Many built-in reports also use `Read-Variable` to collect parameters from the user before running (e.g., "how many days back?"). In our simulation, we'll show how this would work.
+tasks:
+  - instruction: |
+      Build a "Recently Modified Items" report. This mirrors the real SPE report from the repo.
+
+      Get all descendants of Home, filter to items where `__Updated` is not empty, sort by `__Updated` descending (most recent first), then display with `Show-ListView`.
+    hint: |
+      $items = Get-ChildItem -Path "master:\content\Home" -Recurse
+      $items |
+          Sort-Object -Property __Updated -Descending |
+          Show-ListView -Property Name,ItemPath,__Updated,"__Updated by" -Title "Recently Modified Items"
+    starterCode: |
+      # Content Report: Recently Modified Items
+      # Based on SPE/Reporting/Content Reports/Reports/Content Audit
+      $items = Get-ChildItem -Path "master:\content\Home" -Recurse
+      $items |
+          Sort-Object -Property __Updated -Descending |
+          Show-ListView -Property Name,ItemPath,__Updated,"__Updated by" -Title "Recently Modified Items"
+    validation:
+      type: "pipeline"
+      stages:
+        - "sort-object"
+        - "show-listview"
+      outputContains: "Recently Modified"
+    successMessage: |
+      This is essentially what the built-in "Recently Modified" report does. In the real script, `Read-Variable` would first ask the user to select a root path and number of days.
+  - instruction: |
+      Now build an "Items by Template" audit. Store items in a variable, group by TemplateName, then display a report showing the template distribution.
+
+      Bonus: Use `Show-Alert` at the end to show a summary message with the total count.
+    hint: |
+      $items = Get-ChildItem -Path "master:\content\Home" -Recurse
+      $items | Group-Object -Property TemplateName
+      Show-Alert -Title "Audit complete: found $($items.Count) items"
+    starterCode: |
+      # Content Report: Template Distribution Audit
+      $items = Get-ChildItem -Path "master:\content\Home" -Recurse
+      $items | Group-Object -Property TemplateName
+      Show-Alert -Title "Audit complete"
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "group-object"
+    successMessage: |
+      Template auditing is one of the most common SPE use cases. This pattern helps you understand the content model of any Sitecore site — essential when inheriting an unfamiliar codebase.

@@ -1,0 +1,287 @@
+import { useState, useEffect, useCallback } from "react";
+import type { ConsoleEntry } from "./types";
+import { LESSONS } from "./lessons/loader";
+import { VIRTUAL_TREE } from "./engine/virtualTree";
+import { executeScript, executeCommand } from "./engine/executor";
+import { validateTask } from "./validation/validator";
+import { Sidebar } from "./components/Sidebar";
+import { LessonPanel } from "./components/LessonPanel";
+import { ReplEditor } from "./components/ReplEditor";
+import { IseEditor } from "./components/IseEditor";
+import { TreePanel } from "./components/TreePanel";
+
+export default function SPETutorial() {
+  const [currentLesson, setCurrentLesson] = useState(0);
+  const [currentTask, setCurrentTask] = useState(0);
+  const [code, setCode] = useState("");
+  const [consoleOutput, setConsoleOutput] = useState<ConsoleEntry[]>([]);
+  const [completedTasks, setCompletedTasks] = useState<
+    Record<string, boolean>
+  >({});
+  const [showHint, setShowHint] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showTreePanel, setShowTreePanel] = useState(false);
+  const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+
+  const lesson = LESSONS[currentLesson];
+  const task = lesson?.tasks?.[currentTask];
+  const isISE = lesson?.mode === "ise";
+  const totalTasks = LESSONS.reduce((sum, l) => sum + l.tasks.length, 0);
+  const completedCount = Object.keys(completedTasks).length;
+
+  // Reset editor and output when switching lessons or tasks
+  useEffect(() => {
+    setConsoleOutput([]);
+    setShowHint(false);
+    if (isISE && task?.starterCode) {
+      setCode(task.starterCode);
+    } else if (isISE) {
+      setCode("# Write your script here\n");
+    } else {
+      setCode("");
+    }
+  }, [currentLesson, currentTask]);
+
+  const handleRun = useCallback(() => {
+    if (!code.trim()) return;
+    const taskKey = `${currentLesson}-${currentTask}`;
+
+    const newOutput: ConsoleEntry[] = isISE
+      ? [...consoleOutput]
+      : [...consoleOutput, { type: "command", text: code.trim() }];
+
+    if (isISE) {
+      newOutput.push({ type: "script", text: code.trim() });
+    }
+
+    // Execute
+    let result;
+    if (isISE) {
+      result = executeScript(code);
+    } else {
+      const normalized = code
+        .split("\n")
+        .map((l) => l.trim())
+        .filter((l) => l && !l.startsWith("#"))
+        .join(" ");
+      result = executeCommand(normalized);
+    }
+
+    if (result.error) {
+      newOutput.push({ type: "error", text: result.error });
+    } else if (result.output) {
+      newOutput.push({ type: "output", text: result.output });
+    }
+
+    // Validate against current task
+    if (task) {
+      const validation = validateTask(code.trim(), task);
+      if (validation.passed) {
+        newOutput.push({
+          type: "success",
+          text: `✓ ${task.successMessage || "Correct!"}`,
+        });
+        setCompletedTasks((prev) => ({ ...prev, [taskKey]: true }));
+      } else {
+        newOutput.push({
+          type: "hint",
+          text: validation.feedback || "",
+        });
+        if (validation.partial) {
+          newOutput.push({
+            type: "partial",
+            text: validation.partial.join(" → "),
+          });
+        }
+      }
+    }
+
+    setConsoleOutput(newOutput);
+    if (!isISE) {
+      setCommandHistory((prev) => [...prev, code.trim()]);
+      setHistoryIndex(-1);
+      setCode("");
+    }
+    setShowHint(false);
+  }, [code, consoleOutput, currentLesson, currentTask, task, isISE]);
+
+  const advanceTask = () => {
+    if (currentTask < lesson.tasks.length - 1) {
+      setCurrentTask(currentTask + 1);
+    } else if (currentLesson < LESSONS.length - 1) {
+      setCurrentLesson(currentLesson + 1);
+      setCurrentTask(0);
+    }
+  };
+
+  const goToLesson = (idx: number) => {
+    setCurrentLesson(idx);
+    setCurrentTask(0);
+  };
+
+  const goToTask = (taskIdx: number) => {
+    setCurrentTask(taskIdx);
+  };
+
+  const isTaskComplete = (lessonIdx: number, taskIdx: number) =>
+    !!completedTasks[`${lessonIdx}-${taskIdx}`];
+
+  const currentTaskComplete = isTaskComplete(currentLesson, currentTask);
+
+  return (
+    <div
+      style={{
+        height: "100vh",
+        width: "100vw",
+        display: "flex",
+        fontFamily:
+          "'Instrument Sans', 'DM Sans', system-ui, sans-serif",
+        background: "#0d0d1a",
+        color: "#d4d4e8",
+        overflow: "hidden",
+      }}
+    >
+      <link
+        href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet"
+      />
+
+      {/* SIDEBAR */}
+      <Sidebar
+        lessons={LESSONS}
+        currentLesson={currentLesson}
+        completedTasks={completedTasks}
+        totalTasks={totalTasks}
+        completedCount={completedCount}
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+        onGoToLesson={goToLesson}
+      />
+
+      {/* MAIN CONTENT AREA */}
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          minWidth: 0,
+        }}
+      >
+        {/* Top bar */}
+        <div
+          style={{
+            height: 48,
+            background: "#0f0f24",
+            borderBottom: "1px solid #1a1a35",
+            display: "flex",
+            alignItems: "center",
+            padding: "0 20px",
+            gap: 16,
+            flexShrink: 0,
+          }}
+        >
+          <div style={{ fontSize: 13, color: "#8888a8" }}>
+            <span style={{ color: "#5c6bc0", fontWeight: 600 }}>
+              {lesson.module}
+            </span>
+            <span style={{ margin: "0 8px", color: "#333355" }}>/</span>
+            <span style={{ color: "#d4d4e8" }}>{lesson.title}</span>
+          </div>
+          <div style={{ flex: 1 }} />
+          <button
+            onClick={() => setShowTreePanel(!showTreePanel)}
+            style={{
+              background: showTreePanel ? "#1a1a3a" : "transparent",
+              border: "1px solid #2a2a4a",
+              color: showTreePanel ? "#90caf9" : "#8888a8",
+              padding: "5px 12px",
+              borderRadius: 4,
+              cursor: "pointer",
+              fontSize: 12,
+              fontFamily: "inherit",
+            }}
+          >
+            🌲 Content Tree
+          </button>
+          <div
+            style={{
+              fontSize: 11,
+              color: isISE ? "#7c4dff" : "#5c6bc0",
+              padding: "4px 10px",
+              background: "#1a1a2e",
+              borderRadius: 4,
+              border: `1px solid ${isISE ? "#3a2a6a" : "#1a1a35"}`,
+            }}
+          >
+            {isISE ? "ISE" : "Console"}
+          </div>
+          <div
+            style={{
+              fontSize: 11,
+              color: "#555570",
+              padding: "4px 10px",
+              background: "#1a1a2e",
+              borderRadius: 4,
+            }}
+          >
+            Task {currentTask + 1} of {lesson.tasks.length}
+          </div>
+        </div>
+
+        {/* Split pane */}
+        <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+          {/* LEFT — Lesson panel */}
+          <LessonPanel
+            lesson={lesson}
+            task={task}
+            currentTask={currentTask}
+            currentLesson={currentLesson}
+            currentTaskComplete={currentTaskComplete}
+            showHint={showHint}
+            showTreePanel={showTreePanel}
+            onToggleHint={() => setShowHint(!showHint)}
+            onAdvanceTask={advanceTask}
+            onGoToTask={goToTask}
+            isTaskComplete={isTaskComplete}
+            lessonsLength={LESSONS.length}
+          />
+
+          {/* MIDDLE — Editor + Console (mode-aware) */}
+          <div
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              minWidth: 0,
+            }}
+          >
+            {isISE ? (
+              <IseEditor
+                code={code}
+                onCodeChange={setCode}
+                onRun={handleRun}
+                onClear={() => setConsoleOutput([])}
+                consoleOutput={consoleOutput}
+              />
+            ) : (
+              <ReplEditor
+                code={code}
+                onCodeChange={setCode}
+                onRun={handleRun}
+                onClear={() => setConsoleOutput([])}
+                consoleOutput={consoleOutput}
+                commandHistory={commandHistory}
+                historyIndex={historyIndex}
+                onHistoryIndexChange={setHistoryIndex}
+              />
+            )}
+          </div>
+
+          {/* RIGHT — Content Tree Panel (toggle) */}
+          {showTreePanel && <TreePanel tree={VIRTUAL_TREE} />}
+        </div>
+      </div>
+    </div>
+  );
+}

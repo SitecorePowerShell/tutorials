@@ -1,0 +1,131 @@
+// ============================================================================
+// Core Sitecore simulation types
+// ============================================================================
+
+export interface SitecoreNodeFields {
+  [key: string]: string;
+}
+
+export interface SitecoreNode {
+  _id: string;
+  _template: string;
+  _templateFullName: string;
+  _version: number;
+  _fields: SitecoreNodeFields;
+  _children: Record<string, SitecoreNode>;
+}
+
+/** A resolved item reference — what pipeline stages operate on */
+export interface SitecoreItem {
+  name: string;
+  node: SitecoreNode;
+  path?: string;
+}
+
+/** Augmented array with optional Select-Object metadata */
+export interface SitecoreItemArray extends Array<SitecoreItem> {
+  _selectedProperties?: string[];
+}
+
+export interface ResolvedPath {
+  node: SitecoreNode;
+  name: string;
+  path: string;
+}
+
+// ============================================================================
+// Command parser types
+// ============================================================================
+
+export interface ParsedStage {
+  cmdlet: string;
+  params: Record<string, string> & { _positional?: string[] };
+  switches: string[];
+}
+
+export interface ParsedCommand {
+  raw: string[];
+  parsed: ParsedStage[];
+}
+
+// ============================================================================
+// Execution types
+// ============================================================================
+
+export interface ExecutionResult {
+  output: string;
+  error: string | null;
+  pipelineData?: SitecoreItemArray | SitecoreItem[] | string | null;
+  dialogRequests?: DialogRequest[];
+}
+
+export interface DialogRequest {
+  type: "alert" | "read-variable";
+  message?: string;
+  title?: string;
+  description?: string;
+}
+
+export interface ScriptResult {
+  output: string;
+  error: string | null;
+  dialogRequests: DialogRequest[];
+}
+
+// ============================================================================
+// Validation types
+// ============================================================================
+
+export interface StructuralValidation {
+  type: "structural";
+  cmdlet: string;
+  requirePath?: string[];
+  requireSwitch?: string;
+}
+
+export interface PipelineValidation {
+  type: "pipeline";
+  stages: string[];
+  outputContains?: string;
+  outputNotContains?: string;
+}
+
+export type TaskValidation = StructuralValidation | PipelineValidation;
+
+export interface ValidationResult {
+  passed: boolean;
+  feedback?: string;
+  partial?: string[];
+}
+
+// ============================================================================
+// Lesson types
+// ============================================================================
+
+export interface Task {
+  instruction: string;
+  hint: string;
+  starterCode?: string;
+  validation: TaskValidation;
+  successMessage?: string;
+}
+
+export interface Lesson {
+  id: string;
+  module: string;
+  order: number;
+  title: string;
+  difficulty: string;
+  mode?: "repl" | "ise";
+  description: string;
+  tasks: Task[];
+}
+
+// ============================================================================
+// UI types
+// ============================================================================
+
+export interface ConsoleEntry {
+  type: "command" | "script" | "output" | "error" | "success" | "hint" | "partial";
+  text: string;
+}

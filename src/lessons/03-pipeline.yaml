@@ -1,0 +1,48 @@
+id: "pipeline-basics"
+module: "Foundations"
+order: 2
+title: "The Pipeline"
+difficulty: "beginner"
+description: |
+  PowerShell's killer feature is the **pipeline** — chaining commands together with `|`. Each command passes its output to the next.
+
+  This works identically in SPE. You can pipe Sitecore items through `Where-Object` to filter, `Select-Object` to pick properties, and `Sort-Object` to order results.
+
+  The pattern: **Get items → Filter → Select properties → Sort**
+tasks:
+  - instruction: |
+      Get all descendants of Home and pipe to `Measure-Object` to count them.
+    hint: |
+      Type: Get-ChildItem -Path "master:\content\Home" -Recurse | Measure-Object
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "measure-object"
+    successMessage: |
+      The count shows all items in the subtree. `Measure-Object` is your go-to for quick counts.
+  - instruction: |
+      Filter the descendants to only show items using the "Folder" template. Use `Where-Object` with `$_.TemplateName -eq "Folder"`.
+    hint: |
+      Get-ChildItem -Path "master:\content\Home" -Recurse | Where-Object { $_.TemplateName -eq "Folder" }
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "where-object"
+      outputContains: "Folder"
+      outputNotContains: "Sample Item"
+    successMessage: |
+      Filtering with `Where-Object` (alias `?`) is how you narrow down results. The `$_` variable represents the current item in the pipeline — same as in regular PowerShell. Note that `TemplateName` returns the short name (e.g. "Folder", not "Common/Folder"). Use `Template.FullName` for the full path.
+  - instruction: |
+      Now get all recursive children of Home, select only the `Name`, `Id`, and `__Updated` properties, and sort by `Name`.
+    hint: |
+      Get-ChildItem -Path "master:\content\Home" -Recurse | Select-Object -Property Name,Id,__Updated | Sort-Object -Property Name
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "select-object"
+        - "sort-object"
+    successMessage: |
+      This pattern — Get → Select → Sort — is one you'll use constantly in SPE for reporting and auditing content.

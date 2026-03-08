@@ -1,0 +1,38 @@
+id: "filtering-deep"
+module: "Foundations"
+order: 3
+title: "Filtering & Wildcards"
+difficulty: "beginner"
+description: |
+  `Where-Object` supports several comparison operators. The most useful for Sitecore work:
+
+  • `-eq` — exact match (case-insensitive)
+  • `-ne` — not equal
+  • `-like` — wildcard match (`*` = any characters, `?` = single character)
+  • `-match` — regex match
+
+  These operators let you build powerful content queries without writing Sitecore Query or LINQ.
+tasks:
+  - instruction: |
+      Find all items under Home whose Name contains "Product" using the `-like` operator with wildcards.
+    hint: |
+      Get-ChildItem -Path "master:\content\Home" -Recurse | Where-Object { $_.Name -like "*Product*" }
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "where-object"
+      outputContains: "Product"
+    successMessage: |
+      Wildcard matching with `-like` is perfect for finding items by naming convention — a very common Sitecore pattern.
+  - instruction: |
+      Now use `Get-Item` to retrieve the Products folder, then pipe it to `Get-Member` to inspect what properties and methods are available on a Sitecore item.
+    hint: |
+      Get-Item -Path "master:\content\Home\Products" | Get-Member
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-item"
+        - "get-member"
+    successMessage: |
+      `Get-Member` reveals the full API surface of a Sitecore item. In a real instance, you'd see hundreds of members — fields, properties, and methods from the Sitecore API. This is how you discover what's possible.

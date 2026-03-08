@@ -1,0 +1,53 @@
+id: "foreach-object"
+module: "ISE Scripting"
+order: 7
+title: "ForEach-Object & Iteration"
+difficulty: "intermediate"
+mode: "ise"
+description: |
+  `ForEach-Object` (alias `%`) lets you execute a script block against every item in the pipeline. The current item is accessed via `$_`.
+
+  This is how you process items one at a time — reading properties, building output strings, or performing operations on each item.
+
+  ```
+  $items | ForEach-Object { Write-Host $_.Name }
+  ```
+
+  Combined with `Where-Object`, it's the core of every SPE bulk operation.
+tasks:
+  - instruction: |
+      Get all children of Home and use `ForEach-Object` to output each item's Name and TemplateName as a formatted string.
+    hint: |
+      Get-ChildItem -Path "master:\content\Home" |
+          ForEach-Object { Write-Host "$($_.Name) [$($_.TemplateName)]" }
+    starterCode: |
+      # Iterate over items and output formatted info
+      Get-ChildItem -Path "master:\content\Home" |
+          ForEach-Object { Write-Host "$($_.Name) [$($_.TemplateName)]" }
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "foreach-object"
+    successMessage: |
+      `ForEach-Object` is your workhorse for item-by-item processing. In real SPE, you'd use this for bulk field updates, publishing operations, and data transformation.
+  - instruction: |
+      Write a script that:
+      1. Gets all recursive children of Home
+      2. Groups them by TemplateName using `Group-Object`
+
+      This shows you the distribution of templates in a content tree — a common audit pattern.
+    hint: |
+      Get-ChildItem -Path "master:\content\Home" -Recurse |
+          Group-Object -Property TemplateName
+    starterCode: |
+      # Audit: what templates are used in the content tree?
+      Get-ChildItem -Path "master:\content\Home" -Recurse |
+          Group-Object -Property TemplateName
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "group-object"
+    successMessage: |
+      `Group-Object` is perfect for content auditing — quickly see how many items use each template, who last updated them, or which language versions exist.

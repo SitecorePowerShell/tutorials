@@ -1,0 +1,48 @@
+id: "provider-paths"
+module: "Foundations"
+order: 4
+title: "Provider Paths & Drives"
+difficulty: "beginner"
+description: |
+  SPE uses a **provider** to make Sitecore databases look like drives. The three main drives are:
+
+  • `master:` — the editing/authoring database
+  • `web:` — the published/delivery database
+  • `core:` — Sitecore's system database
+
+  Paths work like filesystem paths: `master:\content\Home\About` points to the About item under Home in the master database.
+
+  **Key insight:** The `/sitecore` prefix in paths is optional. These are equivalent:
+  ```
+  master:\content\Home
+  master:\sitecore\content\Home
+  ```
+
+  In this simulation, all paths resolve against the master database.
+tasks:
+  - instruction: |
+      Retrieve the About item by navigating the full path through Home.
+    hint: |
+      Get-Item -Path "master:\content\Home\About"
+    validation:
+      type: "structural"
+      cmdlet: "get-item"
+      requirePath:
+        - "master:\\content\\Home\\About"
+        - "master:\\content\\home\\about"
+        - "master:/content/Home/About"
+    successMessage: |
+      Path navigation is intuitive — it mirrors the content tree structure you see in Sitecore's Content Editor.
+  - instruction: |
+      Get the children of the About item to see what's nested under it.
+    hint: |
+      Get-ChildItem -Path "master:\content\Home\About"
+    validation:
+      type: "structural"
+      cmdlet: "get-childitem"
+      requirePath:
+        - "master:\\content\\Home\\About"
+        - "master:\\content\\home\\about"
+        - "master:/content/Home/About"
+    successMessage: |
+      Team and History are nested under About. You now know how to navigate any depth of the content tree. In real projects, you'd use these patterns to script bulk operations across entire site sections.

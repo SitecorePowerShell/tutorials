@@ -1,0 +1,33 @@
+id: "get-children"
+module: "Foundations"
+order: 1
+title: "Navigating the Content Tree"
+difficulty: "beginner"
+description: |
+  Now that you can retrieve a single item, let's explore the tree. `Get-ChildItem` returns the direct children of an item — just like `dir` or `ls` in a filesystem.
+
+  In Sitecore terms, if Home has child pages like About, Products, and News, `Get-ChildItem` will return those three items.
+tasks:
+  - instruction: |
+      Use `Get-ChildItem` to list the children of the Home item.
+    hint: |
+      Type: Get-ChildItem -Path "master:\content\Home"
+    validation:
+      type: "structural"
+      cmdlet: "get-childitem"
+      requirePath:
+        - "master:\\content\\home"
+        - "master:\\content\\Home"
+        - "master:/content/Home"
+    successMessage: |
+      You can see Home has three children: About, Products, and News. Notice that Products and News show Children=True, meaning they have sub-items too.
+  - instruction: |
+      Now add the `-Recurse` switch to get ALL descendants, not just direct children.
+    hint: |
+      Type: Get-ChildItem -Path "master:\content\Home" -Recurse
+    validation:
+      type: "structural"
+      cmdlet: "get-childitem"
+      requireSwitch: "recurse"
+    successMessage: |
+      With `-Recurse`, you get the entire subtree. In a real Sitecore instance, be careful with this on large trees — it can be slow. We'll cover performance best practices later.

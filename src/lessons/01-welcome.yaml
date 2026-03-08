@@ -1,0 +1,43 @@
+id: "welcome"
+module: "Foundations"
+order: 0
+title: "Welcome to SPE"
+difficulty: "intro"
+description: |
+  **Sitecore PowerShell Extensions** (SPE) gives you a command-line interface directly inside Sitecore. Think of it as having a PowerShell console that speaks Sitecore natively.
+
+  In this tutorial, you'll work with a **simulated Sitecore content tree** — no real instance required. The commands you learn here work exactly the same in a real SPE console.
+
+  The simulated tree looks like this:
+
+  ```
+  sitecore/
+    content/
+      Home/
+        About/
+          Team
+          History
+        Products/
+          Product A
+          Product B
+          Product C
+        News/
+          2025 Roadmap
+          Sitecore Launch
+  ```
+
+  Let's start with the most fundamental command in SPE.
+tasks:
+  - instruction: |
+      Use `Get-Item` to retrieve the Home item. The path format is: `master:\content\Home`
+    hint: |
+      Type: Get-Item -Path "master:\content\Home"
+    validation:
+      type: "structural"
+      cmdlet: "get-item"
+      requirePath:
+        - "master:\\content\\home"
+        - "master:\\content\\Home"
+        - "master:/content/Home"
+    successMessage: |
+      You just retrieved your first Sitecore item. Notice the output shows the item Name, whether it has Children, the Language, Version number, its ID (a GUID in braces), and its TemplateName.

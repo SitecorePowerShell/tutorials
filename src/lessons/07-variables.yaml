@@ -1,0 +1,55 @@
+id: "variables"
+module: "ISE Scripting"
+order: 6
+title: "Variables & Collections"
+difficulty: "intermediate"
+mode: "ise"
+description: |
+  In real SPE scripts, you almost always store results in **variables** before processing them. This lets you reuse data, check counts, and build multi-step workflows.
+
+  Variable syntax is the same as standard PowerShell:
+  ```
+  $items = Get-ChildItem -Path "master:\content\Home" -Recurse
+  $items.Count
+  $items | Where-Object { $_.TemplateName -eq "Folder" }
+  ```
+
+  Variables persist across lines within a script — assign once, use many times.
+tasks:
+  - instruction: |
+      Store all recursive children of Home in a variable called `$items`, then on the next line pipe `$items` to `Measure-Object` to count them.
+    hint: |
+      $items = Get-ChildItem -Path "master:\content\Home" -Recurse
+      $items | Measure-Object
+    starterCode: |
+      # Store items in a variable, then count them
+      $items = Get-ChildItem -Path "master:\content\Home" -Recurse
+      $items | Measure-Object
+    validation:
+      type: "pipeline"
+      stages:
+        - "measure-object"
+      outputContains: "Count"
+    successMessage: |
+      Variables let you capture a result set once and reuse it multiple times. This avoids hitting the content tree repeatedly — important for performance in real Sitecore.
+  - instruction: |
+      Now write a script that:
+      1. Stores all descendants of Home in `$allItems`
+      2. Filters to only "Folder" templates and stores in `$folders`
+      3. Displays `$folders` with `Show-ListView`
+    hint: |
+      $allItems = Get-ChildItem -Path "master:\content\Home" -Recurse
+      $folders = $allItems | Where-Object { $_.TemplateName -eq "Folder" }
+      $folders | Show-ListView -Property Name,ItemPath,TemplateName
+    starterCode: |
+      # Multi-step filtering with variables
+      $allItems = Get-ChildItem -Path "master:\content\Home" -Recurse
+      $folders = $allItems | Where-Object { $_.TemplateName -eq "Folder" }
+      $folders | Show-ListView -Property Name,ItemPath,TemplateName
+    validation:
+      type: "pipeline"
+      stages:
+        - "show-listview"
+      outputContains: "Folder"
+    successMessage: |
+      This multi-step pattern is how most real SPE reports work: gather data → filter → present. Each variable is a checkpoint you can inspect in the console if something looks wrong.

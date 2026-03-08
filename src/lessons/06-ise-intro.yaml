@@ -1,0 +1,62 @@
+id: "ise-intro"
+module: "ISE Scripting"
+order: 5
+title: "The Scripting Environment"
+difficulty: "intermediate"
+mode: "ise"
+description: |
+  You've been working in the **SPE Console** — great for one-liners. Now let's switch to the **ISE** (Integrated Scripting Environment), where you write multi-line scripts.
+
+  In real Sitecore, you access the ISE from: **Sitecore → Development Tools → PowerShell ISE**
+
+  The ISE lets you write a complete script, hit **Run**, and see all the output at once. This is how most real SPE work gets done — reporting, bulk operations, content auditing.
+
+  **`Show-ListView`** is one of SPE's most powerful commands. It takes pipeline input and renders it as an interactive report table with filtering, sorting, and export capabilities.
+tasks:
+  - instruction: |
+      Write a multi-line script that:
+      1. Gets all recursive children of Home
+      2. Filters to only "Sample Item" templates
+      3. Pipes to `Show-ListView` with `-Property Name,ItemPath,__Updated`
+
+      The script should be 3 lines — one per pipeline stage, piped together.
+    hint: |
+      Get-ChildItem -Path "master:\content\Home" -Recurse |
+          Where-Object { $_.TemplateName -eq "Sample Item" } |
+          Show-ListView -Property Name,ItemPath,__Updated
+    starterCode: |
+      # Get all items, filter by template, display as report
+      Get-ChildItem -Path "master:\content\Home" -Recurse |
+          Where-Object { $_.TemplateName -eq "" } |
+          Show-ListView -Property Name,ItemPath,__Updated
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "where-object"
+        - "show-listview"
+      outputContains: "item(s) displayed"
+    successMessage: |
+      You just built your first SPE report! In real Sitecore, `Show-ListView` opens an interactive window with filtering, sorting, and export to CSV/Excel/JSON. This pattern — Get → Filter → Report — is the foundation of all SPE content auditing.
+  - instruction: |
+      Now write a script that creates a sorted report of all items showing `Name`, `TemplateName`, and `__Updated`, sorted by the `__Updated` field.
+
+      Pipe through `Sort-Object` before `Show-ListView`.
+    hint: |
+      Get-ChildItem -Path "master:\content\Home" -Recurse |
+          Sort-Object -Property __Updated |
+          Show-ListView -Property Name,TemplateName,__Updated
+    starterCode: |
+      # Audit report: all items sorted by last update date
+      Get-ChildItem -Path "master:\content\Home" -Recurse |
+          Sort-Object -Property __Updated |
+          Show-ListView -Property Name,TemplateName,__Updated
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "sort-object"
+        - "show-listview"
+      outputContains: "item(s) displayed"
+    successMessage: |
+      Sorting before `Show-ListView` controls the initial display order. In real Sitecore, users can also re-sort by clicking column headers in the ListView window.

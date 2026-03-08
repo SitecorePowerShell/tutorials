@@ -1,0 +1,57 @@
+id: "creating-items"
+module: "Item Manipulation"
+order: 9
+title: "Creating & Removing Items"
+difficulty: "intermediate"
+mode: "ise"
+description: |
+  `New-Item` creates Sitecore items. You specify where (`-Path`), what to call it (`-Name`), and what template to use (`-ItemType`).
+
+  ```
+  New-Item -Path "master:\content\Home" -Name "My Page" -ItemType "Sample/Sample Item"
+  ```
+
+  **`-ItemType`** uses the template's full path (matching `Template.FullName`), not the short name.
+
+  `Remove-Item` deletes items. In real SPE, add `-Permanently` to skip the recycle bin.
+
+  **Important:** These commands mutate the content tree in our simulation. You'll see the changes reflected in the Content Tree panel.
+tasks:
+  - instruction: |
+      Create a new item called "Contact Us" under the About section, using the "Sample/Sample Item" template. Then verify it was created by listing About's children.
+    hint: |
+      New-Item -Path "master:\content\Home\About" -Name "Contact Us" -ItemType "Sample/Sample Item"
+      Get-ChildItem -Path "master:\content\Home\About"
+    starterCode: |
+      # Create a new page under About
+      New-Item -Path "master:\content\Home\About" -Name "Contact Us" -ItemType "Sample/Sample Item"
+
+      # Verify - list children of About
+      Get-ChildItem -Path "master:\content\Home\About"
+    validation:
+      type: "pipeline"
+      stages:
+        - "new-item"
+        - "get-childitem"
+      outputContains: "Contact Us"
+    successMessage: |
+      The new item appears in the tree with its own ID and version 1. In real Sitecore, `New-Item` also supports `-Language` for creating specific language versions and you can pipe items to set field values immediately after creation.
+  - instruction: |
+      Now remove the item you just created. Use `Remove-Item` with the full path, then verify it's gone.
+    hint: |
+      Remove-Item -Path "master:\content\Home\About\Contact Us"
+      Get-ChildItem -Path "master:\content\Home\About"
+    starterCode: |
+      # Remove the Contact Us page
+      Remove-Item -Path "master:\content\Home\About\Contact Us"
+
+      # Verify - should only show Team and History
+      Get-ChildItem -Path "master:\content\Home\About"
+    validation:
+      type: "pipeline"
+      stages:
+        - "remove-item"
+        - "get-childitem"
+      outputNotContains: "Contact Us"
+    successMessage: |
+      The item is gone. In real SPE, `Remove-Item` sends items to the recycle bin by default. Add `-Permanently` to bypass it. You can also pipe items: `Get-Item ... | Remove-Item`.
