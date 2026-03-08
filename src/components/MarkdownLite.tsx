@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { colors, fonts, fontSizes } from "../theme";
 
 /** Very simple markdown: **bold**, `code`, ```blocks```, bullet lists */
 export function MarkdownLite({ text }: { text: string }) {
@@ -15,20 +16,20 @@ export function MarkdownLite({ text }: { text: string }) {
           <pre
             key={key++}
             style={{
-              background: "#1a1a2e",
+              background: colors.bgOverlay,
               padding: "12px 16px",
               borderRadius: 6,
               overflowX: "auto",
               margin: "8px 0",
-              fontSize: 13,
+              fontSize: fontSizes.body,
               lineHeight: 1.5,
-              border: "1px solid #2a2a4a",
+              border: `1px solid ${colors.borderMedium}`,
             }}
           >
             <code
               style={{
-                color: "#c5c8d4",
-                fontFamily: "'JetBrains Mono', 'Cascadia Code', monospace",
+                color: colors.textCode,
+                fontFamily: fonts.mono,
               }}
             >
               {codeBuffer.join("\n")}
@@ -57,7 +58,7 @@ export function MarkdownLite({ text }: { text: string }) {
       .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
       .replace(
         /`([^`]+)`/g,
-        '<code style="background:#1a1a2e;padding:2px 6px;border-radius:3px;font-family:\'JetBrains Mono\',monospace;font-size:12.5px;color:#90caf9;border:1px solid #2a2a4a">$1</code>'
+        `<code style="background:${colors.bgOverlay};padding:2px 6px;border-radius:3px;font-family:${fonts.monoShort};font-size:${fontSizes.md}px;color:${colors.accentLink};border:1px solid ${colors.borderMedium}">$1</code>`
       );
 
     if (line.startsWith("• ") || line.startsWith("- ")) {
@@ -72,7 +73,7 @@ export function MarkdownLite({ text }: { text: string }) {
             marginBottom: 2,
           }}
         >
-          <span style={{ position: "absolute", left: 0, color: "#5c6bc0" }}>
+          <span style={{ position: "absolute", left: 0, color: colors.accentPrimary }}>
             •
           </span>
           <span dangerouslySetInnerHTML={{ __html: processed }} />

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { SitecoreNode } from "../types";
+import { colors, fonts, fontSizes } from "../theme";
 
 function TreeNode({
   name,
@@ -23,9 +24,9 @@ function TreeNode({
           paddingTop: 3,
           paddingBottom: 3,
           cursor: hasChildren ? "pointer" : "default",
-          fontSize: 12.5,
-          fontFamily: "'JetBrains Mono', monospace",
-          color: hasChildren ? "#90caf9" : "#9e9eb8",
+          fontSize: fontSizes.md,
+          fontFamily: fonts.monoShort,
+          color: hasChildren ? colors.accentLink : colors.textSubtle,
           display: "flex",
           alignItems: "center",
           gap: 6,
@@ -33,7 +34,7 @@ function TreeNode({
           transition: "background 0.15s",
         }}
         onMouseEnter={(e) =>
-          (e.currentTarget.style.background = "#1e1e3a")
+          (e.currentTarget.style.background = colors.bgHover)
         }
         onMouseLeave={(e) =>
           (e.currentTarget.style.background = "transparent")
@@ -42,14 +43,14 @@ function TreeNode({
         <span
           style={{
             width: 14,
-            fontSize: 10,
-            color: "#5c6bc0",
+            fontSize: fontSizes.xs,
+            color: colors.accentPrimary,
             flexShrink: 0,
           }}
         >
           {hasChildren ? (expanded ? "▼" : "▶") : " "}
         </span>
-        <span style={{ color: hasChildren ? "#7986cb" : "#b0b0c8" }}>
+        <span style={{ color: hasChildren ? colors.accentFolder : colors.textOutput }}>
           {(node._template || "").includes("Folder")
             ? "📁"
             : hasChildren
@@ -59,8 +60,8 @@ function TreeNode({
         <span>{name}</span>
         <span
           style={{
-            color: "#555570",
-            fontSize: 11,
+            color: colors.textMuted,
+            fontSize: fontSizes.sm,
             marginLeft: "auto",
             paddingRight: 8,
           }}
@@ -90,8 +91,8 @@ export function TreePanel({ tree }: TreePanelProps) {
     <div
       style={{
         width: 280,
-        borderLeft: "1px solid #1a1a35",
-        background: "#0d0d1f",
+        borderLeft: `1px solid ${colors.borderBase}`,
+        background: colors.bgSurface,
         overflow: "auto",
         flexShrink: 0,
       }}
@@ -99,10 +100,10 @@ export function TreePanel({ tree }: TreePanelProps) {
       <div
         style={{
           padding: "14px 16px",
-          borderBottom: "1px solid #1a1a35",
-          fontSize: 12,
+          borderBottom: `1px solid ${colors.borderBase}`,
+          fontSize: fontSizes.base,
           fontWeight: 600,
-          color: "#8888a8",
+          color: colors.textSecondary,
           textTransform: "uppercase",
           letterSpacing: "0.06em",
         }}

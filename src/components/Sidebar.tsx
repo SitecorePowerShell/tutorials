@@ -1,4 +1,5 @@
 import type { Lesson } from "../types";
+import { colors, gradients, fontSizes } from "../theme";
 
 interface SidebarProps {
   lessons: Lesson[];
@@ -31,8 +32,8 @@ export function Sidebar({
     <div
       style={{
         width: collapsed ? 48 : 260,
-        background: "#0f0f24",
-        borderRight: "1px solid #1a1a35",
+        background: colors.bgPanel,
+        borderRight: `1px solid ${colors.borderBase}`,
         display: "flex",
         flexDirection: "column",
         transition: "width 0.25s ease",
@@ -43,7 +44,7 @@ export function Sidebar({
       <div
         style={{
           padding: collapsed ? "16px 8px" : "20px 20px 16px",
-          borderBottom: "1px solid #1a1a35",
+          borderBottom: `1px solid ${colors.borderBase}`,
           display: "flex",
           alignItems: "center",
           justifyContent: collapsed ? "center" : "space-between",
@@ -54,15 +55,15 @@ export function Sidebar({
           <div>
             <div
               style={{
-                fontSize: 14,
+                fontSize: fontSizes.lg,
                 fontWeight: 700,
-                color: "#8187dc",
+                color: colors.accentTitle,
                 letterSpacing: "0.02em",
               }}
             >
               SPE Tutorial
             </div>
-            <div style={{ fontSize: 11, color: "#555570", marginTop: 2 }}>
+            <div style={{ fontSize: fontSizes.sm, color: colors.textMuted, marginTop: 2 }}>
               {completedCount}/{totalTasks} tasks complete
             </div>
           </div>
@@ -72,9 +73,9 @@ export function Sidebar({
           style={{
             background: "none",
             border: "none",
-            color: "#555570",
+            color: colors.textMuted,
             cursor: "pointer",
-            fontSize: 16,
+            fontSize: fontSizes.xl,
             padding: 4,
             lineHeight: 1,
           }}
@@ -98,14 +99,14 @@ export function Sidebar({
                   gap: 10,
                   width: "100%",
                   padding: "10px 20px",
-                  background: active ? "#1a1a3a" : "transparent",
+                  background: active ? colors.bgActive : "transparent",
                   border: "none",
                   borderLeft: active
-                    ? "3px solid #5c6bc0"
+                    ? `3px solid ${colors.accentPrimary}`
                     : "3px solid transparent",
                   cursor: "pointer",
                   textAlign: "left",
-                  color: active ? "#d4d4e8" : "#8888a8",
+                  color: active ? colors.textPrimary : colors.textSecondary,
                   transition: "all 0.15s",
                 }}
               >
@@ -115,16 +116,16 @@ export function Sidebar({
                     height: 20,
                     borderRadius: "50%",
                     border: complete
-                      ? "2px solid #4caf50"
+                      ? `2px solid ${colors.statusSuccess}`
                       : active
-                        ? "2px solid #5c6bc0"
-                        : "2px solid #333355",
-                    background: complete ? "#4caf50" : "transparent",
+                        ? `2px solid ${colors.accentPrimary}`
+                        : `2px solid ${colors.borderDim}`,
+                    background: complete ? colors.statusSuccess : "transparent",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: 10,
-                    color: "#fff",
+                    fontSize: fontSizes.xs,
+                    color: colors.textWhite,
                     flexShrink: 0,
                     marginTop: 1,
                   }}
@@ -134,7 +135,7 @@ export function Sidebar({
                 <div>
                   <div
                     style={{
-                      fontSize: 13,
+                      fontSize: fontSizes.body,
                       fontWeight: active ? 600 : 400,
                       lineHeight: 1.3,
                     }}
@@ -142,7 +143,7 @@ export function Sidebar({
                     {l.title}
                   </div>
                   <div
-                    style={{ fontSize: 11, color: "#555570", marginTop: 2 }}
+                    style={{ fontSize: fontSizes.sm, color: colors.textMuted, marginTop: 2 }}
                   >
                     {l.tasks.length} task{l.tasks.length > 1 ? "s" : ""}
                   </div>
@@ -155,11 +156,11 @@ export function Sidebar({
 
       {/* Progress bar at bottom */}
       {!collapsed && (
-        <div style={{ padding: "12px 20px", borderTop: "1px solid #1a1a35" }}>
+        <div style={{ padding: "12px 20px", borderTop: `1px solid ${colors.borderBase}` }}>
           <div
             style={{
               height: 4,
-              background: "#1a1a35",
+              background: colors.borderBase,
               borderRadius: 2,
               overflow: "hidden",
             }}
@@ -168,7 +169,7 @@ export function Sidebar({
               style={{
                 height: "100%",
                 width: `${(completedCount / totalTasks) * 100}%`,
-                background: "linear-gradient(90deg, #5c6bc0, #7c4dff)",
+                background: gradients.progress,
                 borderRadius: 2,
                 transition: "width 0.4s ease",
               }}

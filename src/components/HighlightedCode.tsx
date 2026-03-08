@@ -1,3 +1,5 @@
+import { colors, fonts, fontSizes } from "../theme";
+
 /** Syntax highlighter for PowerShell */
 export function HighlightedCode({ code }: { code: string }) {
   const keywords =
@@ -13,35 +15,34 @@ export function HighlightedCode({ code }: { code: string }) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 
-  html = html.replace(strings, '<span style="color:#a5d6a7">$1</span>');
+  html = html.replace(strings, `<span style="color:${colors.syntaxString}">$1</span>`);
   html = html.replace(
     keywords,
-    '<span style="color:#90caf9;font-weight:600">$1</span>'
+    `<span style="color:${colors.syntaxKeyword};font-weight:600">$1</span>`
   );
   html = html.replace(
     params,
-    ' <span style="color:#ce93d8">$1</span>'
+    ` <span style="color:${colors.syntaxParam}">$1</span>`
   );
   html = html.replace(
     pipes,
-    '<span style="color:#ffcc80;font-weight:700">$1</span>'
+    `<span style="color:${colors.syntaxPipe};font-weight:700">$1</span>`
   );
   html = html.replace(
     variables,
-    '<span style="color:#ef9a9a">$1</span>'
+    `<span style="color:${colors.syntaxVariable}">$1</span>`
   );
   html = html.replace(
     braces,
-    '<span style="color:#fff59d">$1</span>'
+    `<span style="color:${colors.syntaxBrace}">$1</span>`
   );
 
   return (
     <code
       dangerouslySetInnerHTML={{ __html: html }}
       style={{
-        fontFamily:
-          "'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace",
-        fontSize: 13,
+        fontFamily: fonts.monoFull,
+        fontSize: fontSizes.body,
       }}
     />
   );

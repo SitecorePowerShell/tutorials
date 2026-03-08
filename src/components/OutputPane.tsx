@@ -1,5 +1,6 @@
 import type { ConsoleEntry } from "../types";
 import { HighlightedCode } from "./HighlightedCode";
+import { colors, fontSizes } from "../theme";
 
 interface OutputPaneProps {
   entries: ConsoleEntry[];
@@ -11,7 +12,7 @@ export function OutputPane({ entries, isISE, endRef }: OutputPaneProps) {
   return (
     <>
       {entries.length === 0 && (
-        <div style={{ color: "#444460", fontStyle: "italic", fontSize: 12 }}>
+        <div style={{ color: colors.textDimmed, fontStyle: "italic", fontSize: fontSizes.base }}>
           {isISE
             ? "Output will appear here after you run your script..."
             : "PS master:\\content\\Home> Type your command below and press Enter..."}
@@ -21,7 +22,7 @@ export function OutputPane({ entries, isISE, endRef }: OutputPaneProps) {
         <div key={i} style={{ marginBottom: 6 }}>
           {entry.type === "command" && (
             <div>
-              <span style={{ color: "#5c6bc0" }}>
+              <span style={{ color: colors.accentPrimary }}>
                 PS master:\content\Home&gt;{" "}
               </span>
               <HighlightedCode code={entry.text} />
@@ -30,10 +31,10 @@ export function OutputPane({ entries, isISE, endRef }: OutputPaneProps) {
           {entry.type === "script" && (
             <div
               style={{
-                color: "#555570",
-                fontSize: 11,
+                color: colors.textMuted,
+                fontSize: fontSizes.sm,
                 marginBottom: 8,
-                borderBottom: "1px solid #1a1a30",
+                borderBottom: `1px solid ${colors.borderLight}`,
                 paddingBottom: 6,
               }}
             >
@@ -43,7 +44,7 @@ export function OutputPane({ entries, isISE, endRef }: OutputPaneProps) {
           {entry.type === "output" && (
             <pre
               style={{
-                color: "#b0b0c8",
+                color: colors.textOutput,
                 margin: "4px 0",
                 whiteSpace: "pre-wrap",
                 fontFamily: "inherit",
@@ -54,19 +55,19 @@ export function OutputPane({ entries, isISE, endRef }: OutputPaneProps) {
             </pre>
           )}
           {entry.type === "error" && (
-            <div style={{ color: "#ef5350", margin: "4px 0" }}>
+            <div style={{ color: colors.statusError, margin: "4px 0" }}>
               {entry.text}
             </div>
           )}
           {entry.type === "success" && (
             <div
               style={{
-                color: "#66bb6a",
+                color: colors.statusSuccessLight,
                 margin: "8px 0",
                 padding: "8px 12px",
-                background: "#0d1f0d",
+                background: colors.bgCardSuccess,
                 borderRadius: 4,
-                borderLeft: "3px solid #4caf50",
+                borderLeft: `3px solid ${colors.statusSuccess}`,
               }}
             >
               {entry.text}
@@ -75,20 +76,20 @@ export function OutputPane({ entries, isISE, endRef }: OutputPaneProps) {
           {entry.type === "hint" && (
             <div
               style={{
-                color: "#ffab40",
+                color: colors.statusHint,
                 margin: "4px 0",
                 padding: "6px 12px",
-                background: "#1a1508",
+                background: colors.bgHint,
                 borderRadius: 4,
-                borderLeft: "3px solid #ff9100",
-                fontSize: 12,
+                borderLeft: `3px solid ${colors.statusHintDark}`,
+                fontSize: fontSizes.base,
               }}
             >
               💡 {entry.text}
             </div>
           )}
           {entry.type === "partial" && (
-            <div style={{ color: "#5c6bc0", fontSize: 11, marginLeft: 16 }}>
+            <div style={{ color: colors.accentPrimary, fontSize: fontSizes.sm, marginLeft: 16 }}>
               {entry.text}
             </div>
           )}

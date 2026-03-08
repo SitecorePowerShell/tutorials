@@ -9,6 +9,7 @@ import { LessonPanel } from "./components/LessonPanel";
 import { ReplEditor } from "./components/ReplEditor";
 import { IseEditor } from "./components/IseEditor";
 import { TreePanel } from "./components/TreePanel";
+import { colors, fonts, fontSizes } from "./theme";
 
 export default function SPETutorial() {
   const [currentLesson, setCurrentLesson] = useState(0);
@@ -135,10 +136,9 @@ export default function SPETutorial() {
         height: "100vh",
         width: "100vw",
         display: "flex",
-        fontFamily:
-          "'Instrument Sans', 'DM Sans', system-ui, sans-serif",
-        background: "#0d0d1a",
-        color: "#d4d4e8",
+        fontFamily: fonts.sans,
+        background: colors.bgBase,
+        color: colors.textPrimary,
         overflow: "hidden",
       }}
     >
@@ -172,8 +172,8 @@ export default function SPETutorial() {
         <div
           style={{
             height: 48,
-            background: "#0f0f24",
-            borderBottom: "1px solid #1a1a35",
+            background: colors.bgPanel,
+            borderBottom: `1px solid ${colors.borderBase}`,
             display: "flex",
             alignItems: "center",
             padding: "0 20px",
@@ -181,24 +181,24 @@ export default function SPETutorial() {
             flexShrink: 0,
           }}
         >
-          <div style={{ fontSize: 13, color: "#8888a8" }}>
-            <span style={{ color: "#5c6bc0", fontWeight: 600 }}>
+          <div style={{ fontSize: fontSizes.body, color: colors.textSecondary }}>
+            <span style={{ color: colors.accentPrimary, fontWeight: 600 }}>
               {lesson.module}
             </span>
-            <span style={{ margin: "0 8px", color: "#333355" }}>/</span>
-            <span style={{ color: "#d4d4e8" }}>{lesson.title}</span>
+            <span style={{ margin: "0 8px", color: colors.borderDim }}>/</span>
+            <span style={{ color: colors.textPrimary }}>{lesson.title}</span>
           </div>
           <div style={{ flex: 1 }} />
           <button
             onClick={() => setShowTreePanel(!showTreePanel)}
             style={{
-              background: showTreePanel ? "#1a1a3a" : "transparent",
-              border: "1px solid #2a2a4a",
-              color: showTreePanel ? "#90caf9" : "#8888a8",
+              background: showTreePanel ? colors.bgActive : "transparent",
+              border: `1px solid ${colors.borderMedium}`,
+              color: showTreePanel ? colors.accentLink : colors.textSecondary,
               padding: "5px 12px",
               borderRadius: 4,
               cursor: "pointer",
-              fontSize: 12,
+              fontSize: fontSizes.base,
               fontFamily: "inherit",
             }}
           >
@@ -206,22 +206,22 @@ export default function SPETutorial() {
           </button>
           <div
             style={{
-              fontSize: 11,
-              color: isISE ? "#7c4dff" : "#5c6bc0",
+              fontSize: fontSizes.sm,
+              color: isISE ? colors.accentSecondary : colors.accentPrimary,
               padding: "4px 10px",
-              background: "#1a1a2e",
+              background: colors.bgOverlay,
               borderRadius: 4,
-              border: `1px solid ${isISE ? "#3a2a6a" : "#1a1a35"}`,
+              border: `1px solid ${isISE ? colors.borderAccentIse : colors.borderBase}`,
             }}
           >
             {isISE ? "ISE" : "Console"}
           </div>
           <div
             style={{
-              fontSize: 11,
-              color: "#555570",
+              fontSize: fontSizes.sm,
+              color: colors.textMuted,
               padding: "4px 10px",
-              background: "#1a1a2e",
+              background: colors.bgOverlay,
               borderRadius: 4,
             }}
           >

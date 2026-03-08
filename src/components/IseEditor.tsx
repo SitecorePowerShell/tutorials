@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import type { ConsoleEntry } from "../types";
 import { OutputPane } from "./OutputPane";
+import { colors, gradients, fonts, fontSizes } from "../theme";
 
 interface IseEditorProps {
   code: string;
@@ -75,7 +76,7 @@ export function IseEditor({
         ref={editorPaneRef}
         style={{
           borderBottom: "none",
-          background: "#0d0d1f",
+          background: colors.bgSurface,
           display: "flex",
           flexDirection: "column",
           height: editorHeight,
@@ -85,7 +86,7 @@ export function IseEditor({
         <div
           style={{
             padding: "8px 16px",
-            borderBottom: "1px solid #1a1a35",
+            borderBottom: `1px solid ${colors.borderBase}`,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -94,8 +95,8 @@ export function IseEditor({
         >
           <div
             style={{
-              fontSize: 11,
-              color: "#8888a8",
+              fontSize: fontSizes.sm,
+              color: colors.textSecondary,
               fontWeight: 600,
               textTransform: "uppercase",
               letterSpacing: "0.06em",
@@ -107,13 +108,13 @@ export function IseEditor({
             <button
               onClick={onRun}
               style={{
-                background: "linear-gradient(135deg, #5c6bc0, #7c4dff)",
+                background: gradients.accent,
                 border: "none",
-                color: "#fff",
+                color: colors.textWhite,
                 padding: "5px 16px",
                 borderRadius: 4,
                 cursor: "pointer",
-                fontSize: 12,
+                fontSize: fontSizes.base,
                 fontWeight: 600,
                 fontFamily: "inherit",
                 display: "flex",
@@ -127,12 +128,12 @@ export function IseEditor({
               onClick={onClear}
               style={{
                 background: "transparent",
-                border: "1px solid #2a2a4a",
-                color: "#666680",
+                border: `1px solid ${colors.borderMedium}`,
+                color: colors.textClear,
                 padding: "5px 12px",
                 borderRadius: 4,
                 cursor: "pointer",
-                fontSize: 12,
+                fontSize: fontSizes.base,
                 fontFamily: "inherit",
               }}
             >
@@ -147,15 +148,15 @@ export function IseEditor({
               style={{
                 padding: "10px 0",
                 textAlign: "right",
-                color: "#444460",
-                fontSize: 13,
-                fontFamily: "'JetBrains Mono', monospace",
+                color: colors.textDimmed,
+                fontSize: fontSizes.body,
+                fontFamily: fonts.monoShort,
                 lineHeight: "20px",
                 userSelect: "none",
                 minWidth: 36,
                 paddingRight: 8,
-                borderRight: "1px solid #1a1a35",
-                background: "#0a0a18",
+                borderRight: `1px solid ${colors.borderBase}`,
+                background: colors.bgDeep,
               }}
             >
               {code.split("\n").map((_, i) => (
@@ -178,13 +179,13 @@ export function IseEditor({
                 background: "transparent",
                 border: "none",
                 outline: "none",
-                color: "#d4d4e8",
-                fontFamily: "'JetBrains Mono', 'Cascadia Code', monospace",
-                fontSize: 13,
+                color: colors.textPrimary,
+                fontFamily: fonts.mono,
+                fontSize: fontSizes.body,
                 lineHeight: "20px",
                 padding: "10px 12px",
                 resize: "none",
-                caretColor: "#5c6bc0",
+                caretColor: colors.accentPrimary,
                 tabSize: 4,
               }}
             />
@@ -193,9 +194,9 @@ export function IseEditor({
         <div
           style={{
             padding: "4px 16px 6px",
-            borderTop: "1px solid #1a1a35",
-            fontSize: 11,
-            color: "#555570",
+            borderTop: `1px solid ${colors.borderBase}`,
+            fontSize: fontSizes.sm,
+            color: colors.textMuted,
           }}
         >
           Ctrl+Enter to run
@@ -207,7 +208,7 @@ export function IseEditor({
         onMouseDown={handleDragStart}
         style={{
           height: 6,
-          background: "#1a1a35",
+          background: colors.borderBase,
           cursor: "row-resize",
           display: "flex",
           alignItems: "center",
@@ -215,17 +216,17 @@ export function IseEditor({
           flexShrink: 0,
           transition: "background 0.15s",
         }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = "#2a2a5a")}
+        onMouseEnter={(e) => (e.currentTarget.style.background = colors.bgResizeHover)}
         onMouseLeave={(e) => {
           if (!isDragging.current)
-            e.currentTarget.style.background = "#1a1a35";
+            e.currentTarget.style.background = colors.borderBase;
         }}
       >
         <div
           style={{
             width: 32,
             height: 2,
-            background: "#333355",
+            background: colors.borderDim,
             borderRadius: 1,
           }}
         />
@@ -237,9 +238,9 @@ export function IseEditor({
           flex: 1,
           overflow: "auto",
           padding: "16px 20px",
-          background: "#0a0a18",
-          fontFamily: "'JetBrains Mono', 'Cascadia Code', monospace",
-          fontSize: 13,
+          background: colors.bgDeep,
+          fontFamily: fonts.mono,
+          fontSize: fontSizes.body,
           lineHeight: 1.6,
         }}
       >

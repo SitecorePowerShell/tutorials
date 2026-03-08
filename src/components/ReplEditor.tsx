@@ -1,6 +1,7 @@
 import { useRef, useEffect } from "react";
 import type { ConsoleEntry } from "../types";
 import { OutputPane } from "./OutputPane";
+import { colors, gradients, fonts, fontSizes } from "../theme";
 
 interface ReplEditorProps {
   code: string;
@@ -71,10 +72,9 @@ export function ReplEditor({
           flex: 1,
           overflow: "auto",
           padding: "16px 20px",
-          background: "#0a0a18",
-          fontFamily:
-            "'JetBrains Mono', 'Cascadia Code', monospace",
-          fontSize: 13,
+          background: colors.bgDeep,
+          fontFamily: fonts.mono,
+          fontSize: fontSizes.body,
           lineHeight: 1.6,
         }}
       >
@@ -88,8 +88,8 @@ export function ReplEditor({
       {/* Command input */}
       <div
         style={{
-          borderTop: "1px solid #1a1a35",
-          background: "#0d0d1f",
+          borderTop: `1px solid ${colors.borderBase}`,
+          background: colors.bgSurface,
           padding: "12px 20px",
           display: "flex",
           alignItems: "center",
@@ -99,9 +99,9 @@ export function ReplEditor({
       >
         <span
           style={{
-            color: "#5c6bc0",
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: 13,
+            color: colors.accentPrimary,
+            fontFamily: fonts.monoShort,
+            fontSize: fontSizes.body,
             fontWeight: 600,
             whiteSpace: "nowrap",
           }}
@@ -122,25 +122,24 @@ export function ReplEditor({
             background: "transparent",
             border: "none",
             outline: "none",
-            color: "#d4d4e8",
-            fontFamily:
-              "'JetBrains Mono', 'Cascadia Code', monospace",
-            fontSize: 13,
-            caretColor: "#5c6bc0",
+            color: colors.textPrimary,
+            fontFamily: fonts.mono,
+            fontSize: fontSizes.body,
+            caretColor: colors.accentPrimary,
           }}
         />
         <button
           onClick={onRun}
           style={{
             background: code.trim()
-              ? "linear-gradient(135deg, #5c6bc0, #7c4dff)"
-              : "#1a1a35",
+              ? gradients.accent
+              : colors.borderBase,
             border: "none",
-            color: code.trim() ? "#fff" : "#555570",
+            color: code.trim() ? colors.textWhite : colors.textMuted,
             padding: "6px 16px",
             borderRadius: 4,
             cursor: code.trim() ? "pointer" : "default",
-            fontSize: 12,
+            fontSize: fontSizes.base,
             fontWeight: 600,
             fontFamily: "inherit",
             transition: "all 0.15s",
@@ -152,12 +151,12 @@ export function ReplEditor({
           onClick={onClear}
           style={{
             background: "transparent",
-            border: "1px solid #2a2a4a",
-            color: "#666680",
+            border: `1px solid ${colors.borderMedium}`,
+            color: colors.textClear,
             padding: "6px 12px",
             borderRadius: 4,
             cursor: "pointer",
-            fontSize: 12,
+            fontSize: fontSizes.base,
             fontFamily: "inherit",
           }}
         >

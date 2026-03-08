@@ -1,6 +1,7 @@
 import type { Lesson, Task } from "../types";
 import { MarkdownLite } from "./MarkdownLite";
 import { HighlightedCode } from "./HighlightedCode";
+import { colors, gradients, fontSizes } from "../theme";
 
 interface LessonPanelProps {
   lesson: Lesson;
@@ -35,7 +36,7 @@ export function LessonPanel({
     <div
       style={{
         width: showTreePanel ? "35%" : "40%",
-        borderRight: "1px solid #1a1a35",
+        borderRight: `1px solid ${colors.borderBase}`,
         display: "flex",
         flexDirection: "column",
         overflow: "auto",
@@ -52,10 +53,10 @@ export function LessonPanel({
         {task && (
           <div
             style={{
-              background: currentTaskComplete ? "#0d1f0d" : "#12122a",
+              background: currentTaskComplete ? colors.bgCardSuccess : colors.bgCard,
               border: currentTaskComplete
-                ? "1px solid #2e5e2e"
-                : "1px solid #2a2a4a",
+                ? `1px solid ${colors.borderSuccess}`
+                : `1px solid ${colors.borderMedium}`,
               borderRadius: 8,
               padding: "18px 20px",
               marginBottom: 16,
@@ -63,11 +64,11 @@ export function LessonPanel({
           >
             <div
               style={{
-                fontSize: 11,
+                fontSize: fontSizes.sm,
                 fontWeight: 700,
                 textTransform: "uppercase",
                 letterSpacing: "0.08em",
-                color: currentTaskComplete ? "#4caf50" : "#5c6bc0",
+                color: currentTaskComplete ? colors.statusSuccess : colors.accentPrimary,
                 marginBottom: 10,
               }}
             >
@@ -75,7 +76,7 @@ export function LessonPanel({
                 ? "✓ Completed"
                 : `Task ${currentTask + 1}`}
             </div>
-            <div style={{ fontSize: 14, lineHeight: 1.6 }}>
+            <div style={{ fontSize: fontSizes.lg, lineHeight: 1.6 }}>
               <MarkdownLite text={task.instruction} />
             </div>
 
@@ -85,12 +86,12 @@ export function LessonPanel({
                   onClick={onToggleHint}
                   style={{
                     background: "transparent",
-                    border: "1px solid #333355",
-                    color: "#8888a8",
+                    border: `1px solid ${colors.borderDim}`,
+                    color: colors.textSecondary,
                     padding: "5px 12px",
                     borderRadius: 4,
                     cursor: "pointer",
-                    fontSize: 12,
+                    fontSize: fontSizes.base,
                     fontFamily: "inherit",
                   }}
                 >
@@ -104,10 +105,10 @@ export function LessonPanel({
                 style={{
                   marginTop: 12,
                   padding: "10px 14px",
-                  background: "#1a1a2e",
+                  background: colors.bgOverlay,
                   borderRadius: 6,
-                  borderLeft: "3px solid #ffab40",
-                  fontSize: 13,
+                  borderLeft: `3px solid ${colors.statusHint}`,
+                  fontSize: fontSizes.body,
                 }}
               >
                 <HighlightedCode code={task.hint} />
@@ -119,14 +120,13 @@ export function LessonPanel({
                 onClick={onAdvanceTask}
                 style={{
                   marginTop: 14,
-                  background:
-                    "linear-gradient(135deg, #5c6bc0, #7c4dff)",
+                  background: gradients.accent,
                   border: "none",
-                  color: "#fff",
+                  color: colors.textWhite,
                   padding: "8px 20px",
                   borderRadius: 6,
                   cursor: "pointer",
-                  fontSize: 13,
+                  fontSize: fontSizes.body,
                   fontWeight: 600,
                   fontFamily: "inherit",
                 }}
@@ -153,10 +153,10 @@ export function LessonPanel({
                   height: 8,
                   borderRadius: "50%",
                   background: isTaskComplete(currentLesson, ti)
-                    ? "#4caf50"
+                    ? colors.statusSuccess
                     : ti === currentTask
-                      ? "#5c6bc0"
-                      : "#333355",
+                      ? colors.accentPrimary
+                      : colors.borderDim,
                   cursor: "pointer",
                   transition: "background 0.2s",
                 }}
