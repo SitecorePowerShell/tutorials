@@ -16,6 +16,7 @@ interface LessonPanelProps {
   onGoToTask: (taskIdx: number) => void;
   isTaskComplete: (lessonIdx: number, taskIdx: number) => boolean;
   lessonsLength: number;
+  isMobile?: boolean;
 }
 
 export function LessonPanel({
@@ -31,19 +32,21 @@ export function LessonPanel({
   onGoToTask,
   isTaskComplete,
   lessonsLength,
+  isMobile,
 }: LessonPanelProps) {
   return (
     <div
       style={{
-        width: showTreePanel ? "35%" : "40%",
-        borderRight: `1px solid ${colors.borderBase}`,
+        width: isMobile ? "100%" : showTreePanel ? "35%" : "40%",
+        flex: isMobile ? 1 : undefined,
+        borderRight: isMobile ? "none" : `1px solid ${colors.borderBase}`,
         display: "flex",
         flexDirection: "column",
         overflow: "auto",
-        transition: "width 0.25s ease",
+        transition: isMobile ? "none" : "width 0.25s ease",
       }}
     >
-      <div style={{ padding: "24px 28px", flex: 1, overflow: "auto" }}>
+      <div style={{ padding: isMobile ? "16px 16px" : "24px 28px", flex: 1, overflow: "auto" }}>
         {/* Lesson description */}
         <div style={{ marginBottom: 24 }}>
           <MarkdownLite text={lesson.description} />
@@ -88,11 +91,12 @@ export function LessonPanel({
                     background: "transparent",
                     border: `1px solid ${colors.borderDim}`,
                     color: colors.textSecondary,
-                    padding: "5px 12px",
+                    padding: isMobile ? "10px 16px" : "5px 12px",
                     borderRadius: 4,
                     cursor: "pointer",
-                    fontSize: fontSizes.base,
+                    fontSize: isMobile ? 14 : fontSizes.base,
                     fontFamily: "inherit",
+                    minHeight: isMobile ? 44 : undefined,
                   }}
                 >
                   {showHint ? "Hide Hint" : "Show Hint"}
@@ -123,12 +127,13 @@ export function LessonPanel({
                   background: gradients.accent,
                   border: "none",
                   color: colors.textWhite,
-                  padding: "8px 20px",
+                  padding: isMobile ? "12px 24px" : "8px 20px",
                   borderRadius: 6,
                   cursor: "pointer",
-                  fontSize: fontSizes.body,
+                  fontSize: isMobile ? 16 : fontSizes.body,
                   fontWeight: 600,
                   fontFamily: "inherit",
+                  minHeight: isMobile ? 44 : undefined,
                 }}
               >
                 {currentTask < lesson.tasks.length - 1
@@ -143,14 +148,14 @@ export function LessonPanel({
 
         {/* Task dots */}
         {lesson.tasks.length > 1 && (
-          <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
+          <div style={{ display: "flex", gap: isMobile ? 10 : 6, marginTop: 4 }}>
             {lesson.tasks.map((_, ti) => (
               <div
                 key={ti}
                 onClick={() => onGoToTask(ti)}
                 style={{
-                  width: 8,
-                  height: 8,
+                  width: isMobile ? 16 : 8,
+                  height: isMobile ? 16 : 8,
                   borderRadius: "50%",
                   background: isTaskComplete(currentLesson, ti)
                     ? colors.statusSuccess

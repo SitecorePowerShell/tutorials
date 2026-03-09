@@ -73,3 +73,13 @@ export const fontSizes = {
   lg: 14,
   xl: 16,
 };
+
+export const fontSizesMobile = {
+  xs: 12,
+  sm: 13,
+  base: 14,
+  md: 14.5,
+  body: 15,
+  lg: 16,
+  xl: 18,
+};

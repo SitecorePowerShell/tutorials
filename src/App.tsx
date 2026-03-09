@@ -5,12 +5,14 @@ import { VIRTUAL_TREE } from "./engine/virtualTree";
 import { executeScript, executeCommand } from "./engine/executor";
 import { validateTask } from "./validation/validator";
 import { loadProgress, saveProgress, clearProgress } from "./hooks/useSessionProgress";
+import { useMediaQuery } from "./hooks/useMediaQuery";
 import { Sidebar } from "./components/Sidebar";
 import { LessonPanel } from "./components/LessonPanel";
 import { ReplEditor } from "./components/ReplEditor";
 import { IseEditor } from "./components/IseEditor";
 import { TreePanel } from "./components/TreePanel";
-import { colors, fonts, fontSizes } from "./theme";
+import { MobileTabBar, type MobilePanel } from "./components/MobileTabBar";
+import { colors, fonts, fontSizes, fontSizesMobile } from "./theme";
 
 const initialProgress = loadProgress();
 
@@ -27,6 +29,12 @@ export default function SPETutorial() {
   const [showTreePanel, setShowTreePanel] = useState(false);
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const [mobilePanel, setMobilePanel] = useState<MobilePanel>("lesson");
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  const isMobile = useMediaQuery("(max-width: 767px)");
+  const isTablet = useMediaQuery("(min-width: 768px) and (max-width: 1024px)");
+  const fs = isMobile ? fontSizesMobile : fontSizes;
 
   const lesson = LESSONS[currentLesson];
   const task = lesson?.tasks?.[currentTask];
@@ -140,6 +148,10 @@ export default function SPETutorial() {
   const goToLesson = (idx: number) => {
     setCurrentLesson(idx);
     setCurrentTask(0);
+    if (isMobile) {
+      setMobileSidebarOpen(false);
+      setMobilePanel("lesson");
+    }
   };
 
   const goToTask = (taskIdx: number) => {
@@ -151,6 +163,188 @@ export default function SPETutorial() {
 
   const currentTaskComplete = isTaskComplete(currentLesson, currentTask);
 
+  // Auto-collapse sidebar on tablet
+  useEffect(() => {
+    if (isTablet && !sidebarCollapsed) {
+      setSidebarCollapsed(true);
+    }
+  }, [isTablet]);
+
+  // --- MOBILE LAYOUT ---
+  if (isMobile) {
+    return (
+      <div
+        style={{
+          height: "100vh",
+          width: "100vw",
+          display: "flex",
+          flexDirection: "column",
+          fontFamily: fonts.sans,
+          background: colors.bgBase,
+          color: colors.textPrimary,
+          overflow: "hidden",
+          minWidth: 390,
+        }}
+      >
+        <link
+          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap"
+          rel="stylesheet"
+        />
+
+        {/* Mobile top bar */}
+        <div
+          style={{
+            height: 52,
+            background: colors.bgPanel,
+            borderBottom: `1px solid ${colors.borderBase}`,
+            display: "flex",
+            alignItems: "center",
+            padding: "0 12px",
+            gap: 10,
+            flexShrink: 0,
+          }}
+        >
+          <button
+            onClick={() => setMobileSidebarOpen(true)}
+            style={{
+              background: "none",
+              border: "none",
+              color: colors.textSecondary,
+              fontSize: 22,
+              cursor: "pointer",
+              padding: 8,
+              minWidth: 44,
+              minHeight: 44,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            ☰
+          </button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontSize: fs.body,
+                color: colors.textPrimary,
+                fontWeight: 600,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {lesson.title}
+            </div>
+            <div style={{ fontSize: fs.xs, color: colors.textMuted }}>
+              Task {currentTask + 1}/{lesson.tasks.length}
+            </div>
+          </div>
+          <div
+            style={{
+              fontSize: fs.xs,
+              color: isISE ? colors.accentSecondary : colors.accentPrimary,
+              padding: "4px 10px",
+              background: colors.bgOverlay,
+              borderRadius: 4,
+              border: `1px solid ${isISE ? colors.borderAccentIse : colors.borderBase}`,
+            }}
+          >
+            {isISE ? "ISE" : "Console"}
+          </div>
+        </div>
+
+        {/* Mobile sidebar overlay */}
+        {mobileSidebarOpen && (
+          <>
+            <div
+              onClick={() => setMobileSidebarOpen(false)}
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(0,0,0,0.6)",
+                zIndex: 100,
+              }}
+            />
+            <div style={{ position: "fixed", top: 0, left: 0, bottom: 0, width: "80%", maxWidth: 320, zIndex: 101 }}>
+              <Sidebar
+                lessons={LESSONS}
+                currentLesson={currentLesson}
+                completedTasks={completedTasks}
+                totalTasks={totalTasks}
+                completedCount={completedCount}
+                collapsed={false}
+                onToggle={() => setMobileSidebarOpen(false)}
+                onGoToLesson={goToLesson}
+                onResetProgress={handleResetProgress}
+                isMobile={true}
+                onClose={() => setMobileSidebarOpen(false)}
+              />
+            </div>
+          </>
+        )}
+
+        {/* Active panel content */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          {mobilePanel === "lesson" && (
+            <LessonPanel
+              lesson={lesson}
+              task={task}
+              currentTask={currentTask}
+              currentLesson={currentLesson}
+              currentTaskComplete={currentTaskComplete}
+              showHint={showHint}
+              showTreePanel={false}
+              onToggleHint={() => setShowHint(!showHint)}
+              onAdvanceTask={advanceTask}
+              onGoToTask={goToTask}
+              isTaskComplete={isTaskComplete}
+              lessonsLength={LESSONS.length}
+              isMobile={true}
+            />
+          )}
+          {mobilePanel === "editor" && (
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+              {isISE ? (
+                <IseEditor
+                  code={code}
+                  onCodeChange={setCode}
+                  onRun={handleRun}
+                  onClear={() => setConsoleOutput([])}
+                  consoleOutput={consoleOutput}
+                  tree={VIRTUAL_TREE}
+                  isMobile={true}
+                />
+              ) : (
+                <ReplEditor
+                  code={code}
+                  onCodeChange={setCode}
+                  onRun={handleRun}
+                  onClear={() => setConsoleOutput([])}
+                  consoleOutput={consoleOutput}
+                  commandHistory={commandHistory}
+                  historyIndex={historyIndex}
+                  onHistoryIndexChange={setHistoryIndex}
+                  isMobile={true}
+                />
+              )}
+            </div>
+          )}
+          {mobilePanel === "tree" && (
+            <TreePanel tree={VIRTUAL_TREE} isMobile={true} />
+          )}
+        </div>
+
+        {/* Bottom tab bar */}
+        <MobileTabBar
+          activeTab={mobilePanel}
+          onTabChange={setMobilePanel}
+          showTreeTab={true}
+        />
+      </div>
+    );
+  }
+
+  // --- DESKTOP / TABLET LAYOUT ---
   return (
     <div
       style={{

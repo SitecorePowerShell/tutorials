@@ -12,6 +12,7 @@ interface ReplEditorProps {
   commandHistory: string[];
   historyIndex: number;
   onHistoryIndexChange: (index: number) => void;
+  isMobile?: boolean;
 }
 
 export function ReplEditor({
@@ -23,6 +24,7 @@ export function ReplEditor({
   commandHistory,
   historyIndex,
   onHistoryIndexChange,
+  isMobile,
 }: ReplEditorProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const consoleEndRef = useRef<HTMLDivElement>(null);
@@ -90,78 +92,88 @@ export function ReplEditor({
         style={{
           borderTop: `1px solid ${colors.borderBase}`,
           background: colors.bgSurface,
-          padding: "12px 20px",
+          padding: isMobile ? "10px 12px" : "12px 20px",
           display: "flex",
-          alignItems: "center",
-          gap: 12,
+          alignItems: isMobile ? "stretch" : "center",
+          flexDirection: isMobile ? "column" : "row",
+          gap: isMobile ? 8 : 12,
           flexShrink: 0,
         }}
       >
-        <span
-          style={{
-            color: colors.accentPrimary,
-            fontFamily: fonts.monoShort,
-            fontSize: fontSizes.body,
-            fontWeight: 600,
-            whiteSpace: "nowrap",
-          }}
-        >
-          PS master:\content\Home&gt;
-        </span>
-        <input
-          ref={inputRef}
-          type="text"
-          value={code}
-          onChange={(e) => onCodeChange(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Type your SPE command here..."
-          spellCheck={false}
-          autoComplete="off"
-          style={{
-            flex: 1,
-            background: "transparent",
-            border: "none",
-            outline: "none",
-            color: colors.textPrimary,
-            fontFamily: fonts.mono,
-            fontSize: fontSizes.body,
-            caretColor: colors.accentPrimary,
-          }}
-        />
-        <button
-          onClick={onRun}
-          style={{
-            background: code.trim()
-              ? gradients.accent
-              : colors.borderBase,
-            border: "none",
-            color: code.trim() ? colors.textWhite : colors.textMuted,
-            padding: "6px 16px",
-            borderRadius: 4,
-            cursor: code.trim() ? "pointer" : "default",
-            fontSize: fontSizes.base,
-            fontWeight: 600,
-            fontFamily: "inherit",
-            transition: "all 0.15s",
-          }}
-        >
-          Run ⏎
-        </button>
-        <button
-          onClick={onClear}
-          style={{
-            background: "transparent",
-            border: `1px solid ${colors.borderMedium}`,
-            color: colors.textClear,
-            padding: "6px 12px",
-            borderRadius: 4,
-            cursor: "pointer",
-            fontSize: fontSizes.base,
-            fontFamily: "inherit",
-          }}
-        >
-          Clear
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
+          <span
+            style={{
+              color: colors.accentPrimary,
+              fontFamily: fonts.monoShort,
+              fontSize: isMobile ? 13 : fontSizes.body,
+              fontWeight: 600,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {isMobile ? "PS>" : "PS master:\\content\\Home>"}
+          </span>
+          <input
+            ref={inputRef}
+            type="text"
+            value={code}
+            onChange={(e) => onCodeChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type your SPE command here..."
+            spellCheck={false}
+            autoComplete="off"
+            style={{
+              flex: 1,
+              background: "transparent",
+              border: "none",
+              outline: "none",
+              color: colors.textPrimary,
+              fontFamily: fonts.mono,
+              fontSize: isMobile ? 15 : fontSizes.body,
+              caretColor: colors.accentPrimary,
+              minHeight: isMobile ? 44 : undefined,
+              padding: isMobile ? "8px 0" : undefined,
+            }}
+          />
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            onClick={onRun}
+            style={{
+              background: code.trim()
+                ? gradients.accent
+                : colors.borderBase,
+              border: "none",
+              color: code.trim() ? colors.textWhite : colors.textMuted,
+              padding: isMobile ? "10px 20px" : "6px 16px",
+              borderRadius: 4,
+              cursor: code.trim() ? "pointer" : "default",
+              fontSize: isMobile ? 14 : fontSizes.base,
+              fontWeight: 600,
+              fontFamily: "inherit",
+              transition: "all 0.15s",
+              minHeight: isMobile ? 44 : undefined,
+              flex: isMobile ? 1 : undefined,
+            }}
+          >
+            Run ⏎
+          </button>
+          <button
+            onClick={onClear}
+            style={{
+              background: "transparent",
+              border: `1px solid ${colors.borderMedium}`,
+              color: colors.textClear,
+              padding: isMobile ? "10px 16px" : "6px 12px",
+              borderRadius: 4,
+              cursor: "pointer",
+              fontSize: isMobile ? 14 : fontSizes.base,
+              fontFamily: "inherit",
+              minHeight: isMobile ? 44 : undefined,
+            }}
+          >
+            Clear
+          </button>
+        </div>
       </div>
     </>
   );

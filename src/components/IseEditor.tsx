@@ -20,6 +20,7 @@ interface IseEditorProps {
   consoleOutput: ConsoleEntry[];
   tree?: { sitecore: SitecoreNode };
   userVariables?: string[];
+  isMobile?: boolean;
 }
 
 export function IseEditor({
@@ -30,6 +31,7 @@ export function IseEditor({
   consoleOutput,
   tree,
   userVariables,
+  isMobile,
 }: IseEditorProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const overlayRef = useRef<HTMLPreElement>(null);
@@ -55,6 +57,25 @@ export function IseEditor({
     isDragging.current = true;
     document.body.style.cursor = "row-resize";
     document.body.style.userSelect = "none";
+  }, []);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    isDragging.current = true;
+    (e.currentTarget as HTMLDivElement).style.background = colors.bgResizeHover;
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    if (!isDragging.current || !editorPaneRef.current) return;
+    const touch = e.touches[0];
+    const containerRect = editorPaneRef.current.parentElement!.getBoundingClientRect();
+    const newHeight = touch.clientY - editorPaneRef.current.getBoundingClientRect().top;
+    const clamped = Math.max(100, Math.min(newHeight, containerRect.height - 100));
+    setEditorHeight(clamped);
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    isDragging.current = false;
+    (e.currentTarget as HTMLDivElement).style.background = colors.borderBase;
   }, []);
 
   useEffect(() => {
@@ -324,15 +345,16 @@ export function IseEditor({
                 background: gradients.accent,
                 border: "none",
                 color: colors.textWhite,
-                padding: "5px 16px",
+                padding: isMobile ? "10px 20px" : "5px 16px",
                 borderRadius: 4,
                 cursor: "pointer",
-                fontSize: fontSizes.base,
+                fontSize: isMobile ? 14 : fontSizes.base,
                 fontWeight: 600,
                 fontFamily: "inherit",
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
+                minHeight: isMobile ? 44 : undefined,
               }}
             >
               ▶ Run
@@ -343,11 +365,12 @@ export function IseEditor({
                 background: "transparent",
                 border: `1px solid ${colors.borderMedium}`,
                 color: colors.textClear,
-                padding: "5px 12px",
+                padding: isMobile ? "10px 16px" : "5px 12px",
                 borderRadius: 4,
                 cursor: "pointer",
-                fontSize: fontSizes.base,
+                fontSize: isMobile ? 14 : fontSizes.base,
                 fontFamily: "inherit",
+                minHeight: isMobile ? 44 : undefined,
               }}
             >
               Clear Output
@@ -469,8 +492,11 @@ export function IseEditor({
       {/* Resize handle */}
       <div
         onMouseDown={handleDragStart}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         style={{
-          height: 6,
+          height: isMobile ? 12 : 6,
           background: colors.borderBase,
           cursor: "row-resize",
           display: "flex",
@@ -478,6 +504,7 @@ export function IseEditor({
           justifyContent: "center",
           flexShrink: 0,
           transition: "background 0.15s",
+          touchAction: "none",
         }}
         onMouseEnter={(e) => (e.currentTarget.style.background = colors.bgResizeHover)}
         onMouseLeave={(e) => {

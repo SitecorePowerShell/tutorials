@@ -6,10 +6,12 @@ function TreeNode({
   name,
   node,
   depth = 0,
+  isMobile,
 }: {
   name: string;
   node: SitecoreNode;
   depth?: number;
+  isMobile?: boolean;
 }) {
   const [expanded, setExpanded] = useState(depth < 2);
   const children = Object.entries(node._children || {});
@@ -21,8 +23,9 @@ function TreeNode({
         onClick={() => hasChildren && setExpanded(!expanded)}
         style={{
           paddingLeft: depth * 18 + 8,
-          paddingTop: 3,
-          paddingBottom: 3,
+          paddingTop: isMobile ? 8 : 3,
+          paddingBottom: isMobile ? 8 : 3,
+          minHeight: isMobile ? 40 : undefined,
           cursor: hasChildren ? "pointer" : "default",
           fontSize: fontSizes.md,
           fontFamily: fonts.monoShort,
@@ -76,6 +79,7 @@ function TreeNode({
             name={childName}
             node={childNode}
             depth={depth + 1}
+            isMobile={isMobile}
           />
         ))}
     </div>
@@ -84,14 +88,16 @@ function TreeNode({
 
 interface TreePanelProps {
   tree: { sitecore: SitecoreNode };
+  isMobile?: boolean;
 }
 
-export function TreePanel({ tree }: TreePanelProps) {
+export function TreePanel({ tree, isMobile }: TreePanelProps) {
   return (
     <div
       style={{
-        width: 280,
-        borderLeft: `1px solid ${colors.borderBase}`,
+        width: isMobile ? "100%" : 280,
+        flex: isMobile ? 1 : undefined,
+        borderLeft: isMobile ? "none" : `1px solid ${colors.borderBase}`,
         background: colors.bgSurface,
         overflow: "auto",
         flexShrink: 0,
@@ -111,7 +117,7 @@ export function TreePanel({ tree }: TreePanelProps) {
         Sitecore Content Tree
       </div>
       <div style={{ padding: "8px 0" }}>
-        <TreeNode name="sitecore" node={tree.sitecore} depth={0} />
+        <TreeNode name="sitecore" node={tree.sitecore} depth={0} isMobile={isMobile} />
       </div>
     </div>
   );

@@ -12,6 +12,8 @@ interface SidebarProps {
   onToggle: () => void;
   onGoToLesson: (idx: number) => void;
   onResetProgress: () => void;
+  isMobile?: boolean;
+  onClose?: () => void;
 }
 
 export function Sidebar({
@@ -24,6 +26,8 @@ export function Sidebar({
   onToggle,
   onGoToLesson,
   onResetProgress,
+  isMobile,
+  onClose,
 }: SidebarProps) {
   const [confirmReset, setConfirmReset] = useState(false);
   const isTaskComplete = (lessonIdx: number, taskIdx: number) =>
@@ -35,12 +39,13 @@ export function Sidebar({
   return (
     <div
       style={{
-        width: collapsed ? 48 : 260,
+        width: isMobile ? "100%" : collapsed ? 48 : 260,
+        height: isMobile ? "100%" : undefined,
         background: colors.bgPanel,
-        borderRight: `1px solid ${colors.borderBase}`,
+        borderRight: isMobile ? "none" : `1px solid ${colors.borderBase}`,
         display: "flex",
         flexDirection: "column",
-        transition: "width 0.25s ease",
+        transition: isMobile ? "none" : "width 0.25s ease",
         overflow: "hidden",
         flexShrink: 0,
       }}
@@ -73,18 +78,23 @@ export function Sidebar({
           </div>
         )}
         <button
-          onClick={onToggle}
+          onClick={isMobile ? onClose : onToggle}
           style={{
             background: "none",
             border: "none",
             color: colors.textMuted,
             cursor: "pointer",
-            fontSize: fontSizes.xl,
-            padding: 4,
+            fontSize: isMobile ? 20 : fontSizes.xl,
+            padding: isMobile ? 8 : 4,
+            minWidth: isMobile ? 44 : undefined,
+            minHeight: isMobile ? 44 : undefined,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
             lineHeight: 1,
           }}
         >
-          {collapsed ? "▶" : "◀"}
+          {isMobile ? "✕" : collapsed ? "▶" : "◀"}
         </button>
       </div>
 
@@ -102,7 +112,8 @@ export function Sidebar({
                   alignItems: "flex-start",
                   gap: 10,
                   width: "100%",
-                  padding: "10px 20px",
+                  padding: isMobile ? "14px 20px" : "10px 20px",
+                  minHeight: isMobile ? 48 : undefined,
                   background: active ? colors.bgActive : "transparent",
                   border: "none",
                   borderLeft: active
