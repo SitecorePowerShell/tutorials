@@ -283,6 +283,7 @@ export function IseEditor({
 
   return (
     <>
+      <style>{`.ise-editor-textarea::placeholder { color: #555570; opacity: 1; }`}</style>
       {/* Script editor pane */}
       <div
         ref={editorPaneRef}
@@ -408,11 +409,13 @@ export function IseEditor({
               {/* Transparent textarea (foreground — captures input) */}
               <textarea
                 ref={inputRef}
+                className="ise-editor-textarea"
                 value={code}
                 onChange={(e) => onCodeChange(e.target.value)}
                 onKeyDown={handleKeyDown}
                 onScroll={handleScroll}
                 spellCheck={false}
+                placeholder="Write your script here, then press Ctrl+Enter to run..."
                 style={{
                   position: "absolute",
                   top: 0,

@@ -13,7 +13,7 @@ description: |
 
   Combined with `foreach` loops, this enables **bulk updates** across hundreds of items in seconds — something that would take hours through the Content Editor.
 
-  **Warning:** In a real Sitecore instance, always test bulk updates on a small set first!
+  > [!WARNING] In a real Sitecore instance, always test bulk updates on a small set first!
 tasks:
   - instruction: |
       Update the Title field of the About page to "About Our Company", then verify the change by piping the item to `Format-Table` showing Name and Title.
@@ -28,7 +28,9 @@ tasks:
       type: "output"
       outputContains: "About Our Company"
     successMessage: |
-      `Set-ItemProperty` is the workhorse of content management scripts. In real SPE, this is wrapped in `New-UsingBlock` for proper edit context, but the syntax is identical.
+      `Set-ItemProperty` is the workhorse of content management scripts.
+
+      > [!NOTE] In real SPE, this is wrapped in `New-UsingBlock` for proper edit context, but the syntax is identical.
   - instruction: |
       Bulk update: use a `foreach` loop to set the Title field on every child of Products to include a "Featured: " prefix. Then display all products with `Format-Table`.
     hint: |

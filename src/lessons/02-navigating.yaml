@@ -30,4 +30,6 @@ tasks:
       cmdlet: "get-childitem"
       requireSwitch: "recurse"
     successMessage: |
-      With `-Recurse`, you get the entire subtree. In a real Sitecore instance, be careful with this on large trees — it can be slow. We'll cover performance best practices later.
+      With `-Recurse`, you get the entire subtree.
+
+      > [!WARNING] In a real Sitecore instance, be careful with `-Recurse` on large trees — it can be slow. We'll cover performance best practices later.

@@ -37,7 +37,9 @@ tasks:
         - "show-listview"
       outputContains: "item(s) displayed"
     successMessage: |
-      You just built your first SPE report! In real Sitecore, `Show-ListView` opens an interactive window with filtering, sorting, and export to CSV/Excel/JSON. This pattern — Get → Filter → Report — is the foundation of all SPE content auditing.
+      You just built your first SPE report! This pattern — Get → Filter → Report — is the foundation of all SPE content auditing.
+
+      > [!TIP] In real Sitecore, `Show-ListView` opens an interactive window with filtering, sorting, and export to CSV/Excel/JSON.
   - instruction: |
       Now write a script that creates a sorted report of all items showing `Name`, `TemplateName`, and `__Updated`, sorted by the `__Updated` field.
 
