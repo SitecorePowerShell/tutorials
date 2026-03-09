@@ -14,6 +14,7 @@ Users learn SPE commands against a **simulated Sitecore content tree** — no re
   - ISE Scripting (Show-ListView, variables, ForEach-Object)
   - Item Manipulation (New-Item, Remove-Item, Move-Item, Copy-Item, Rename-Item)
   - Real-World Patterns (content audit reports based on actual SPE repo scripts)
+- **Advanced expression engine** — string operators (`-replace`, `-split`, `-join`, `-f`), compound filters (`-and`, `-or`, `-not`), `if`/`else` conditionals, .NET type simulation (`[DateTime]`, `[Math]`, `[guid]`, etc.), hashtable/array literals
 - **Smart validation** — checks resolved paths (not string matching), supports aliases, validates multi-line scripts with variable assignments
 - **Resizable ISE editor** with line numbers and Ctrl+Enter execution
 - **Command history** with up/down arrow in REPL mode
@@ -33,7 +34,7 @@ bun install
 bun run dev        # Start dev server at http://localhost:5173
 
 # Testing
-bun run test       # Run all 86 tests
+bun run test       # Run all 229 tests
 bun run test:watch # Watch mode
 
 # Production build
@@ -48,6 +49,11 @@ bun run preview    # Preview the production build locally
 ```
 src/
   engine/       # Simulation engine (pure TypeScript, no React deps)
+    expressionEval.ts   # Expression evaluator (operators, interpolation, .NET calls)
+    filterEval.ts       # Boolean filter evaluator (compound conditions)
+    dotnetTypes.ts      # Simulated .NET static types
+    executor.ts         # Pipeline executor + cmdlet handlers
+    ...                 # parser, pathResolver, properties, formatter, etc.
   validation/   # Task validation (structural + pipeline)
   components/   # React UI components
   lessons/      # 11 YAML lesson files + loader
@@ -76,8 +82,7 @@ The `reference/` folder contains calibration data from a real Sitecore instance:
 ## Roadmap
 
 See the [implementation roadmap in ARCHITECTURE.md](ARCHITECTURE.md#implementation-roadmap). Key next steps:
-- BeginEdit/EndEdit simulation
-- Read-Variable interactive form
+- Advanced tutorial lessons using new engine capabilities
 - Calculated property support (`@{Label=...; Expression=...}`)
 - Cloudflare Pages CI/CD
 - GitBook iframe embed integration

@@ -118,23 +118,33 @@ Pipeline execution engine. Processes stages left-to-right, passing `pipelineData
 |---------|---------|-------|
 | `Get-Item` | `gi` | Path resolution, default to CWD |
 | `Get-ChildItem` | `gci`, `dir`, `ls` | `-Recurse` switch, pipeline input |
-| `Where-Object` | `where`, `?` | `-eq`, `-ne`, `-like`, `-match` operators |
+| `Where-Object` | `where`, `?` | Compound filters: `-and`, `-or`, `-not`, parenthesized groups. Operators: `-eq`, `-ne`, `-like`, `-notlike`, `-match`, `-notmatch`, `-gt`, `-lt`, `-ge`, `-le` |
+| `ForEach-Object` | `foreach`, `%` | `$_` context, expression bodies (string operators), command bodies |
 | `Select-Object` | `select` | `-Property`, `-First`, `-Last` |
 | `Sort-Object` | `sort` | `-Property`, `-Descending` |
+| `Group-Object` | `group` | `-Property`, grouped count table |
 | `Measure-Object` | `measure` | Count output |
 | `Get-Member` | `gm` | Full property list matching real SPE |
 | `Get-Location` | `gl`, `pwd` | Returns CWD |
 | `Show-ListView` | — | Report table with `-Property`, `-Title` |
 | `Write-Host` | `Write-Output` | Simple string output |
+| `New-Item` | — | Creates item in virtual tree, `-Path`, `-Name`, `-ItemType` |
+| `Remove-Item` | — | Removes item by path or pipeline input |
+| `Move-Item` | — | Moves item to new parent, `-Path`, `-Destination` |
+| `Copy-Item` | — | Deep copies item with new ID |
+| `Rename-Item` | — | Renames item, preserves node reference |
+| `Set-ItemProperty` | — | Sets field value, `-Path`, `-Name`, `-Value`, pipeline input |
+| `Format-Table` | `ft` | `-Property` (specific columns) or default table |
+| `ConvertTo-Json` | — | Serializes pipeline items to JSON |
+| `Show-Alert` | — | Dialog simulation |
+| `Read-Variable` | — | Parameter dialog placeholder |
 
-**Planned commands (Phase 2 — not yet implemented):**
+**Planned commands (not yet implemented):**
 
 | Command | Priority | Complexity |
 |---------|----------|------------|
 | `Find-Item` | Low | Medium — index-based query simulation |
 | `Export-Csv` | Low | Low — format output as CSV |
-| `Set-ItemProperty` | Medium | Medium — needs BeginEdit/EndEdit |
-| `BeginEdit`/`EndEdit` | Medium | Medium — editing context state |
 
 ### 5. Property Resolution (`getItemProperty`)
 
@@ -150,7 +160,56 @@ function getItemProperty(item, prop) {
 }
 ```
 
-### 6. Output Formatting
+### 6. Expression Evaluator (`evaluateExpression`)
+
+Centralized evaluator for PowerShell expressions. Returns resolved values (strings, numbers, booleans, arrays, objects).
+
+**Handles:**
+
+| Pattern | Example | Result |
+|---------|---------|--------|
+| String literals | `"hello"`, `'world'` | String value |
+| Number literals | `42`, `3.14` | Number value |
+| Boolean/null | `$true`, `$false`, `$null` | Boolean/null |
+| Variable reference | `$var` | Variable value |
+| Property access | `$var.Name`, `$_.ItemPath` | Resolved property |
+| Indexer access | `$var["Title"]`, `$_['field']` | Field value |
+| String interpolation | `"Hello $name $(1+2)"` | Interpolated string |
+| `-replace` | `"text" -replace "old", "new"` | Regex replacement |
+| `-split` | `"a,b,c" -split ","` | Array |
+| `-join` | `$arr -join ", "` | Joined string |
+| `-f` format | `"{0} items" -f $count` | Formatted string |
+| `+` concat | `"Hello" + " World"` | Concatenated string/sum |
+| Hashtable | `@{ Key = "Val" }` | Object |
+| Array | `@("a", "b", "c")` | Array |
+| Type cast | `[int]"42"` | Coerced value |
+| Static call | `[Math]::Round(3.14, 2)` | Method result |
+
+**Simulated .NET types (`dotnetTypes.ts`):**
+
+| Type | Members |
+|------|---------|
+| `[DateTime]` | `::Now`, `::UtcNow`, `::Parse(str)` |
+| `[Math]` | `::Round(n,d)`, `::Floor(n)`, `::Ceiling(n)`, `::Abs(n)` |
+| `[string]` | `::IsNullOrEmpty(s)`, `::Join(sep, arr)`, `::Format(fmt, args)` |
+| `[guid]` | `::NewGuid()` |
+| `[System.IO.Path]` | `::GetExtension(s)`, `::GetFileNameWithoutExtension(s)`, `::Combine(a,b)` |
+| `[Sitecore.Data.ID]` | `::NewID`, `::Parse(str)` |
+| `[int]`, `[string]`, `[bool]` | Type casting: `[int]"42"` → `42` |
+
+### 7. Filter Evaluator (`evaluateFilter`)
+
+Boolean evaluator for Where-Object conditions and `if`/`else`. Reuses `evaluateExpression` for value resolution.
+
+**Handles:**
+
+- **Comparison operators:** `-eq`, `-ne`, `-like`, `-notlike`, `-match`, `-notmatch`, `-gt`, `-lt`, `-ge`, `-le`
+- **Logical operators:** `-and`, `-or` (with correct precedence: `-and` binds tighter)
+- **Negation:** `-not`, `!`
+- **Parenthesized grouping:** `($_.Name -like "A*" -or $_.Name -like "B*") -and $_.HasChildren`
+- **Truthy/falsy evaluation:** Non-empty strings, non-zero numbers, non-empty arrays are truthy
+
+### 8. Output Formatting
 
 **Default table** (from `Sitecore_Views.ps1xml`):
 
@@ -162,7 +221,7 @@ Note: Column header `Children` maps to property `HasChildren`. Header `Id` maps 
 
 **Show-ListView:** Report-style output with title, column headers, and item count.
 
-### 7. Validation Engine (`validateTask`)
+### 9. Validation Engine (`validateTask`)
 
 Two validation types:
 
@@ -172,7 +231,7 @@ Two validation types:
 
 Multi-line scripts are normalized (comments stripped, lines joined) before validation.
 
-### 8. Dual-Mode Editor
+### 10. Dual-Mode Editor
 
 Driven by `mode` field on lesson definition:
 
@@ -275,9 +334,11 @@ To add a new simulated command:
 
 3. Use `getItemProperty()` from `src/engine/properties.ts` for any property access — don't inline your own resolution.
 
-4. Add tests in `src/engine/__tests__/executor.test.ts`.
+4. For expression evaluation (string operators, .NET calls, etc.), use `evaluateExpression()` from `src/engine/expressionEval.ts`. For boolean conditions, use `evaluateFilter()` from `src/engine/filterEval.ts`.
 
-5. Add to the supported commands table in this document.
+5. Add tests in `src/engine/__tests__/executor.test.ts` or `executorAdvanced.test.ts`.
+
+6. Add to the supported commands table in this document.
 
 ---
 
@@ -299,7 +360,7 @@ To add a new simulated command:
 - [x] **Split monolith** into engine/, validation/, components/, lessons/ modules
 - [x] **TypeScript** with strict mode throughout
 - [x] **Bun + Vite** build toolchain
-- [x] **Vitest** test suites — 86 tests across parser, pathResolver, properties, executor, formatter, validator
+- [x] **Vitest** test suites — 229 tests across 10 suites
 - [x] **YAML lessons** — 11 lesson files loaded via js-yaml
 - [x] **createVirtualTree()** — deep clone factory for isolated test state
 
@@ -314,18 +375,28 @@ To add a new simulated command:
 - [x] **Read-Variable** placeholder simulation
 - [x] **Close-Window** (no-op)
 
-### Phase 2.5 — Engine Expansion (Next)
-- [ ] **BeginEdit / EndEdit** simulation with error on direct set
-- [ ] **Read-Variable** interactive form in output pane
-- [ ] **Calculated property support** (`@{Label=...; Expression=...}`)
-- [ ] **-Query parameter** — Sitecore query syntax on Get-Item
+### Phase 2.5 — Advanced Engine Capabilities (Complete)
+- [x] **Expression evaluator** — centralized evaluator for string operators, interpolation, .NET calls
+- [x] **Compound filters** — `-and`, `-or`, `-not`, parenthesized grouping in Where-Object
+- [x] **`-notlike`, `-notmatch`** — negated pattern operators
+- [x] **String operators** — `-replace`, `-split`, `-join`, `-f` format, `+` concatenation
+- [x] **`$()` subexpression** expansion in double-quoted strings
+- [x] **`if`/`else` conditionals** — condition evaluation reuses filter evaluator
+- [x] **Set-ItemProperty** — field modification by path or pipeline, completes CRUD story
+- [x] **Indexer access** — `$item["FieldName"]` for field retrieval
+- [x] **Simulated .NET types** — `[DateTime]`, `[Math]`, `[string]`, `[guid]`, `[System.IO.Path]`, `[Sitecore.Data.ID]`, type casting
+- [x] **Hashtable & array literals** — `@{ Key = "Value" }`, `@("a", "b")`
+- [x] **Format-Table / ConvertTo-Json** — additional output formatters
+- [x] **Single-element array auto-unwrap** — matches PowerShell behavior for `$item = Get-Item ...`
+- [x] **Bare `$var` expansion** — variables expanded in command arguments
 
-### Phase 3 — Real-World Lessons
+### Phase 3 — Real-World Lessons (Next)
+- [ ] Advanced tutorial lessons using new engine capabilities
 - [ ] Content audit reports (based on SPE repo scripts)
 - [ ] Reporting with calculated properties (`@{Label=...; Expression=...}`)
-- [ ] Bulk operations with ForEach-Object
+- [ ] Bulk operations with ForEach-Object + string operators
+- [ ] Conditional logic patterns with if/else
 - [ ] Security: Get-ItemAcl patterns
-- [ ] Packaging basics
 
 ### Phase 4 — Polish & Distribution
 - [x] Migrate lessons to external YAML files
@@ -364,14 +435,21 @@ tutorials/
 │   │   ├── parser.ts             # parseCommand, parseSingleCommand
 │   │   ├── properties.ts         # getItemProperty (centralized resolver)
 │   │   ├── scriptContext.ts      # ScriptContext class (variable scope)
+│   │   ├── expressionEval.ts     # Centralized expression evaluator
+│   │   ├── filterEval.ts         # Boolean filter evaluator (compound conditions)
+│   │   ├── dotnetTypes.ts        # Simulated .NET static types + type casting
 │   │   ├── executor.ts           # executeScript, executeCommand, all cmdlet handlers
 │   │   ├── formatter.ts          # formatItemTable, formatPropertyTable
 │   │   ├── index.ts              # Re-exports
-│   │   └── __tests__/            # Vitest test suites (86 tests)
+│   │   └── __tests__/            # Vitest test suites (229 tests)
 │   │       ├── parser.test.ts
 │   │       ├── pathResolver.test.ts
 │   │       ├── properties.test.ts
 │   │       ├── executor.test.ts
+│   │       ├── executorAdvanced.test.ts
+│   │       ├── expressionEval.test.ts
+│   │       ├── filterEval.test.ts
+│   │       ├── dotnetTypes.test.ts
 │   │       └── formatter.test.ts
 │   ├── validation/
 │   │   ├── validator.ts          # validateTask (structural + pipeline)
@@ -408,7 +486,6 @@ tutorials/
 ├── vite.config.ts
 ├── spe-tutorial-prototype.jsx    # Original monolith (reference)
 ├── ARCHITECTURE.md
-├── CONTINUATION_PROMPT.md
 └── reference/                    # SPE calibration data
     ├── spe-simulation-reference.ps1
     ├── spe-simulation-reference-part2.ps1
@@ -420,6 +497,6 @@ tutorials/
 - **Runtime/Package Manager:** Bun
 - **Bundler:** Vite with @vitejs/plugin-react
 - **Language:** TypeScript (strict mode)
-- **Testing:** Vitest (86 tests across 6 suites)
+- **Testing:** Vitest (229 tests across 10 suites)
 - **Lesson Format:** YAML (loaded via js-yaml + Vite ?raw imports)
 - **Deployment Target:** Cloudflare Pages (static build)

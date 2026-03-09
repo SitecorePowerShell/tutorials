@@ -15,6 +15,66 @@ import { parseCommand } from "./parser";
 import { getItemProperty } from "./properties";
 import { formatItemTable, formatPropertyTable } from "./formatter";
 import { ScriptContext } from "./scriptContext";
+import { evaluateExpression } from "./expressionEval";
+import { evaluateFilter } from "./filterEval";
+import { findMatchingDelimiter } from "./expressionEval";
+
+/** Cmdlet-like tokens that should be executed as commands, not expressions */
+const CMDLET_ALIASES = new Set([
+  "foreach",
+  "where",
+  "sort",
+  "select",
+  "group",
+  "measure",
+  "gm",
+  "pwd",
+  "gl",
+  "%",
+  "?",
+]);
+
+/** Check if a string looks like a command (vs an expression) */
+function looksLikeCommand(expr: string): boolean {
+  const trimmed = expr.trim();
+  // Pipeline → command
+  if (hasTopLevelPipe(trimmed)) return true;
+  const firstToken = trimmed.split(/\s/)[0];
+  // Cmdlet naming convention (contains dash)
+  if (firstToken.includes("-")) return true;
+  // Known aliases
+  if (CMDLET_ALIASES.has(firstToken.toLowerCase())) return true;
+  return false;
+}
+
+/** Check if expression contains a pipe at the top level (not inside quotes/braces) */
+function hasTopLevelPipe(expr: string): boolean {
+  let depth = 0;
+  let inQuote = false;
+  let quoteChar = "";
+  for (let i = 0; i < expr.length; i++) {
+    const ch = expr[i];
+    if (inQuote) {
+      if (ch === quoteChar) inQuote = false;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      inQuote = true;
+      quoteChar = ch;
+      continue;
+    }
+    if (ch === "(" || ch === "[" || ch === "{") {
+      depth++;
+      continue;
+    }
+    if (ch === ")" || ch === "]" || ch === "}") {
+      depth--;
+      continue;
+    }
+    if (ch === "|" && depth === 0) return true;
+  }
+  return false;
+}
 
 // ============================================================================
 // Multi-line script executor
@@ -74,13 +134,67 @@ export function executeLine(line: string, ctx: ScriptContext): void {
   const assignMatch = trimmed.match(/^\$(\w+)\s*=\s*(.+)$/);
   if (assignMatch) {
     const [, varName, expr] = assignMatch;
-    const result = executeCommandWithContext(expr, ctx);
-    if (result.error) {
-      ctx.errors.push(result.error);
-    } else if (result.pipelineData) {
-      ctx.setVar(varName, result.pipelineData);
-    } else if (result.output) {
-      ctx.setVar(varName, result.output);
+
+    if (looksLikeCommand(expr)) {
+      // Execute as pipeline command
+      const result = executeCommandWithContext(expr, ctx);
+      if (result.error) {
+        ctx.errors.push(result.error);
+      } else if (result.pipelineData) {
+        // Unwrap single-element arrays (PowerShell auto-unwrap behavior)
+        if (Array.isArray(result.pipelineData) && result.pipelineData.length === 1) {
+          ctx.setVar(varName, result.pipelineData[0]);
+        } else {
+          ctx.setVar(varName, result.pipelineData);
+        }
+      } else if (result.output) {
+        ctx.setVar(varName, result.output);
+      }
+    } else {
+      // Evaluate as expression
+      const value = evaluateExpression(expr, ctx);
+      ctx.setVar(varName, value);
+    }
+    return;
+  }
+
+  // if/else conditional
+  if (/^if\s*\(/i.test(trimmed)) {
+    const condStart = trimmed.indexOf("(");
+    const condEnd = findMatchingDelimiter(trimmed, condStart, "(", ")");
+    if (condStart === -1 || condEnd === -1) return;
+
+    const condition = trimmed.slice(condStart + 1, condEnd);
+
+    // Find the if body
+    const ifBodyStart = trimmed.indexOf("{", condEnd);
+    const ifBodyEnd = findMatchingDelimiter(trimmed, ifBodyStart, "{", "}");
+    if (ifBodyStart === -1 || ifBodyEnd === -1) return;
+
+    const ifBody = trimmed.slice(ifBodyStart + 1, ifBodyEnd);
+
+    // Check for else
+    let elseBody: string | null = null;
+    const afterIf = trimmed.slice(ifBodyEnd + 1).trim();
+    if (/^else\s*\{/i.test(afterIf)) {
+      const elseStart = afterIf.indexOf("{");
+      const elseEnd = findMatchingDelimiter(afterIf, elseStart, "{", "}");
+      if (elseStart !== -1 && elseEnd !== -1) {
+        elseBody = afterIf.slice(elseStart + 1, elseEnd);
+      }
+    }
+
+    // Evaluate condition and execute appropriate body
+    const condResult = evaluateFilter(condition, ctx);
+    const body = condResult ? ifBody : elseBody;
+    if (body) {
+      const bodyLines = body
+        .split(";")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      for (const bl of bodyLines) {
+        executeLine(bl, ctx);
+      }
     }
     return;
   }
@@ -124,6 +238,23 @@ export function executeCommandWithContext(
 ): ExecutionResult {
   let expanded = input;
 
+  // Expand $var["key"] indexer access patterns
+  expanded = expanded.replace(
+    /\$(\w+)\[["']([^"']+)["']\]/g,
+    (match, varName, key) => {
+      if (varName === "_") return match;
+      const val = ctx.getVar(varName);
+      if (!val) return match;
+      if (typeof val === "object" && val !== null && "node" in val) {
+        return getItemProperty(val as SitecoreItem, key);
+      }
+      if (typeof val === "object" && !Array.isArray(val) && val !== null) {
+        return String((val as Record<string, unknown>)[key] ?? match);
+      }
+      return match;
+    }
+  );
+
   // Expand $var.Property access patterns
   expanded = expanded.replace(
     /\$(\w+)\.(\w+)/g,
@@ -147,6 +278,24 @@ export function executeCommandWithContext(
     }
   );
 
+  // Expand $() subexpressions in double-quoted strings
+  expanded = expanded.replace(/"([^"]*\$\([^)]+\)[^"]*)"/g, (match) => {
+    const inner = match.slice(1, -1);
+    const interpolated = inner.replace(/\$\(([^)]+)\)/g, (_, subExpr) => {
+      const subResult = executeCommandWithContext(subExpr, ctx, tree);
+      if (subResult.pipelineData) {
+        if (Array.isArray(subResult.pipelineData)) {
+          return String(
+            (subResult.pipelineData as SitecoreItem[]).length
+          );
+        }
+        return String(subResult.pipelineData);
+      }
+      return subResult.output || "";
+    });
+    return `"${interpolated}"`;
+  });
+
   // Expand simple $var references in quoted strings
   expanded = expanded.replace(/"([^"]*\$\w+[^"]*)"/g, (match) => {
     return (
@@ -163,6 +312,16 @@ export function executeCommandWithContext(
       }) +
       '"'
     );
+  });
+
+  // Expand bare $var references in command arguments (string/number only)
+  expanded = expanded.replace(/\$(\w+)(?![.\[\w])/g, (match, varName) => {
+    if (varName === "_") return match;
+    const val = ctx.getVar(varName);
+    if (val === undefined) return match;
+    if (typeof val === "string") return val;
+    if (typeof val === "number" || typeof val === "boolean") return String(val);
+    return match; // Don't expand arrays/objects (handled by pipeline)
   });
 
   // Check if the input is just a variable reference (to pipe variable contents)
@@ -302,41 +461,10 @@ export function executeCommandWithContext(
           };
         }
 
-        const filterMatch = filterExpr.match(
-          /\$_\.(\w+)\s+-(eq|ne|like|notlike|match|gt|lt|ge|le)\s+(?:"([^"]+)"|'([^']+)'|(\S+))/i
-        );
-        if (filterMatch) {
-          const prop = filterMatch[1];
-          const op = filterMatch[2];
-          const val = filterMatch[3] || filterMatch[4] || filterMatch[5] || "";
-          pipelineData = pipelineData.filter((item) => {
-            const itemVal = getItemProperty(item, prop);
-
-            switch (op.toLowerCase()) {
-              case "eq":
-                return (
-                  String(itemVal).toLowerCase() === val.toLowerCase()
-                );
-              case "ne":
-                return (
-                  String(itemVal).toLowerCase() !== val.toLowerCase()
-                );
-              case "like": {
-                const regex = new RegExp(
-                  "^" +
-                    val.replace(/\*/g, ".*").replace(/\?/g, ".") +
-                    "$",
-                  "i"
-                );
-                return regex.test(String(itemVal));
-              }
-              case "match":
-                return new RegExp(val, "i").test(String(itemVal));
-              default:
-                return true;
-            }
-          });
-        }
+        // Use the new filter evaluator for compound condition support
+        pipelineData = pipelineData.filter((item) => {
+          return evaluateFilter(filterExpr, ctx, item);
+        });
       } else if (
         cmdLower === "foreach-object" ||
         cmdLower === "foreach" ||
@@ -356,30 +484,45 @@ export function executeCommandWithContext(
           for (const item of pipelineData) {
             ctx.setVar("_", item);
 
-            // Handle property access: $_.PropertyName
-            let expandedBody = body.replace(/\$_\.(\w+)/g, (_, prop) => {
-              return getItemProperty(item, prop);
-            });
+            // Split body on semicolons for multiple statements
+            const bodyStatements = body
+              .split(";")
+              .map((s) => s.trim())
+              .filter(Boolean);
 
-            // Handle Write-Host or simple expression output
-            if (expandedBody.toLowerCase().startsWith("write-host")) {
-              const msg = expandedBody
-                .replace(/^write-host\s*/i, "")
-                .replace(/^["']|["']$/g, "");
-              results.push(msg);
-            } else if (
-              expandedBody.startsWith('"') ||
-              expandedBody.startsWith("'")
-            ) {
-              results.push(expandedBody.replace(/^["']|["']$/g, ""));
-            } else {
-              const innerResult = executeCommandWithContext(
-                expandedBody,
-                ctx,
-                tree
-              );
-              if (innerResult.output) results.push(innerResult.output);
-              if (innerResult.error) ctx.errors.push(innerResult.error);
+            for (const stmt of bodyStatements) {
+              const firstToken = stmt.split(/\s/)[0];
+              const isCmd =
+                firstToken.includes("-") ||
+                CMDLET_ALIASES.has(firstToken.toLowerCase());
+
+              if (isCmd) {
+                // Pre-expand $_.Prop for command context
+                let expandedBody = stmt.replace(/\$_\.(\w+)/g, (_, prop) => {
+                  return getItemProperty(item, prop);
+                });
+
+                if (expandedBody.toLowerCase().startsWith("write-host")) {
+                  const msg = expandedBody
+                    .replace(/^write-host\s*/i, "")
+                    .replace(/^["']|["']$/g, "");
+                  results.push(msg);
+                } else {
+                  const innerResult = executeCommandWithContext(
+                    expandedBody,
+                    ctx,
+                    tree
+                  );
+                  if (innerResult.output) results.push(innerResult.output);
+                  if (innerResult.error) ctx.errors.push(innerResult.error);
+                }
+              } else {
+                // Evaluate as expression (handles strings, operators, $_ access)
+                const val = evaluateExpression(stmt, ctx, item);
+                if (val !== undefined && val !== null && String(val) !== "") {
+                  results.push(String(val));
+                }
+              }
             }
           }
           if (results.length > 0) {
@@ -823,10 +966,91 @@ export function executeCommandWithContext(
             pipelineData = [{ name: newName, node: renamedNode, path: newPath }];
           }
         }
+      } else if (cmdLower === "set-itemproperty") {
+        const targetPath =
+          stage.params.Path ||
+          stage.params.path ||
+          (stage.params._positional && stage.params._positional[0]);
+        const propName = stage.params.Name || stage.params.name;
+        const propValue = stage.params.Value || stage.params.value;
+
+        if (!propName) {
+          return {
+            output: "",
+            error: "Set-ItemProperty : Missing -Name parameter.",
+          };
+        }
+
+        let items: SitecoreItem[] = [];
+        if (pipelineData && !targetPath) {
+          items = [...pipelineData];
+        } else if (targetPath) {
+          const resolved = resolvePath(targetPath, tree);
+          if (!resolved)
+            return {
+              output: "",
+              error: `Set-ItemProperty : Cannot find path '${targetPath}'`,
+            };
+          items = [
+            { name: resolved.name, node: resolved.node, path: resolved.path },
+          ];
+        }
+
+        for (const item of items) {
+          if (!item.node._fields) item.node._fields = {};
+          item.node._fields[propName] = propValue || "";
+        }
+
+        pipelineData = items;
+      } else if (
+        cmdLower === "format-table" ||
+        cmdLower === "ft"
+      ) {
+        if (!pipelineData)
+          return { output: "", error: "Format-Table : No pipeline input." };
+        const propParam =
+          stage.params.Property ||
+          stage.params.property ||
+          (stage.params._positional && stage.params._positional[0]);
+        if (propParam) {
+          const props = propParam.split(",").map((p) => p.trim());
+          return {
+            output: formatPropertyTable(pipelineData, props),
+            error: null,
+          };
+        }
+        return { output: formatItemTable(pipelineData), error: null };
+      } else if (cmdLower === "convertto-json") {
+        if (!pipelineData)
+          return {
+            output: "",
+            error: "ConvertTo-Json : No pipeline input.",
+          };
+        const jsonData = pipelineData.map((item) => {
+          const obj: Record<string, unknown> = {
+            Name: item.name,
+            ID: item.node._id,
+            TemplateName: item.node._template,
+            ItemPath: item.path || "/" + item.name,
+            HasChildren:
+              Object.keys(item.node._children || {}).length > 0,
+          };
+          if (item.node._fields) {
+            for (const [key, val] of Object.entries(item.node._fields)) {
+              obj[key] = val;
+            }
+          }
+          return obj;
+        });
+        const result = jsonData.length === 1 ? jsonData[0] : jsonData;
+        return {
+          output: JSON.stringify(result, null, 2),
+          error: null,
+        };
       } else {
         return {
           output: "",
-          error: `${stage.cmdlet} : The term '${stage.cmdlet}' is not recognized. Supported commands: Get-Item, Get-ChildItem, Where-Object, ForEach-Object, Select-Object, Sort-Object, Group-Object, Measure-Object, Get-Member, Show-ListView, New-Item, Remove-Item, Move-Item, Copy-Item, Rename-Item, Write-Host, Show-Alert, Read-Variable`,
+          error: `${stage.cmdlet} : The term '${stage.cmdlet}' is not recognized. Supported commands: Get-Item, Get-ChildItem, Where-Object, ForEach-Object, Select-Object, Sort-Object, Group-Object, Measure-Object, Get-Member, Show-ListView, New-Item, Remove-Item, Move-Item, Copy-Item, Rename-Item, Set-ItemProperty, Format-Table, ConvertTo-Json, Write-Host, Show-Alert, Read-Variable`,
         };
       }
     } catch (err) {
