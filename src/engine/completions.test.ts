@@ -167,43 +167,44 @@ describe("completions", () => {
   });
 
   describe("path completion", () => {
-    it("completes top-level children of /sitecore/", () => {
+    it("completes bare master: with root children", () => {
       const result = getCompletions(
-        "Get-Item /sitecore/",
-        19,
+        "Get-Item master:\\",
+        17,
         MOCK_TREE
       );
       expect(result).not.toBeNull();
-      expect(result!.matches).toContain("/sitecore/content");
-      expect(result!.matches).toContain("/sitecore/templates");
+      expect(result!.matches).toContain("master:\\content");
+      expect(result!.matches).toContain("master:\\templates");
     });
 
     it("completes partial path segment", () => {
       const result = getCompletions(
-        "Get-Item /sitecore/con",
-        22,
+        "Get-Item master:\\con",
+        20,
         MOCK_TREE
       );
       expect(result).not.toBeNull();
-      expect(result!.matches).toContain("/sitecore/content");
-      expect(result!.matches).not.toContain("/sitecore/templates");
+      expect(result!.matches).toContain("master:\\content");
+      expect(result!.matches).not.toContain("master:\\templates");
     });
 
     it("completes nested paths", () => {
+      const input = "Get-Item master:\\content\\Home\\";
       const result = getCompletions(
-        "Get-Item /sitecore/content/Home/",
-        32,
+        input,
+        input.length,
         MOCK_TREE
       );
       expect(result).not.toBeNull();
-      expect(result!.matches).toContain("/sitecore/content/Home/About");
-      expect(result!.matches).toContain("/sitecore/content/Home/Contact");
+      expect(result!.matches).toContain("master:\\content\\Home\\About");
+      expect(result!.matches).toContain("master:\\content\\Home\\Contact");
     });
 
     it("returns null for non-existent path", () => {
       const result = getCompletions(
-        "Get-Item /sitecore/nonexistent/",
-        31,
+        "Get-Item master:\\nonexistent\\",
+        28,
         MOCK_TREE
       );
       expect(result).toBeNull();
@@ -211,12 +212,43 @@ describe("completions", () => {
 
     it("completes path with partial nested segment", () => {
       const result = getCompletions(
-        "Get-Item /sitecore/content/Home/Ab",
-        34,
+        "Get-Item master:\\content\\Home\\Ab",
+        31,
         MOCK_TREE
       );
       expect(result).not.toBeNull();
-      expect(result!.matches).toContain("/sitecore/content/Home/About");
+      expect(result!.matches).toContain("master:\\content\\Home\\About");
+    });
+
+    it("works with forward slashes too", () => {
+      const result = getCompletions(
+        "Get-Item master:/content/",
+        25,
+        MOCK_TREE
+      );
+      expect(result).not.toBeNull();
+      expect(result!.matches).toContain("master:\\content\\Home");
+    });
+
+    it("works with core: and web: drives", () => {
+      const result = getCompletions(
+        "Get-Item core:\\",
+        15,
+        MOCK_TREE
+      );
+      expect(result).not.toBeNull();
+      expect(result!.matches).toContain("core:\\content");
+    });
+
+    it("completes bare drive with no separator", () => {
+      const result = getCompletions(
+        "Get-Item master:",
+        16,
+        MOCK_TREE
+      );
+      expect(result).not.toBeNull();
+      expect(result!.matches).toContain("master:\\content");
+      expect(result!.matches).toContain("master:\\templates");
     });
   });
 });

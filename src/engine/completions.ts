@@ -213,69 +213,66 @@ function getParamsForCmdlet(cmdletName: string | null): string[] {
   return CMDLET_PARAMS[cmdletName] || [];
 }
 
-/** Try to complete a Sitecore path */
+/** Supported Sitecore drive names */
+const DRIVE_NAMES = ["master", "core", "web"];
+
+/** Try to complete a Sitecore path using drive syntax (master:\path) */
 function tryPathCompletion(
   beforeCursor: string,
   cursorPos: number,
   tree: { sitecore: SitecoreNode }
 ): CompletionResult | null {
-  // Match a path-like token: /sitecore/..., or a quoted path
+  // Match drive:\ or drive:/ paths (e.g. master:\content\Home, master:/content)
+  // Also match bare "master:" for root-level completion
   const pathMatch = beforeCursor.match(
-    /(["']?)(\/sitecore(?:\/[\w\s-]*)*\/?)$/
+    /(["']?)((master|core|web):([\\/][\w\s-]*)*[\\/]?)$/i
   );
   if (!pathMatch) return null;
 
   const quote = pathMatch[1];
-  const pathPrefix = pathMatch[2];
-  const start = cursorPos - pathPrefix.length - quote.length;
+  const fullPath = pathMatch[2];
+  const drive = pathMatch[3];
+  const start = cursorPos - fullPath.length - quote.length;
 
-  // Split path and find the parent node
-  const segments = pathPrefix.split("/").filter(Boolean); // ["sitecore", "content", ...]
-  const lastSegment = segments[segments.length - 1] || "";
+  // Normalize separators to backslash for output, forward slash internally
+  const normalized = fullPath.slice(drive.length + 1); // strip "master:" prefix
+  const parts = normalized.replace(/\\/g, "/").split("/").filter(Boolean);
+  const endsWithSep = /[\\/]$/.test(fullPath);
 
-  // Try to navigate to the parent
+  // Bare drive (e.g. "master:") — complete with root-level children
+  const isBare = normalized === "" || normalized === "/" || normalized === "\\";
+
   let node: SitecoreNode = tree.sitecore;
-  let resolvedPath = "/sitecore";
+  let resolvedPath = `${drive}:`;
 
-  // Check if the path ends with "/" — user wants children of this node
-  const endsWithSlash = pathPrefix.endsWith("/");
-
-  if (endsWithSlash) {
+  if (isBare || endsWithSep) {
     // Navigate all segments
-    for (let i = 1; i < segments.length; i++) {
-      const childName = findChildCaseInsensitive(node, segments[i]);
+    for (const seg of parts) {
+      const childName = findChildCaseInsensitive(node, seg);
       if (!childName) return null;
       node = node._children[childName];
-      resolvedPath += "/" + childName;
+      resolvedPath += "\\" + childName;
     }
     // Complete children of this node
     const children = Object.keys(node._children);
     if (children.length === 0) return null;
-    const matches = children.map((c) => quote + resolvedPath + "/" + c);
-    return {
-      matches,
-      replaceStart: start,
-      replaceEnd: cursorPos,
-    };
+    const matches = children.map((c) => quote + resolvedPath + "\\" + c);
+    return { matches, replaceStart: start, replaceEnd: cursorPos };
   } else {
-    // Navigate to parent of last segment, then match last segment prefix
-    for (let i = 1; i < segments.length - 1; i++) {
-      const childName = findChildCaseInsensitive(node, segments[i]);
+    // Partial last segment — navigate to parent, match against children
+    const lastSegment = parts[parts.length - 1] || "";
+    for (let i = 0; i < parts.length - 1; i++) {
+      const childName = findChildCaseInsensitive(node, parts[i]);
       if (!childName) return null;
       node = node._children[childName];
-      resolvedPath += "/" + childName;
+      resolvedPath += "\\" + childName;
     }
-    // Match children against last segment
     const children = Object.keys(node._children);
     const matches = children
       .filter((c) => c.toLowerCase().startsWith(lastSegment.toLowerCase()))
-      .map((c) => quote + resolvedPath + "/" + c);
+      .map((c) => quote + resolvedPath + "\\" + c);
     if (matches.length === 0) return null;
-    return {
-      matches,
-      replaceStart: start,
-      replaceEnd: cursorPos,
-    };
+    return { matches, replaceStart: start, replaceEnd: cursorPos };
   }
 }
 
