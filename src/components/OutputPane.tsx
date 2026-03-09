@@ -5,7 +5,7 @@ import { colors, fontSizes } from "../theme";
 interface OutputPaneProps {
   entries: ConsoleEntry[];
   isISE: boolean;
-  endRef: React.RefObject<HTMLDivElement | null>;
+  endRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 export function OutputPane({ entries, isISE, endRef }: OutputPaneProps) {
@@ -95,7 +95,7 @@ export function OutputPane({ entries, isISE, endRef }: OutputPaneProps) {
           )}
         </div>
       ))}
-      <div ref={endRef} />
+      {endRef && <div ref={endRef} />}
     </>
   );
 }

@@ -304,7 +304,7 @@ export function IseEditor({
 
   return (
     <>
-      <style>{`.ise-editor-textarea::placeholder { color: #555570; opacity: 1; }`}</style>
+      <style>{`.ise-editor-textarea::placeholder { color: #7a7a98; opacity: 1; }`}</style>
       {/* Script editor pane */}
       <div
         ref={editorPaneRef}

@@ -77,6 +77,16 @@ export default function SPETutorial() {
     if (!code.trim()) return;
     const taskKey = `${currentLesson}-${currentTask}`;
 
+    // Handle clear commands in console mode
+    const trimmed = code.trim().toLowerCase();
+    if (trimmed === "clear-host" || trimmed === "clear" || trimmed === "cls") {
+      setConsoleOutput([]);
+      setCommandHistory((prev) => [...prev, code.trim()]);
+      setHistoryIndex(-1);
+      setCode("");
+      return;
+    }
+
     const newOutput: ConsoleEntry[] = isISE
       ? [...consoleOutput]
       : [...consoleOutput, { type: "command", text: code.trim() }];

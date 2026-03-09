@@ -30,6 +30,7 @@ export const CMDLET_NAMES = [
   "Where-Object",
   "Write-Host",
   "Write-Output",
+  "Get-Alias",
 ];
 
 /** Cmdlet aliases */
@@ -44,6 +45,16 @@ export const CMDLET_ALIASES: Record<string, string> = {
   pwd: "Get-Location",
   gl: "Get-Location",
   ft: "Format-Table",
+  gci: "Get-ChildItem", ls: "Get-ChildItem", dir: "Get-ChildItem",
+  gi: "Get-Item",
+  echo: "Write-Output", write: "Write-Output",
+  ni: "New-Item",
+  ri: "Remove-Item", rm: "Remove-Item", del: "Remove-Item",
+  mi: "Move-Item", mv: "Move-Item", move: "Move-Item",
+  ci: "Copy-Item", cp: "Copy-Item", copy: "Copy-Item",
+  rni: "Rename-Item", ren: "Rename-Item",
+  sp: "Set-ItemProperty",
+  gal: "Get-Alias",
 };
 
 /** All completable cmdlet tokens (names + aliases) */
@@ -78,6 +89,7 @@ const CMDLET_PARAMS: Record<string, string[]> = {
   "Show-Alert": ["-Title"],
   "Read-Variable": ["-Title", "-Description"],
   "Close-Window": [],
+  "Get-Alias": [],
 };
 
 /** Built-in variables */

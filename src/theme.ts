@@ -19,12 +19,12 @@ export const colors = {
   borderAccentIse: "#3a2a6a",
 
   textPrimary: "#d4d4e8",
-  textSecondary: "#8888a8",
-  textMuted: "#555570",
-  textDimmed: "#444460",
-  textClear: "#666680",
-  textSubtle: "#9e9eb8",
-  textOutput: "#b0b0c8",
+  textSecondary: "#9898b8",
+  textMuted: "#7a7a98",
+  textDimmed: "#606080",
+  textClear: "#8585a0",
+  textSubtle: "#b0b0ca",
+  textOutput: "#c0c0d8",
   textCode: "#c5c8d4",
   textWhite: "#fff",
 
@@ -65,9 +65,9 @@ export const fonts = {
 };
 
 export const fontSizes = {
-  xs: 10,
-  sm: 11,
-  base: 12,
+  xs: 11,
+  sm: 12,
+  base: 12.5,
   md: 12.5,
   body: 13,
   lg: 14,

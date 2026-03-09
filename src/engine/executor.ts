@@ -19,20 +19,30 @@ import { evaluateExpression } from "./expressionEval";
 import { evaluateFilter } from "./filterEval";
 import { findMatchingDelimiter } from "./expressionEval";
 
+/** Canonical alias → cmdlet map (lowercase keys, lowercase cmdlet values) */
+const ALIAS_MAP: Record<string, string> = {
+  // Existing aliases
+  foreach: "foreach-object", "%": "foreach-object",
+  where: "where-object", "?": "where-object",
+  select: "select-object", sort: "sort-object",
+  group: "group-object", measure: "measure-object",
+  gm: "get-member", pwd: "get-location", gl: "get-location",
+  ft: "format-table",
+  // New aliases
+  gci: "get-childitem", ls: "get-childitem", dir: "get-childitem",
+  gi: "get-item",
+  echo: "write-output", write: "write-output",
+  ni: "new-item",
+  ri: "remove-item", rm: "remove-item", del: "remove-item",
+  mi: "move-item", mv: "move-item", move: "move-item",
+  ci: "copy-item", cp: "copy-item", copy: "copy-item",
+  rni: "rename-item", ren: "rename-item",
+  sp: "set-itemproperty",
+  gal: "get-alias",
+};
+
 /** Cmdlet-like tokens that should be executed as commands, not expressions */
-const CMDLET_ALIASES = new Set([
-  "foreach",
-  "where",
-  "sort",
-  "select",
-  "group",
-  "measure",
-  "gm",
-  "pwd",
-  "gl",
-  "%",
-  "?",
-]);
+const CMDLET_ALIASES = new Set(Object.keys(ALIAS_MAP));
 
 /** Check if a string looks like a command (vs an expression) */
 function looksLikeCommand(expr: string): boolean {
@@ -348,7 +358,7 @@ export function executeCommandWithContext(
 
   for (let i = 0; i < stages.length; i++) {
     const stage = stages[i];
-    const cmdLower = stage.cmdlet.toLowerCase();
+    const cmdLower = ALIAS_MAP[stage.cmdlet.toLowerCase()] ?? stage.cmdlet.toLowerCase();
 
     // Check if the first stage is a variable reference
     if (i === 0 && stage.cmdlet.startsWith("$")) {
@@ -425,11 +435,7 @@ export function executeCommandWithContext(
           }
         }
         pipelineData = items;
-      } else if (
-        cmdLower === "where-object" ||
-        cmdLower === "where" ||
-        cmdLower === "?"
-      ) {
+      } else if (cmdLower === "where-object") {
         if (!pipelineData)
           return { output: "", error: "Where-Object : No pipeline input." };
 
@@ -465,11 +471,7 @@ export function executeCommandWithContext(
         pipelineData = pipelineData.filter((item) => {
           return evaluateFilter(filterExpr, ctx, item);
         });
-      } else if (
-        cmdLower === "foreach-object" ||
-        cmdLower === "foreach" ||
-        cmdLower === "%"
-      ) {
+      } else if (cmdLower === "foreach-object") {
         if (!pipelineData)
           return { output: "", error: "ForEach-Object : No pipeline input." };
 
@@ -529,10 +531,7 @@ export function executeCommandWithContext(
             return { output: results.join("\n"), error: null };
           }
         }
-      } else if (
-        cmdLower === "select-object" ||
-        cmdLower === "select"
-      ) {
+      } else if (cmdLower === "select-object") {
         if (!pipelineData)
           return { output: "", error: "Select-Object : No pipeline input." };
         const propParam =
@@ -545,7 +544,7 @@ export function executeCommandWithContext(
         if (first) pipelineData = pipelineData.slice(0, parseInt(first));
         const last = stage.params.Last || stage.params.last;
         if (last) pipelineData = pipelineData.slice(-parseInt(last));
-      } else if (cmdLower === "sort-object" || cmdLower === "sort") {
+      } else if (cmdLower === "sort-object") {
         if (!pipelineData)
           return { output: "", error: "Sort-Object : No pipeline input." };
         const sortProp =
@@ -563,10 +562,7 @@ export function executeCommandWithContext(
             return desc ? -cmp : cmp;
           });
         }
-      } else if (
-        cmdLower === "group-object" ||
-        cmdLower === "group"
-      ) {
+      } else if (cmdLower === "group-object") {
         if (!pipelineData)
           return { output: "", error: "Group-Object : No pipeline input." };
         const groupProp =
@@ -604,10 +600,7 @@ export function executeCommandWithContext(
             error: null,
           };
         }
-      } else if (
-        cmdLower === "measure-object" ||
-        cmdLower === "measure"
-      ) {
+      } else if (cmdLower === "measure-object") {
         if (!pipelineData)
           return { output: "", error: "Measure-Object : No pipeline input." };
         const count = Array.isArray(pipelineData)
@@ -617,7 +610,7 @@ export function executeCommandWithContext(
           output: `\nCount    : ${count}\nAverage  : \nSum      : \nMaximum  : \nMinimum  : \nProperty :`,
           error: null,
         };
-      } else if (cmdLower === "get-member" || cmdLower === "gm") {
+      } else if (cmdLower === "get-member") {
         if (!pipelineData || pipelineData.length === 0) {
           return { output: "", error: "Get-Member : No input object." };
         }
@@ -673,11 +666,7 @@ export function executeCommandWithContext(
           "Visualization           Property   Sitecore.Data.Items.ItemVisualization Visualization {get;}",
         ];
         return { output: members.join("\n"), error: null };
-      } else if (
-        cmdLower === "get-location" ||
-        cmdLower === "gl" ||
-        cmdLower === "pwd"
-      ) {
+      } else if (cmdLower === "get-location") {
         return {
           output:
             "\nPath                \n----                \nmaster:\\content\\Home\n",
@@ -727,10 +716,7 @@ export function executeCommandWithContext(
         };
       } else if (cmdLower === "close-window") {
         return { output: "", error: null };
-      } else if (
-        cmdLower === "write-host" ||
-        cmdLower === "write-output"
-      ) {
+      } else if (cmdLower === "write-host" || cmdLower === "write-output") {
         const msg = [
           ...(stage.params._positional || []),
           ...Object.entries(stage.params)
@@ -1002,10 +988,7 @@ export function executeCommandWithContext(
         }
 
         pipelineData = items;
-      } else if (
-        cmdLower === "format-table" ||
-        cmdLower === "ft"
-      ) {
+      } else if (cmdLower === "format-table") {
         if (!pipelineData)
           return { output: "", error: "Format-Table : No pipeline input." };
         const propParam =
@@ -1047,10 +1030,21 @@ export function executeCommandWithContext(
           output: JSON.stringify(result, null, 2),
           error: null,
         };
+      } else if (cmdLower === "get-alias") {
+        const entries = Object.entries(ALIAS_MAP)
+          .map(([alias, cmdlet]) => ({ alias, cmdlet }))
+          .sort((a, b) => a.alias.localeCompare(b.alias));
+        const nameWidth = Math.max(4, ...entries.map((e) => e.alias.length));
+        const header = "Name".padEnd(nameWidth) + " Definition";
+        const sep = "-".repeat(nameWidth) + " " + "-".repeat(20);
+        const rows = entries.map(
+          (e) => e.alias.padEnd(nameWidth) + " " + e.cmdlet
+        );
+        return { output: [header, sep, ...rows].join("\n"), error: null };
       } else {
         return {
           output: "",
-          error: `${stage.cmdlet} : The term '${stage.cmdlet}' is not recognized. Supported commands: Get-Item, Get-ChildItem, Where-Object, ForEach-Object, Select-Object, Sort-Object, Group-Object, Measure-Object, Get-Member, Show-ListView, New-Item, Remove-Item, Move-Item, Copy-Item, Rename-Item, Set-ItemProperty, Format-Table, ConvertTo-Json, Write-Host, Show-Alert, Read-Variable`,
+          error: `${stage.cmdlet} : The term '${stage.cmdlet}' is not recognized. Supported commands: Get-Item, Get-ChildItem, Where-Object, ForEach-Object, Select-Object, Sort-Object, Group-Object, Measure-Object, Get-Member, Get-Alias, Show-ListView, New-Item, Remove-Item, Move-Item, Copy-Item, Rename-Item, Set-ItemProperty, Format-Table, ConvertTo-Json, Write-Host, Show-Alert, Read-Variable`,
         };
       }
     } catch (err) {
