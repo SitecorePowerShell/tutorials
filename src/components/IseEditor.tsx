@@ -1,8 +1,16 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import type { ConsoleEntry } from "../types";
+import type { ConsoleEntry, SitecoreNode } from "../types";
 import { OutputPane } from "./OutputPane";
 import { tokenize, renderTokens } from "./HighlightedCode";
 import { colors, gradients, fonts, fontSizes } from "../theme";
+import { getCompletions, type CompletionResult } from "../engine/completions";
+
+interface CompletionState {
+  result: CompletionResult;
+  index: number;
+  originalText: string;
+  originalCursor: number;
+}
 
 interface IseEditorProps {
   code: string;
@@ -10,6 +18,8 @@ interface IseEditorProps {
   onRun: () => void;
   onClear: () => void;
   consoleOutput: ConsoleEntry[];
+  tree?: { sitecore: SitecoreNode };
+  userVariables?: string[];
 }
 
 export function IseEditor({
@@ -18,6 +28,8 @@ export function IseEditor({
   onRun,
   onClear,
   consoleOutput,
+  tree,
+  userVariables,
 }: IseEditorProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const overlayRef = useRef<HTMLPreElement>(null);
@@ -26,6 +38,7 @@ export function IseEditor({
   const editorPaneRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const [editorHeight, setEditorHeight] = useState(250);
+  const [completion, setCompletion] = useState<CompletionState | null>(null);
 
   useEffect(() => {
     if (consoleEndRef.current) {
@@ -87,9 +100,75 @@ export function IseEditor({
     }
   }, []);
 
+  // Dismiss completion on any non-completion key
+  const dismissCompletion = useCallback(() => {
+    setCompletion(null);
+  }, []);
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       const ta = e.currentTarget;
+
+      // Ctrl+Space — trigger/cycle completion
+      if (e.key === " " && e.ctrlKey) {
+        e.preventDefault();
+        const cursorPos = ta.selectionStart;
+
+        if (completion) {
+          // Cycle to next match
+          const nextIndex = (completion.index + 1) % completion.result.matches.length;
+          const match = completion.result.matches[nextIndex];
+          const newCode =
+            completion.originalText.slice(0, completion.result.replaceStart) +
+            match +
+            completion.originalText.slice(completion.result.replaceEnd);
+          onCodeChange(newCode);
+          const newCursor = completion.result.replaceStart + match.length;
+          setCompletion({ ...completion, index: nextIndex });
+          requestAnimationFrame(() => {
+            ta.selectionStart = ta.selectionEnd = newCursor;
+          });
+        } else {
+          // Start new completion
+          const result = getCompletions(code, cursorPos, tree, userVariables);
+          if (result && result.matches.length > 0) {
+            const match = result.matches[0];
+            const newCode =
+              code.slice(0, result.replaceStart) +
+              match +
+              code.slice(result.replaceEnd);
+            onCodeChange(newCode);
+            const newCursor = result.replaceStart + match.length;
+            setCompletion({
+              result,
+              index: 0,
+              originalText: code,
+              originalCursor: cursorPos,
+            });
+            requestAnimationFrame(() => {
+              ta.selectionStart = ta.selectionEnd = newCursor;
+            });
+          }
+        }
+        return;
+      }
+
+      // Escape — cancel completion
+      if (e.key === "Escape" && completion) {
+        e.preventDefault();
+        onCodeChange(completion.originalText);
+        const cursor = completion.originalCursor;
+        setCompletion(null);
+        requestAnimationFrame(() => {
+          ta.selectionStart = ta.selectionEnd = cursor;
+        });
+        return;
+      }
+
+      // Any other key dismisses active completion (accepts it)
+      if (completion) {
+        dismissCompletion();
+      }
 
       // Ctrl+Enter — run
       if (e.key === "Enter" && e.ctrlKey) {
@@ -193,7 +272,7 @@ export function IseEditor({
         return;
       }
     },
-    [onRun, onClear, onCodeChange]
+    [onRun, onClear, onCodeChange, completion, dismissCompletion, code, tree, userVariables]
   );
 
   // Render syntax-highlighted overlay content
@@ -371,9 +450,16 @@ export function IseEditor({
           }}
         >
           <span>Ctrl+Enter run</span>
+          <span>Ctrl+Space complete</span>
           <span>Tab indent</span>
           <span>Ctrl+/ comment</span>
           <span>Ctrl+L clear</span>
+          {completion && (
+            <span style={{ color: colors.accentPrimary, marginLeft: "auto" }}>
+              {completion.index + 1}/{completion.result.matches.length}:{" "}
+              {completion.result.matches[completion.index]}
+            </span>
+          )}
         </div>
       </div>
 

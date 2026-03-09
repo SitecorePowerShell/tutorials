@@ -285,6 +285,7 @@ export default function SPETutorial() {
                 onRun={handleRun}
                 onClear={() => setConsoleOutput([])}
                 consoleOutput={consoleOutput}
+                tree={VIRTUAL_TREE}
               />
             ) : (
               <ReplEditor
