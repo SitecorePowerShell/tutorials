@@ -1,0 +1,69 @@
+id: "string-operations"
+module: "String & Data Operations"
+order: 13
+title: "String Operators & Formatting"
+difficulty: "intermediate"
+mode: "ise"
+description: |
+  PowerShell has powerful string operators built right in:
+
+  • `-replace 'pattern','replacement'` — regex-based find & replace
+  • `-split 'delimiter'` — split a string into an array
+  • `-join 'delimiter'` — join array elements into a string
+  • `-f` — .NET format operator (`"{0} ({1})" -f $a, $b`)
+
+  These are essential for cleaning up field values, building display strings, and transforming Sitecore data for reports.
+tasks:
+  - instruction: |
+      Strip HTML tags from the Home item's Text field. Get the Home item, then use `ForEach-Object` with `-replace` to remove all HTML tags (pattern: `<[^>]+>`).
+    hint: |
+      Get-Item -Path "master:\content\Home" |
+          ForEach-Object { $_.Text -replace '<[^>]+>','' }
+    starterCode: |
+      # Strip HTML Tags from Content
+      Get-Item -Path "master:\content\Home" |
+          ForEach-Object { $_.Text -replace '<[^>]+>','' }
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-item"
+        - "foreach-object"
+      outputContains: "home page"
+    successMessage: |
+      The `-replace` operator uses regex, making it perfect for cleaning Rich Text fields. This pattern strips all HTML tags, leaving just the plain text content.
+  - instruction: |
+      Use the `-f` format operator to build a formatted string for each item under Home. Display each as `"Name (TemplateName)"` using `"{0} ({1})" -f $_.Name, $_.TemplateName`.
+    hint: |
+      Get-ChildItem -Path "master:\content\Home" |
+          ForEach-Object { "{0} ({1})" -f $_.Name, $_.TemplateName }
+    starterCode: |
+      # Format Item Display Strings
+      Get-ChildItem -Path "master:\content\Home" |
+          ForEach-Object { "{0} ({1})" -f $_.Name, $_.TemplateName }
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "foreach-object"
+      outputContains: "Folder"
+    successMessage: |
+      The `-f` format operator works just like `String.Format()` in C#. It's great for building consistent display strings in reports and exports.
+  - instruction: |
+      Build a breadcrumb trail for the About item. Get its ItemPath, split it on `/`, then rejoin with ` > ` as the separator.
+
+      Use: `($_.ItemPath -split '/') -join ' > '`
+    hint: |
+      Get-Item -Path "master:\content\Home\About" |
+          ForEach-Object { ($_.ItemPath -split '/') -join ' > ' }
+    starterCode: |
+      # Build Breadcrumb Trail
+      Get-Item -Path "master:\content\Home\About" |
+          ForEach-Object { ($_.ItemPath -split '/') -join ' > ' }
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-item"
+        - "foreach-object"
+      outputContains: ">"
+    successMessage: |
+      Combining `-split` and `-join` lets you transform path strings into any format. This breadcrumb pattern is useful for reports, navigation builders, and content migration scripts.

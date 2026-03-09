@@ -1,0 +1,61 @@
+id: "dotnet-types"
+module: "String & Data Operations"
+order: 14
+title: ".NET Types & Static Methods"
+difficulty: "advanced"
+mode: "ise"
+description: |
+  PowerShell gives you direct access to **.NET types and static methods**. In SPE, the most useful ones include:
+
+  • `[DateTime]::Now` — current date/time
+  • `[String]::IsNullOrEmpty($value)` — check for empty strings
+  • `[Guid]::NewGuid()` — generate a new GUID
+  • `[Sitecore.Data.ID]::NewId` — generate a Sitecore-formatted ID
+
+  These are used constantly in SPE scripts for timestamps, validation, and ID generation.
+tasks:
+  - instruction: |
+      Create a report header that includes the current date and time. Use `Write-Host` with `[DateTime]::Now` to display a timestamp.
+    hint: |
+      Write-Host "Content Report - Generated: $([DateTime]::Now)"
+    starterCode: |
+      # Report Header with Timestamp
+      Write-Host "Content Report - Generated: $([DateTime]::Now)"
+    validation:
+      type: "output"
+      outputContains: "Report"
+    successMessage: |
+      `[DateTime]::Now` is essential for report headers, audit logs, and any script that needs to record when it was run. In real SPE, you'd also use `[DateTime]::UtcNow` for timezone-safe timestamps.
+  - instruction: |
+      Filter items under Home to find those where the Title field is **not empty**. Use `[String]::IsNullOrEmpty()` with `-not` in a `Where-Object` filter, then display with `Format-Table`.
+    hint: |
+      Get-ChildItem -Path "master:\content\Home" -Recurse |
+          Where-Object { -not [String]::IsNullOrEmpty($_.Title) } |
+          Format-Table -Property Name,Title
+    starterCode: |
+      # Find Items with Non-Empty Titles
+      Get-ChildItem -Path "master:\content\Home" -Recurse |
+          Where-Object { -not [String]::IsNullOrEmpty($_.Title) } |
+          Format-Table -Property Name,Title
+    validation:
+      type: "pipeline"
+      stages:
+        - "where-object"
+        - "format-table"
+      outputContains: "Title"
+    successMessage: |
+      `[String]::IsNullOrEmpty()` is the proper way to check for empty fields. In Sitecore, many fields may exist but be blank — this catches both null and empty string cases.
+  - instruction: |
+      Generate new IDs using both `[Guid]::NewGuid()` and `[Sitecore.Data.ID]::NewId`. Write both to the output so you can see the different formats.
+    hint: |
+      Write-Host "New GUID: $([Guid]::NewGuid())"
+      Write-Host "New Sitecore ID: $([Sitecore.Data.ID]::NewId)"
+    starterCode: |
+      # Generate Sitecore IDs
+      Write-Host "New GUID: $([Guid]::NewGuid())"
+      Write-Host "New Sitecore ID: $([Sitecore.Data.ID]::NewId)"
+    validation:
+      type: "output"
+      outputContains: "New"
+    successMessage: |
+      Sitecore IDs are GUIDs wrapped in braces `{...}`. `[Guid]::NewGuid()` gives you a raw GUID, while `[Sitecore.Data.ID]::NewId` gives you the Sitecore-formatted version with braces. Both are used in migration and import scripts.

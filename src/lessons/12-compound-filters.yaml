@@ -1,0 +1,58 @@
+id: "compound-filters"
+module: "Advanced Filtering"
+order: 11
+title: "Compound Filters & Regex"
+difficulty: "intermediate"
+description: |
+  `Where-Object` supports **compound conditions** using logical operators:
+
+  • `-and` — both conditions must be true
+  • `-or` — either condition can be true
+  • `-not` or `!` — negates a condition
+  • Parentheses `()` — group conditions for precedence
+
+  You can also use **regex matching**:
+
+  • `-match` — true if value matches a regex pattern
+  • `-notmatch` — true if value does NOT match
+
+  Combining these lets you build precise content queries without writing Sitecore Query.
+tasks:
+  - instruction: |
+      Find all items under Home that are **Sample Items** updated by **author1**. Use `-and` to combine both conditions in a single `Where-Object` filter.
+    hint: |
+      Get-ChildItem -Path "master:\content\Home" -Recurse | Where-Object { $_.TemplateName -eq "Sample Item" -and $_."__Updated by" -eq "sitecore\author1" }
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "where-object"
+      outputContains: "author1"
+    successMessage: |
+      The `-and` operator lets you narrow results with multiple criteria — essential for content audits where you need items matching several conditions at once.
+  - instruction: |
+      Use `-match` with a regex pattern to find items whose Name matches `^Product` (starts with "Product") **or** ends with `Roadmap` using `-or`.
+    hint: |
+      Get-ChildItem -Path "master:\content\Home" -Recurse | Where-Object { $_.Name -match "^Product" -or $_.Name -match "Roadmap$" }
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "where-object"
+      outputContains: "Product"
+    successMessage: |
+      Regex with `-match` is more powerful than `-like` wildcards. Combined with `-or`, you can find items matching any of several naming patterns in a single pass.
+  - instruction: |
+      Build a compound filter with parentheses: find items where the template is "Folder" **or** the item was updated by "admin" **and** has a Name containing "Product".
+
+      Use: `($_.TemplateName -eq "Folder") -or ($_."__Updated by" -eq "sitecore\admin" -and $_.Name -like "*Product*")`
+    hint: |
+      Get-ChildItem -Path "master:\content\Home" -Recurse | Where-Object { ($_.TemplateName -eq "Folder") -or ($_."__Updated by" -eq "sitecore\admin" -and $_.Name -like "*Product*") }
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "where-object"
+      outputContains: "Folder"
+    successMessage: |
+      Parenthesized grouping controls evaluation order, just like in C# or SQL. This lets you express complex business rules in a single filter — "all folders, plus any admin-updated products."

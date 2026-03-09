@@ -1,0 +1,58 @@
+id: "numeric-select"
+module: "Advanced Filtering"
+order: 12
+title: "Sorting & Select-Object"
+difficulty: "intermediate"
+mode: "ise"
+description: |
+  PowerShell gives you fine-grained control over result sets:
+
+  • `Sort-Object` — order items by any property (add `-Descending` for reverse)
+  • `Select-Object -First N` — take only the first N items
+  • `Select-Object -Last N` — take only the last N items
+  • `Format-Table` — display specific properties in a table
+
+  These are the building blocks of every content report in SPE. Sort first, then slice.
+tasks:
+  - instruction: |
+      Get all descendants of Home, sort by `__Updated` descending (most recent first), then select only the **first 3** items. Display them with `Format-Table` showing Name and `__Updated`.
+    hint: |
+      Get-ChildItem -Path "master:\content\Home" -Recurse |
+          Sort-Object -Property __Updated -Descending |
+          Select-Object -First 3 |
+          Format-Table -Property Name,__Updated
+    starterCode: |
+      # Top 3 Most Recently Updated Items
+      Get-ChildItem -Path "master:\content\Home" -Recurse |
+          Sort-Object -Property __Updated -Descending |
+          Select-Object -First 3 |
+          Format-Table -Property Name,__Updated
+    validation:
+      type: "pipeline"
+      stages:
+        - "sort-object"
+        - "select-object"
+        - "format-table"
+    successMessage: |
+      This "sort then slice" pattern is the foundation of every "Top N" report in SPE. You'll use it constantly for finding recently modified, oldest, or most-viewed content.
+  - instruction: |
+      Now find the **2 oldest items** by sorting on `__Created` ascending (oldest first), selecting the first 2, and displaying with `Format-Table` showing Name, `__Created`, and TemplateName.
+    hint: |
+      Get-ChildItem -Path "master:\content\Home" -Recurse |
+          Sort-Object -Property __Created |
+          Select-Object -First 2 |
+          Format-Table -Property Name,__Created,TemplateName
+    starterCode: |
+      # Find the 2 Oldest Items
+      Get-ChildItem -Path "master:\content\Home" -Recurse |
+          Sort-Object -Property __Created |
+          Select-Object -First 2 |
+          Format-Table -Property Name,__Created,TemplateName
+    validation:
+      type: "pipeline"
+      stages:
+        - "sort-object"
+        - "select-object"
+        - "format-table"
+    successMessage: |
+      Sorting ascending (the default) puts the oldest items first. Combined with `Select-Object -First`, this gives you a quick way to find legacy content that may need review or cleanup.

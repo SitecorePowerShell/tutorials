@@ -1,0 +1,68 @@
+id: "bulk-updates"
+module: "Control Flow & Bulk Operations"
+order: 17
+title: "Bulk Updates with Set-ItemProperty"
+difficulty: "advanced"
+mode: "ise"
+description: |
+  `Set-ItemProperty` is how SPE modifies Sitecore item fields:
+
+  ```
+  Set-ItemProperty -Path "master:\content\Home" -Name "Title" -Value "New Title"
+  ```
+
+  Combined with `foreach` loops, this enables **bulk updates** across hundreds of items in seconds — something that would take hours through the Content Editor.
+
+  **Warning:** In a real Sitecore instance, always test bulk updates on a small set first!
+tasks:
+  - instruction: |
+      Update the Title field of the About page to "About Our Company", then verify the change by piping the item to `Format-Table` showing Name and Title.
+    hint: |
+      Set-ItemProperty -Path "master:\content\Home\About" -Name "Title" -Value "About Our Company"
+      Get-Item -Path "master:\content\Home\About" | Format-Table -Property Name,Title
+    starterCode: |
+      # Update a Single Field
+      Set-ItemProperty -Path "master:\content\Home\About" -Name "Title" -Value "About Our Company"
+      Get-Item -Path "master:\content\Home\About" | Format-Table -Property Name,Title
+    validation:
+      type: "output"
+      outputContains: "About Our Company"
+    successMessage: |
+      `Set-ItemProperty` is the workhorse of content management scripts. In real SPE, this is wrapped in `New-UsingBlock` for proper edit context, but the syntax is identical.
+  - instruction: |
+      Bulk update: use a `foreach` loop to set the Title field on every child of Products to include a "Featured: " prefix. Then display all products with `Format-Table`.
+    hint: |
+      $items = Get-ChildItem -Path "master:\content\Home\Products"
+      foreach($item in $items) { Set-ItemProperty -Path $item.ItemPath -Name "Title" -Value "Featured: $($item.Name)" }
+      Get-ChildItem -Path "master:\content\Home\Products" | Format-Table -Property Name,Title
+    starterCode: |
+      # Bulk Update Product Titles
+      $items = Get-ChildItem -Path "master:\content\Home\Products"
+      foreach($item in $items) { Set-ItemProperty -Path $item.ItemPath -Name "Title" -Value "Featured: $($item.Name)" }
+      Get-ChildItem -Path "master:\content\Home\Products" | Format-Table -Property Name,Title
+    validation:
+      type: "output"
+      outputContains: "Featured"
+    successMessage: |
+      Bulk updates are SPE's superpower. This pattern can update thousands of items in seconds. Always run on a small set first, and consider adding `Write-Host` progress output for large batches.
+  - instruction: |
+      Create a new FAQ item under Home, set its Title and Text fields, then verify with `ConvertTo-Json`.
+    hint: |
+      New-Item -Path "master:\content\Home" -Name "FAQ" -ItemType "Sample/Sample Item"
+      Set-ItemProperty -Path "master:\content\Home\FAQ" -Name "Title" -Value "Frequently Asked Questions"
+      Set-ItemProperty -Path "master:\content\Home\FAQ" -Name "Text" -Value "Common questions and answers"
+      Get-Item -Path "master:\content\Home\FAQ" | ConvertTo-Json
+    starterCode: |
+      # Create and Configure New Item
+      New-Item -Path "master:\content\Home" -Name "FAQ" -ItemType "Sample/Sample Item"
+      Set-ItemProperty -Path "master:\content\Home\FAQ" -Name "Title" -Value "Frequently Asked Questions"
+      Set-ItemProperty -Path "master:\content\Home\FAQ" -Name "Text" -Value "Common questions and answers"
+      Get-Item -Path "master:\content\Home\FAQ" | ConvertTo-Json
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-item"
+        - "convertto-json"
+      outputContains: "Frequently Asked Questions"
+    successMessage: |
+      The create → configure → verify pattern is essential for content scaffolding scripts. In production SPE, this is how you build entire site sections programmatically — creating items and setting all their fields in one script run.

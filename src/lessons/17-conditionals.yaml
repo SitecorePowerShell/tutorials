@@ -1,0 +1,67 @@
+id: "conditionals"
+module: "Control Flow & Bulk Operations"
+order: 16
+title: "If/Else & Conditional Logic"
+difficulty: "advanced"
+mode: "ise"
+description: |
+  PowerShell supports standard **conditional branching**:
+
+  ```
+  if ($condition) {
+      # do something
+  } else {
+      # do something else
+  }
+  ```
+
+  Combined with Sitecore item properties like `.HasChildren` and `.Count`, conditionals let you build scripts that make decisions based on content structure.
+
+  • `$item.HasChildren` — true if item has child items
+  • `$items.Count` — number of items in a collection
+  • `Show-Alert` — display a message dialog
+tasks:
+  - instruction: |
+      Check if the Products folder has children. Store it in `$item`, then use `if/else` to display different messages with `Write-Host` based on `HasChildren`.
+    hint: |
+      $item = Get-Item -Path "master:\content\Home\Products"
+      if ($item.HasChildren) { Write-Host "Products folder has children" } else { Write-Host "Products folder is empty" }
+    starterCode: |
+      # Check for Child Items
+      $item = Get-Item -Path "master:\content\Home\Products"
+      if ($item.HasChildren) { Write-Host "Products folder has children" } else { Write-Host "Products folder is empty" }
+    validation:
+      type: "output"
+      outputContains: "has children"
+    successMessage: |
+      `HasChildren` is one of the most useful Sitecore item properties. It's perfect for deciding whether to recurse deeper, show expand buttons, or skip empty branches.
+  - instruction: |
+      Count the children of Products and show a conditional alert. If there are more than 2 items, show "Large catalog" — otherwise show "Small catalog".
+    hint: |
+      $items = Get-ChildItem -Path "master:\content\Home\Products"
+      if ($items.Count -gt 2) { Show-Alert -Title "Large catalog: $($items.Count) products" } else { Show-Alert -Title "Small catalog: $($items.Count) products" }
+    starterCode: |
+      # Conditional Alert Based on Count
+      $items = Get-ChildItem -Path "master:\content\Home\Products"
+      if ($items.Count -gt 2) { Show-Alert -Title "Large catalog: $($items.Count) products" } else { Show-Alert -Title "Small catalog: $($items.Count) products" }
+    validation:
+      type: "output"
+      outputContains: "catalog"
+    successMessage: |
+      Using `.Count` with conditionals lets you build smart scripts that adapt their behavior. In production SPE scripts, this pattern drives decisions like "should we batch process?" or "do we need pagination?"
+  - instruction: |
+      Build a content summary: count how many Folders vs Sample Items exist under Home. Display the counts with `Write-Host`.
+    hint: |
+      $folders = Get-ChildItem -Path "master:\content\Home" -Recurse | Where-Object { $_.TemplateName -eq "Folder" }
+      $pages = Get-ChildItem -Path "master:\content\Home" -Recurse | Where-Object { $_.TemplateName -eq "Sample Item" }
+      Write-Host "Folders: $($folders.Count), Pages: $($pages.Count)"
+    starterCode: |
+      # Content Structure Summary
+      $folders = Get-ChildItem -Path "master:\content\Home" -Recurse | Where-Object { $_.TemplateName -eq "Folder" }
+      $pages = Get-ChildItem -Path "master:\content\Home" -Recurse | Where-Object { $_.TemplateName -eq "Sample Item" }
+      Write-Host "Folders: $($folders.Count), Pages: $($pages.Count)"
+    validation:
+      type: "output"
+      outputContains: "Folders"
+    successMessage: |
+      This summary pattern is the foundation of content health dashboards. In real SPE, you'd expand this to count by template, check for orphaned items, and generate full audit reports.

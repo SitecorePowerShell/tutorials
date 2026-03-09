@@ -1,0 +1,54 @@
+id: "data-export"
+module: "String & Data Operations"
+order: 15
+title: "Data Export & JSON"
+difficulty: "intermediate"
+mode: "ise"
+description: |
+  SPE makes it easy to **export Sitecore data** for integration with other systems:
+
+  • `ConvertTo-Json` — converts pipeline objects to JSON format
+  • Combine with filters and `Select-Object` for targeted exports
+
+  This is invaluable for feeding Sitecore content to external tools, building API responses, or creating data snapshots for migration.
+tasks:
+  - instruction: |
+      Export all children of the Products folder to JSON. Pipe the results of `Get-ChildItem` directly to `ConvertTo-Json`.
+    hint: |
+      Get-ChildItem -Path "master:\content\Home\Products" |
+          ConvertTo-Json
+    starterCode: |
+      # Export Products to JSON
+      Get-ChildItem -Path "master:\content\Home\Products" |
+          ConvertTo-Json
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "convertto-json"
+      outputContains: "Product"
+    successMessage: |
+      `ConvertTo-Json` automatically includes item properties like Name, ID, TemplateName, ItemPath, and all fields. This is exactly what you'd pipe to `Out-File` in a real export script.
+  - instruction: |
+      Build a full export pipeline: get all descendants of Home, filter to Sample Items only, select the first 5, then export to JSON.
+    hint: |
+      Get-ChildItem -Path "master:\content\Home" -Recurse |
+          Where-Object { $_.TemplateName -eq "Sample Item" } |
+          Select-Object -First 5 |
+          ConvertTo-Json
+    starterCode: |
+      # Filtered Export Pipeline
+      Get-ChildItem -Path "master:\content\Home" -Recurse |
+          Where-Object { $_.TemplateName -eq "Sample Item" } |
+          Select-Object -First 5 |
+          ConvertTo-Json
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "where-object"
+        - "select-object"
+        - "convertto-json"
+      outputContains: "Sample Item"
+    successMessage: |
+      This pattern — gather, filter, slice, export — is the core of every SPE data export script. In production, you'd add `| Out-File "C:\exports\items.json"` to save to disk.
