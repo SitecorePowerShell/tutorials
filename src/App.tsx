@@ -4,6 +4,7 @@ import { LESSONS } from "./lessons/loader";
 import { VIRTUAL_TREE } from "./engine/virtualTree";
 import { executeScript, executeCommand } from "./engine/executor";
 import { validateTask } from "./validation/validator";
+import { loadProgress, saveProgress, clearProgress } from "./hooks/useSessionProgress";
 import { Sidebar } from "./components/Sidebar";
 import { LessonPanel } from "./components/LessonPanel";
 import { ReplEditor } from "./components/ReplEditor";
@@ -11,16 +12,18 @@ import { IseEditor } from "./components/IseEditor";
 import { TreePanel } from "./components/TreePanel";
 import { colors, fonts, fontSizes } from "./theme";
 
+const initialProgress = loadProgress();
+
 export default function SPETutorial() {
-  const [currentLesson, setCurrentLesson] = useState(0);
-  const [currentTask, setCurrentTask] = useState(0);
+  const [currentLesson, setCurrentLesson] = useState(initialProgress.currentLesson);
+  const [currentTask, setCurrentTask] = useState(initialProgress.currentTask);
   const [code, setCode] = useState("");
   const [consoleOutput, setConsoleOutput] = useState<ConsoleEntry[]>([]);
   const [completedTasks, setCompletedTasks] = useState<
     Record<string, boolean>
-  >({});
+  >(initialProgress.completedTasks);
   const [showHint, setShowHint] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(initialProgress.sidebarCollapsed);
   const [showTreePanel, setShowTreePanel] = useState(false);
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -30,6 +33,24 @@ export default function SPETutorial() {
   const isISE = lesson?.mode === "ise";
   const totalTasks = LESSONS.reduce((sum, l) => sum + l.tasks.length, 0);
   const completedCount = Object.keys(completedTasks).length;
+
+  // Persist progress to localStorage
+  useEffect(() => {
+    saveProgress({
+      currentLesson,
+      currentTask,
+      completedTasks,
+      sidebarCollapsed,
+    });
+  }, [currentLesson, currentTask, completedTasks, sidebarCollapsed]);
+
+  const handleResetProgress = useCallback(() => {
+    clearProgress();
+    setCurrentLesson(0);
+    setCurrentTask(0);
+    setCompletedTasks({});
+    setSidebarCollapsed(false);
+  }, []);
 
   // Reset editor and output when switching lessons or tasks
   useEffect(() => {
@@ -157,6 +178,7 @@ export default function SPETutorial() {
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
         onGoToLesson={goToLesson}
+        onResetProgress={handleResetProgress}
       />
 
       {/* MAIN CONTENT AREA */}

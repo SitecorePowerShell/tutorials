@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import type { ConsoleEntry } from "../types";
 import { OutputPane } from "./OutputPane";
+import { tokenize, renderTokens } from "./HighlightedCode";
 import { colors, gradients, fonts, fontSizes } from "../theme";
 
 interface IseEditorProps {
@@ -19,6 +20,8 @@ export function IseEditor({
   consoleOutput,
 }: IseEditorProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const overlayRef = useRef<HTMLPreElement>(null);
+  const lineNumRef = useRef<HTMLDivElement>(null);
   const consoleEndRef = useRef<HTMLDivElement>(null);
   const editorPaneRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
@@ -68,6 +71,136 @@ export function IseEditor({
       document.removeEventListener("mouseup", handleMouseUp);
     };
   }, []);
+
+  // Sync scroll between textarea, overlay, and line numbers
+  const handleScroll = useCallback(() => {
+    const ta = inputRef.current;
+    const ov = overlayRef.current;
+    const ln = lineNumRef.current;
+    if (!ta) return;
+    if (ov) {
+      ov.scrollTop = ta.scrollTop;
+      ov.scrollLeft = ta.scrollLeft;
+    }
+    if (ln) {
+      ln.scrollTop = ta.scrollTop;
+    }
+  }, []);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      const ta = e.currentTarget;
+
+      // Ctrl+Enter — run
+      if (e.key === "Enter" && e.ctrlKey) {
+        e.preventDefault();
+        onRun();
+        return;
+      }
+
+      // Ctrl+L — clear output
+      if (e.key === "l" && e.ctrlKey) {
+        e.preventDefault();
+        onClear();
+        return;
+      }
+
+      // Ctrl+/ — toggle line comment
+      if (e.key === "/" && e.ctrlKey) {
+        e.preventDefault();
+        const { selectionStart, selectionEnd, value } = ta;
+        const lineStart = value.lastIndexOf("\n", selectionStart - 1) + 1;
+        const lineEnd =
+          value.indexOf("\n", selectionEnd) === -1
+            ? value.length
+            : value.indexOf("\n", selectionEnd);
+        const selectedText = value.slice(lineStart, lineEnd);
+        const lines = selectedText.split("\n");
+        const allCommented = lines.every((l) => /^\s*#/.test(l) || l.trim() === "");
+        const toggled = lines
+          .map((l) => {
+            if (allCommented) {
+              return l.replace(/^(\s*)# ?/, "$1");
+            }
+            return l.replace(/^(\s*)/, "$1# ");
+          })
+          .join("\n");
+        const newCode = value.slice(0, lineStart) + toggled + value.slice(lineEnd);
+        onCodeChange(newCode);
+        // Restore cursor
+        requestAnimationFrame(() => {
+          const diff = toggled.length - selectedText.length;
+          ta.selectionStart = selectionStart + (selectionStart === lineStart ? 0 : diff > 0 ? 2 : -2);
+          ta.selectionEnd = selectionEnd + diff;
+        });
+        return;
+      }
+
+      // Tab — insert 2 spaces
+      if (e.key === "Tab" && !e.shiftKey) {
+        e.preventDefault();
+        const { selectionStart, selectionEnd, value } = ta;
+        if (selectionStart === selectionEnd) {
+          // No selection — insert spaces at cursor
+          const newCode =
+            value.slice(0, selectionStart) + "  " + value.slice(selectionEnd);
+          onCodeChange(newCode);
+          requestAnimationFrame(() => {
+            ta.selectionStart = ta.selectionEnd = selectionStart + 2;
+          });
+        } else {
+          // Selection — indent each line
+          const lineStart = value.lastIndexOf("\n", selectionStart - 1) + 1;
+          const lineEnd =
+            value.indexOf("\n", selectionEnd) === -1
+              ? value.length
+              : value.indexOf("\n", selectionEnd);
+          const block = value.slice(lineStart, lineEnd);
+          const indented = block
+            .split("\n")
+            .map((l) => "  " + l)
+            .join("\n");
+          const newCode = value.slice(0, lineStart) + indented + value.slice(lineEnd);
+          onCodeChange(newCode);
+          requestAnimationFrame(() => {
+            ta.selectionStart = lineStart;
+            ta.selectionEnd = lineStart + indented.length;
+          });
+        }
+        return;
+      }
+
+      // Shift+Tab — dedent selected lines
+      if (e.key === "Tab" && e.shiftKey) {
+        e.preventDefault();
+        const { selectionStart, selectionEnd, value } = ta;
+        const lineStart = value.lastIndexOf("\n", selectionStart - 1) + 1;
+        const lineEnd =
+          value.indexOf("\n", selectionEnd) === -1
+            ? value.length
+            : value.indexOf("\n", selectionEnd);
+        const block = value.slice(lineStart, lineEnd);
+        const dedented = block
+          .split("\n")
+          .map((l) => l.replace(/^ {1,2}/, ""))
+          .join("\n");
+        const newCode = value.slice(0, lineStart) + dedented + value.slice(lineEnd);
+        onCodeChange(newCode);
+        requestAnimationFrame(() => {
+          ta.selectionStart = lineStart;
+          ta.selectionEnd = lineStart + dedented.length;
+        });
+        return;
+      }
+    },
+    [onRun, onClear, onCodeChange]
+  );
+
+  // Render syntax-highlighted overlay content
+  const tokens = tokenize(code);
+  // Ensure trailing newline so overlay height matches textarea
+  const overlayContent = code.endsWith("\n") ? code + " " : code;
+  const overlayTokens = tokenize(overlayContent);
 
   return (
     <>
@@ -145,6 +278,7 @@ export function IseEditor({
           <div style={{ display: "flex", height: "100%" }}>
             {/* Line numbers */}
             <div
+              ref={lineNumRef}
               style={{
                 padding: "10px 0",
                 textAlign: "right",
@@ -157,38 +291,73 @@ export function IseEditor({
                 paddingRight: 8,
                 borderRight: `1px solid ${colors.borderBase}`,
                 background: colors.bgDeep,
+                overflow: "hidden",
               }}
             >
               {code.split("\n").map((_, i) => (
                 <div key={i}>{i + 1}</div>
               ))}
             </div>
-            <textarea
-              ref={inputRef}
-              value={code}
-              onChange={(e) => onCodeChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && e.ctrlKey) {
-                  e.preventDefault();
-                  onRun();
-                }
-              }}
-              spellCheck={false}
-              style={{
-                flex: 1,
-                background: "transparent",
-                border: "none",
-                outline: "none",
-                color: colors.textPrimary,
-                fontFamily: fonts.mono,
-                fontSize: fontSizes.body,
-                lineHeight: "20px",
-                padding: "10px 12px",
-                resize: "none",
-                caretColor: colors.accentPrimary,
-                tabSize: 4,
-              }}
-            />
+            {/* Editor area with overlay */}
+            <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+              {/* Syntax highlight overlay (background) */}
+              <pre
+                ref={overlayRef}
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  margin: 0,
+                  padding: "10px 12px",
+                  fontFamily: fonts.mono,
+                  fontSize: fontSizes.body,
+                  lineHeight: "20px",
+                  whiteSpace: "pre-wrap",
+                  wordWrap: "break-word",
+                  overflow: "hidden",
+                  pointerEvents: "none",
+                  color: "transparent",
+                  border: "none",
+                  background: "transparent",
+                }}
+              >
+                {renderTokens(overlayTokens)}
+              </pre>
+              {/* Transparent textarea (foreground — captures input) */}
+              <textarea
+                ref={inputRef}
+                value={code}
+                onChange={(e) => onCodeChange(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onScroll={handleScroll}
+                spellCheck={false}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  background: "transparent",
+                  border: "none",
+                  outline: "none",
+                  color: "transparent",
+                  caretColor: colors.accentPrimary,
+                  fontFamily: fonts.mono,
+                  fontSize: fontSizes.body,
+                  lineHeight: "20px",
+                  padding: "10px 12px",
+                  resize: "none",
+                  tabSize: 4,
+                  whiteSpace: "pre-wrap",
+                  wordWrap: "break-word",
+                  overflow: "auto",
+                  margin: 0,
+                }}
+              />
+            </div>
           </div>
         </div>
         <div
@@ -197,9 +366,14 @@ export function IseEditor({
             borderTop: `1px solid ${colors.borderBase}`,
             fontSize: fontSizes.sm,
             color: colors.textMuted,
+            display: "flex",
+            gap: 16,
           }}
         >
-          Ctrl+Enter to run
+          <span>Ctrl+Enter run</span>
+          <span>Tab indent</span>
+          <span>Ctrl+/ comment</span>
+          <span>Ctrl+L clear</span>
         </div>
       </div>
 

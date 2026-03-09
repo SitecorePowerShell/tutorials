@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { Lesson } from "../types";
 import { colors, gradients, fontSizes } from "../theme";
 
@@ -10,6 +11,7 @@ interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
   onGoToLesson: (idx: number) => void;
+  onResetProgress: () => void;
 }
 
 export function Sidebar({
@@ -21,7 +23,9 @@ export function Sidebar({
   collapsed,
   onToggle,
   onGoToLesson,
+  onResetProgress,
 }: SidebarProps) {
+  const [confirmReset, setConfirmReset] = useState(false);
   const isTaskComplete = (lessonIdx: number, taskIdx: number) =>
     completedTasks[`${lessonIdx}-${taskIdx}`];
 
@@ -154,7 +158,7 @@ export function Sidebar({
         </div>
       )}
 
-      {/* Progress bar at bottom */}
+      {/* Progress bar + reset at bottom */}
       {!collapsed && (
         <div style={{ padding: "12px 20px", borderTop: `1px solid ${colors.borderBase}` }}>
           <div
@@ -163,6 +167,7 @@ export function Sidebar({
               background: colors.borderBase,
               borderRadius: 2,
               overflow: "hidden",
+              marginBottom: completedCount > 0 ? 8 : 0,
             }}
           >
             <div
@@ -175,6 +180,30 @@ export function Sidebar({
               }}
             />
           </div>
+          {completedCount > 0 && (
+            <button
+              onClick={() => {
+                if (confirmReset) {
+                  onResetProgress();
+                  setConfirmReset(false);
+                } else {
+                  setConfirmReset(true);
+                  setTimeout(() => setConfirmReset(false), 3000);
+                }
+              }}
+              style={{
+                background: "none",
+                border: "none",
+                color: confirmReset ? colors.statusError : colors.textMuted,
+                cursor: "pointer",
+                fontSize: fontSizes.sm,
+                padding: 0,
+                fontFamily: "inherit",
+              }}
+            >
+              {confirmReset ? "Click again to confirm reset" : "Reset progress"}
+            </button>
+          )}
         </div>
       )}
     </div>

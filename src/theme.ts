@@ -46,6 +46,10 @@ export const colors = {
   syntaxPipe: "#ffcc80",
   syntaxVariable: "#ef9a9a",
   syntaxBrace: "#fff59d",
+  syntaxComment: "#6a9955",
+  syntaxOperator: "#80deea",
+  syntaxType: "#4dd0e1",
+  syntaxNumber: "#ffb74d",
 };
 
 export const gradients = {
