@@ -324,6 +324,7 @@ export default function SPETutorial() {
                   commandHistory={commandHistory}
                   historyIndex={historyIndex}
                   onHistoryIndexChange={setHistoryIndex}
+                  tree={VIRTUAL_TREE}
                   isMobile={true}
                 />
               )}
@@ -491,6 +492,7 @@ export default function SPETutorial() {
                 commandHistory={commandHistory}
                 historyIndex={historyIndex}
                 onHistoryIndexChange={setHistoryIndex}
+                tree={VIRTUAL_TREE}
               />
             )}
           </div>

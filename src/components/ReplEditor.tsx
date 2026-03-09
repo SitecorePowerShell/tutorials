@@ -1,7 +1,15 @@
-import { useRef, useEffect } from "react";
-import type { ConsoleEntry } from "../types";
+import { useState, useRef, useEffect } from "react";
+import type { ConsoleEntry, SitecoreNode } from "../types";
 import { OutputPane } from "./OutputPane";
 import { colors, gradients, fonts, fontSizes } from "../theme";
+import { getCompletions, type CompletionResult } from "../engine/completions";
+
+interface CompletionState {
+  result: CompletionResult;
+  index: number;
+  originalText: string;
+  originalCursor: number;
+}
 
 interface ReplEditorProps {
   code: string;
@@ -12,6 +20,8 @@ interface ReplEditorProps {
   commandHistory: string[];
   historyIndex: number;
   onHistoryIndexChange: (index: number) => void;
+  tree?: { sitecore: SitecoreNode };
+  userVariables?: string[];
   isMobile?: boolean;
 }
 
@@ -23,11 +33,14 @@ export function ReplEditor({
   consoleOutput,
   commandHistory,
   historyIndex,
+  tree,
+  userVariables,
   onHistoryIndexChange,
   isMobile,
 }: ReplEditorProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const consoleEndRef = useRef<HTMLDivElement>(null);
+  const [completion, setCompletion] = useState<CompletionState | null>(null);
 
   useEffect(() => {
     if (consoleEndRef.current) {
@@ -39,12 +52,91 @@ export function ReplEditor({
     inputRef.current?.focus();
   }, []);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const input = e.currentTarget;
+
+    // Tab — trigger/cycle completion
+    if (e.key === "Tab" && !e.shiftKey) {
       e.preventDefault();
-      onRun();
-    } else if (e.key === "ArrowUp") {
+      const cursorPos = input.selectionStart ?? code.length;
+
+      if (completion) {
+        // Cycle to next match
+        const nextIndex = (completion.index + 1) % completion.result.matches.length;
+        const match = completion.result.matches[nextIndex];
+        const newCode =
+          completion.originalText.slice(0, completion.result.replaceStart) +
+          match +
+          completion.originalText.slice(completion.result.replaceEnd);
+        onCodeChange(newCode);
+        const newCursor = completion.result.replaceStart + match.length;
+        setCompletion({ ...completion, index: nextIndex });
+        requestAnimationFrame(() => {
+          input.selectionStart = input.selectionEnd = newCursor;
+        });
+      } else {
+        // Start new completion
+        const result = getCompletions(code, cursorPos, tree, userVariables);
+        if (result && result.matches.length > 0) {
+          const match = result.matches[0];
+          const newCode =
+            code.slice(0, result.replaceStart) +
+            match +
+            code.slice(result.replaceEnd);
+          onCodeChange(newCode);
+          const newCursor = result.replaceStart + match.length;
+          setCompletion({
+            result,
+            index: 0,
+            originalText: code,
+            originalCursor: cursorPos,
+          });
+          requestAnimationFrame(() => {
+            input.selectionStart = input.selectionEnd = newCursor;
+          });
+        }
+      }
+      return;
+    }
+
+    // Shift+Tab — cycle backwards
+    if (e.key === "Tab" && e.shiftKey) {
       e.preventDefault();
+      if (completion) {
+        const prevIndex =
+          (completion.index - 1 + completion.result.matches.length) %
+          completion.result.matches.length;
+        const match = completion.result.matches[prevIndex];
+        const newCode =
+          completion.originalText.slice(0, completion.result.replaceStart) +
+          match +
+          completion.originalText.slice(completion.result.replaceEnd);
+        onCodeChange(newCode);
+        const newCursor = completion.result.replaceStart + match.length;
+        setCompletion({ ...completion, index: prevIndex });
+        requestAnimationFrame(() => {
+          input.selectionStart = input.selectionEnd = newCursor;
+        });
+      }
+      return;
+    }
+
+    // Escape — cancel completion, revert to original
+    if (e.key === "Escape" && completion) {
+      e.preventDefault();
+      onCodeChange(completion.originalText);
+      const cursor = completion.originalCursor;
+      setCompletion(null);
+      requestAnimationFrame(() => {
+        input.selectionStart = input.selectionEnd = cursor;
+      });
+      return;
+    }
+
+    // ArrowUp/ArrowDown — dismiss completion and handle history
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (completion) setCompletion(null);
       if (commandHistory.length === 0) return;
       const newIndex =
         historyIndex === -1
@@ -52,8 +144,12 @@ export function ReplEditor({
           : Math.max(0, historyIndex - 1);
       onHistoryIndexChange(newIndex);
       onCodeChange(commandHistory[newIndex]);
-    } else if (e.key === "ArrowDown") {
+      return;
+    }
+
+    if (e.key === "ArrowDown") {
       e.preventDefault();
+      if (completion) setCompletion(null);
       if (historyIndex === -1) return;
       const newIndex = historyIndex + 1;
       if (newIndex >= commandHistory.length) {
@@ -63,6 +159,19 @@ export function ReplEditor({
         onHistoryIndexChange(newIndex);
         onCodeChange(commandHistory[newIndex]);
       }
+      return;
+    }
+
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (completion) setCompletion(null);
+      onRun();
+      return;
+    }
+
+    // Any other key dismisses active completion (accepts it)
+    if (completion) {
+      setCompletion(null);
     }
   };
 
@@ -116,7 +225,10 @@ export function ReplEditor({
             ref={inputRef}
             type="text"
             value={code}
-            onChange={(e) => onCodeChange(e.target.value)}
+            onChange={(e) => {
+              if (completion) setCompletion(null);
+              onCodeChange(e.target.value);
+            }}
             onKeyDown={handleKeyDown}
             placeholder="Type your SPE command here..."
             spellCheck={false}
@@ -134,6 +246,18 @@ export function ReplEditor({
               padding: isMobile ? "8px 0" : undefined,
             }}
           />
+          {completion && (
+            <span
+              style={{
+                color: colors.accentPrimary,
+                fontFamily: fonts.monoShort,
+                fontSize: fontSizes.sm,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {completion.index + 1}/{completion.result.matches.length}
+            </span>
+          )}
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button
