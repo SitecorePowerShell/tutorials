@@ -61,7 +61,7 @@ const tokenColors: Record<string, { color: string; fontWeight?: number }> = {
 export function renderTokens(tokens: Token[]): React.ReactElement[] {
   return tokens.map((tok, i) => {
     const style = tokenColors[tok.type];
-    if (!style) return <span key={i}>{tok.text}</span>;
+    if (!style) return <span key={i} style={{ color: colors.textPrimary }}>{tok.text}</span>;
     return (
       <span key={i} style={style}>
         {tok.text}
