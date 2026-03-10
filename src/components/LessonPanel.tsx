@@ -42,8 +42,76 @@ export function LessonPanel({
   height,
   sideBySide,
 }: LessonPanelProps) {
-  // Desktop collapsed state — thin bar with task info
+  // Desktop collapsed state
   if (!isMobile && collapsed) {
+    // Side-by-side: narrow vertical strip
+    if (sideBySide) {
+      return (
+        <div
+          style={{
+            width: 36,
+            borderRight: `1px solid ${colors.borderBase}`,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            padding: "12px 0",
+            gap: 8,
+            background: colors.bgPanel,
+          }}
+        >
+          <button
+            onClick={onToggleCollapse}
+            title="Show Tasks"
+            style={{
+              background: "transparent",
+              border: `1px solid ${colors.borderDim}`,
+              color: colors.textSecondary,
+              padding: "4px 6px",
+              borderRadius: 4,
+              cursor: "pointer",
+              fontSize: fontSizes.sm,
+              fontFamily: "inherit",
+            }}
+          >
+            ▶
+          </button>
+          <span
+            style={{
+              fontSize: fontSizes.sm,
+              color: colors.textMuted,
+              writingMode: "vertical-rl",
+              textOrientation: "mixed",
+            }}
+          >
+            Task {currentTask + 1}/{lesson.tasks.length}
+          </span>
+          {/* Task dots vertical */}
+          {lesson.tasks.length > 1 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 4 }}>
+              {lesson.tasks.map((_, ti) => (
+                <div
+                  key={ti}
+                  onClick={() => onGoToTask(ti)}
+                  style={{
+                    width: 7,
+                    height: 7,
+                    borderRadius: "50%",
+                    background: isTaskComplete(currentLesson, ti)
+                      ? colors.statusSuccess
+                      : ti === currentTask
+                        ? colors.accentPrimary
+                        : colors.borderDim,
+                    cursor: "pointer",
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Stacked: thin horizontal bar
     return (
       <div
         style={{
@@ -142,7 +210,7 @@ export function LessonPanel({
             }}
             title="Collapse task panel"
           >
-            ▲
+            {sideBySide ? "◀" : "▲"}
           </button>
         )}
         {/* Lesson description */}

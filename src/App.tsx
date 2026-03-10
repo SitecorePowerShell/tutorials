@@ -604,7 +604,7 @@ export default function SPETutorial() {
           </div>
         ) : (
           <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-            {/* LEFT — Lesson panel (side-by-side) */}
+            {/* LEFT — Lesson panel (side-by-side, collapsible) */}
             <LessonPanel
               lesson={lesson}
               task={task}
@@ -619,6 +619,8 @@ export default function SPETutorial() {
               isTaskComplete={isTaskComplete}
               lessonsLength={LESSONS.length}
               sideBySide={true}
+              collapsed={lessonPanelCollapsed}
+              onToggleCollapse={() => setLessonPanelCollapsed(!lessonPanelCollapsed)}
             />
 
             {/* MIDDLE — Editor + Console */}
