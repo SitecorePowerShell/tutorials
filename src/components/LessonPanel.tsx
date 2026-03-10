@@ -9,9 +9,10 @@ interface LessonPanelProps {
   currentTask: number;
   currentLesson: number;
   currentTaskComplete: boolean;
-  showHint: boolean;
+  attempts: number;
+  revealedHintLevel: number;
+  onRevealHint: (level: number) => void;
   showTreePanel: boolean;
-  onToggleHint: () => void;
   onAdvanceTask: () => void;
   onGoToTask: (taskIdx: number) => void;
   isTaskComplete: (lessonIdx: number, taskIdx: number) => boolean;
@@ -29,9 +30,9 @@ export function LessonPanel({
   currentTask,
   currentLesson,
   currentTaskComplete,
-  showHint,
-  showTreePanel,
-  onToggleHint,
+  attempts,
+  revealedHintLevel,
+  onRevealHint,
   onAdvanceTask,
   onGoToTask,
   isTaskComplete,
@@ -41,7 +42,13 @@ export function LessonPanel({
   onToggleCollapse,
   height,
   sideBySide,
+  showTreePanel,
 }: LessonPanelProps) {
+  // Determine which hint tiers are unlocked
+  const hasNudge = !!task?.nudge;
+  const nudgeUnlocked = attempts >= 2;
+  const answerUnlocked = attempts >= 4;
+
   // Desktop collapsed state
   if (!isMobile && collapsed) {
     // Side-by-side: narrow vertical strip
@@ -249,28 +256,116 @@ export function LessonPanel({
               <MarkdownLite text={task.instruction} />
             </div>
 
+            {/* Progressive hint buttons */}
             {!currentTaskComplete && (
-              <div style={{ marginTop: 14, display: "flex", gap: 8 }}>
-                <button
-                  onClick={onToggleHint}
-                  style={{
-                    background: "transparent",
-                    border: `1px solid ${colors.borderDim}`,
-                    color: colors.textSecondary,
-                    padding: isMobile ? "10px 16px" : "5px 12px",
-                    borderRadius: 4,
-                    cursor: "pointer",
-                    fontSize: isMobile ? 14 : fontSizes.base,
-                    fontFamily: "inherit",
-                    minHeight: isMobile ? 44 : undefined,
-                  }}
-                >
-                  {showHint ? "Hide Hint" : "Show Hint"}
-                </button>
+              <div style={{ marginTop: 14 }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  {/* Nudge / Hint button */}
+                  {revealedHintLevel < 2 && (
+                    (() => {
+                      // If nudge exists and not yet revealed, show nudge button
+                      if (hasNudge && revealedHintLevel < 1) {
+                        const disabled = !nudgeUnlocked;
+                        return (
+                          <button
+                            onClick={() => !disabled && onRevealHint(1)}
+                            disabled={disabled}
+                            title={disabled ? "Try the task first (2 attempts needed)" : "Show a conceptual hint"}
+                            style={{
+                              background: "transparent",
+                              border: `1px solid ${disabled ? colors.borderDim : colors.borderMedium}`,
+                              color: disabled ? colors.textMuted : colors.textSecondary,
+                              padding: isMobile ? "10px 16px" : "5px 12px",
+                              borderRadius: 4,
+                              cursor: disabled ? "not-allowed" : "pointer",
+                              fontSize: isMobile ? 14 : fontSizes.base,
+                              fontFamily: "inherit",
+                              minHeight: isMobile ? 44 : undefined,
+                              opacity: disabled ? 0.6 : 1,
+                            }}
+                          >
+                            Show Hint
+                          </button>
+                        );
+                      }
+                      // Show answer button (nudge already revealed or no nudge)
+                      const disabled = !answerUnlocked;
+                      return (
+                        <button
+                          onClick={() => !disabled && onRevealHint(2)}
+                          disabled={disabled}
+                          title={disabled ? `Try the task first (${4 - attempts} more attempt${4 - attempts === 1 ? "" : "s"} needed)` : "Show the full answer"}
+                          style={{
+                            background: "transparent",
+                            border: `1px solid ${disabled ? colors.borderDim : colors.statusHint}`,
+                            color: disabled ? colors.textMuted : colors.statusHint,
+                            padding: isMobile ? "10px 16px" : "5px 12px",
+                            borderRadius: 4,
+                            cursor: disabled ? "not-allowed" : "pointer",
+                            fontSize: isMobile ? 14 : fontSizes.base,
+                            fontFamily: "inherit",
+                            minHeight: isMobile ? 44 : undefined,
+                            opacity: disabled ? 0.6 : 1,
+                          }}
+                        >
+                          Show Answer
+                        </button>
+                      );
+                    })()
+                  )}
+
+                  {/* Hide button when hint is revealed */}
+                  {revealedHintLevel > 0 && (
+                    <button
+                      onClick={() => onRevealHint(0)}
+                      style={{
+                        background: "transparent",
+                        border: `1px solid ${colors.borderDim}`,
+                        color: colors.textMuted,
+                        padding: isMobile ? "10px 16px" : "5px 12px",
+                        borderRadius: 4,
+                        cursor: "pointer",
+                        fontSize: isMobile ? 14 : fontSizes.base,
+                        fontFamily: "inherit",
+                        minHeight: isMobile ? 44 : undefined,
+                      }}
+                    >
+                      Hide
+                    </button>
+                  )}
+                </div>
+
+                {/* Attempt counter */}
+                {attempts > 0 && (
+                  <div style={{
+                    marginTop: 8,
+                    fontSize: fontSizes.sm,
+                    color: colors.textMuted,
+                  }}>
+                    Attempts: {attempts}
+                  </div>
+                )}
               </div>
             )}
 
-            {showHint && !currentTaskComplete && (
+            {/* Nudge display (Tier 1) */}
+            {revealedHintLevel >= 1 && !currentTaskComplete && hasNudge && (
+              <div
+                style={{
+                  marginTop: 12,
+                  padding: "10px 14px",
+                  background: colors.bgOverlay,
+                  borderRadius: 6,
+                  borderLeft: `3px solid ${colors.accentPrimary}`,
+                  fontSize: fontSizes.body,
+                }}
+              >
+                <MarkdownLite text={task.nudge!} />
+              </div>
+            )}
+
+            {/* Full answer display (Tier 2) */}
+            {revealedHintLevel >= 2 && !currentTaskComplete && (
               <div
                 style={{
                   marginTop: 12,

@@ -104,6 +104,7 @@ export interface ValidationResult {
 
 export interface Task {
   instruction: string;
+  nudge?: string;
   hint: string;
   starterCode?: string;
   validation: TaskValidation;

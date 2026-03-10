@@ -24,7 +24,8 @@ export default function SPETutorial() {
   const [completedTasks, setCompletedTasks] = useState<
     Record<string, boolean>
   >(initialProgress.completedTasks);
-  const [showHint, setShowHint] = useState(false);
+  const [taskAttempts, setTaskAttempts] = useState<Record<string, number>>(initialProgress.taskAttempts);
+  const [revealedHintLevel, setRevealedHintLevel] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(initialProgress.sidebarCollapsed);
   const [showTreePanel, setShowTreePanel] = useState(false);
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
@@ -53,22 +54,24 @@ export default function SPETutorial() {
       currentLesson,
       currentTask,
       completedTasks,
+      taskAttempts,
       sidebarCollapsed,
     });
-  }, [currentLesson, currentTask, completedTasks, sidebarCollapsed]);
+  }, [currentLesson, currentTask, completedTasks, taskAttempts, sidebarCollapsed]);
 
   const handleResetProgress = useCallback(() => {
     clearProgress();
     setCurrentLesson(0);
     setCurrentTask(0);
     setCompletedTasks({});
+    setTaskAttempts({});
     setSidebarCollapsed(false);
   }, []);
 
   // Reset editor and output when switching lessons or tasks
   useEffect(() => {
     setConsoleOutput([]);
-    setShowHint(false);
+    setRevealedHintLevel(0);
     if (isISE && task?.starterCode) {
       setCode(task.starterCode);
     } else if (isISE) {
@@ -129,6 +132,10 @@ export default function SPETutorial() {
         });
         setCompletedTasks((prev) => ({ ...prev, [taskKey]: true }));
       } else {
+        setTaskAttempts((prev) => ({
+          ...prev,
+          [taskKey]: (prev[taskKey] || 0) + 1,
+        }));
         newOutput.push({
           type: "hint",
           text: validation.feedback || "",
@@ -148,7 +155,6 @@ export default function SPETutorial() {
       setHistoryIndex(-1);
       setCode("");
     }
-    setShowHint(false);
   }, [code, consoleOutput, currentLesson, currentTask, task, isISE]);
 
   const advanceTask = () => {
@@ -177,6 +183,8 @@ export default function SPETutorial() {
     !!completedTasks[`${lessonIdx}-${taskIdx}`];
 
   const currentTaskComplete = isTaskComplete(currentLesson, currentTask);
+  const currentTaskKey = `${currentLesson}-${currentTask}`;
+  const currentAttempts = taskAttempts[currentTaskKey] || 0;
 
   // Auto-collapse sidebar on tablet
   useEffect(() => {
@@ -340,9 +348,10 @@ export default function SPETutorial() {
               currentTask={currentTask}
               currentLesson={currentLesson}
               currentTaskComplete={currentTaskComplete}
-              showHint={showHint}
+              attempts={currentAttempts}
+              revealedHintLevel={revealedHintLevel}
+              onRevealHint={(level) => setRevealedHintLevel(level)}
               showTreePanel={false}
-              onToggleHint={() => setShowHint(!showHint)}
               onAdvanceTask={advanceTask}
               onGoToTask={goToTask}
               isTaskComplete={isTaskComplete}
@@ -521,9 +530,10 @@ export default function SPETutorial() {
                 currentTask={currentTask}
                 currentLesson={currentLesson}
                 currentTaskComplete={currentTaskComplete}
-                showHint={showHint}
+                attempts={currentAttempts}
+                revealedHintLevel={revealedHintLevel}
+                onRevealHint={(level) => setRevealedHintLevel(level)}
                 showTreePanel={showTreePanel}
-                onToggleHint={() => setShowHint(!showHint)}
                 onAdvanceTask={advanceTask}
                 onGoToTask={goToTask}
                 isTaskComplete={isTaskComplete}
@@ -611,9 +621,10 @@ export default function SPETutorial() {
               currentTask={currentTask}
               currentLesson={currentLesson}
               currentTaskComplete={currentTaskComplete}
-              showHint={showHint}
+              attempts={currentAttempts}
+              revealedHintLevel={revealedHintLevel}
+              onRevealHint={(level) => setRevealedHintLevel(level)}
               showTreePanel={showTreePanel}
-              onToggleHint={() => setShowHint(!showHint)}
               onAdvanceTask={advanceTask}
               onGoToTask={goToTask}
               isTaskComplete={isTaskComplete}

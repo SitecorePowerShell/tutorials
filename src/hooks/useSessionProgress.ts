@@ -1,11 +1,12 @@
 const STORAGE_KEY = "spe-tutorial-progress";
-const CURRENT_VERSION = 1;
+const CURRENT_VERSION = 2;
 
 export interface SessionProgress {
   version: number;
   currentLesson: number;
   currentTask: number;
   completedTasks: Record<string, boolean>;
+  taskAttempts: Record<string, number>;
   sidebarCollapsed: boolean;
 }
 
@@ -14,6 +15,7 @@ const DEFAULTS: SessionProgress = {
   currentLesson: 0,
   currentTask: 0,
   completedTasks: {},
+  taskAttempts: {},
   sidebarCollapsed: false,
 };
 
@@ -22,11 +24,26 @@ export function loadProgress(): SessionProgress {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULTS };
     const parsed = JSON.parse(raw);
-    if (
-      typeof parsed !== "object" ||
-      parsed === null ||
-      parsed.version !== CURRENT_VERSION
-    ) {
+    if (typeof parsed !== "object" || parsed === null) {
+      return { ...DEFAULTS };
+    }
+    // Migrate from version 1: preserve existing data, add taskAttempts
+    if (parsed.version === 1) {
+      return {
+        version: CURRENT_VERSION,
+        currentLesson:
+          typeof parsed.currentLesson === "number" ? parsed.currentLesson : 0,
+        currentTask:
+          typeof parsed.currentTask === "number" ? parsed.currentTask : 0,
+        completedTasks:
+          typeof parsed.completedTasks === "object" && parsed.completedTasks
+            ? parsed.completedTasks
+            : {},
+        taskAttempts: {},
+        sidebarCollapsed: !!parsed.sidebarCollapsed,
+      };
+    }
+    if (parsed.version !== CURRENT_VERSION) {
       return { ...DEFAULTS };
     }
     return {
@@ -38,6 +55,10 @@ export function loadProgress(): SessionProgress {
       completedTasks:
         typeof parsed.completedTasks === "object" && parsed.completedTasks
           ? parsed.completedTasks
+          : {},
+      taskAttempts:
+        typeof parsed.taskAttempts === "object" && parsed.taskAttempts
+          ? parsed.taskAttempts
           : {},
       sidebarCollapsed: !!parsed.sidebarCollapsed,
     };
