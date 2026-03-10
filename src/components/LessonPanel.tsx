@@ -17,6 +17,10 @@ interface LessonPanelProps {
   isTaskComplete: (lessonIdx: number, taskIdx: number) => boolean;
   lessonsLength: number;
   isMobile?: boolean;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
+  height?: number;
+  sideBySide?: boolean;
 }
 
 export function LessonPanel({
@@ -33,20 +37,114 @@ export function LessonPanel({
   isTaskComplete,
   lessonsLength,
   isMobile,
+  collapsed,
+  onToggleCollapse,
+  height,
+  sideBySide,
 }: LessonPanelProps) {
+  // Desktop collapsed state — thin bar with task info
+  if (!isMobile && collapsed) {
+    return (
+      <div
+        style={{
+          height: 36,
+          borderBottom: `1px solid ${colors.borderBase}`,
+          display: "flex",
+          alignItems: "center",
+          padding: "0 16px",
+          gap: 12,
+          background: colors.bgPanel,
+          flexShrink: 0,
+        }}
+      >
+        <span style={{ fontSize: fontSizes.sm, color: colors.textMuted }}>
+          Task {currentTask + 1} of {lesson.tasks.length}
+          {currentTaskComplete && <span style={{ color: colors.statusSuccess, marginLeft: 6 }}>✓</span>}
+        </span>
+        {/* Task dots inline */}
+        {lesson.tasks.length > 1 && (
+          <div style={{ display: "flex", gap: 4, marginLeft: 8 }}>
+            {lesson.tasks.map((_, ti) => (
+              <div
+                key={ti}
+                onClick={() => onGoToTask(ti)}
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: "50%",
+                  background: isTaskComplete(currentLesson, ti)
+                    ? colors.statusSuccess
+                    : ti === currentTask
+                      ? colors.accentPrimary
+                      : colors.borderDim,
+                  cursor: "pointer",
+                }}
+              />
+            ))}
+          </div>
+        )}
+        <div style={{ flex: 1 }} />
+        <button
+          onClick={onToggleCollapse}
+          style={{
+            background: "transparent",
+            border: `1px solid ${colors.borderDim}`,
+            color: colors.textSecondary,
+            padding: "2px 10px",
+            borderRadius: 4,
+            cursor: "pointer",
+            fontSize: fontSizes.sm,
+            fontFamily: "inherit",
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+          }}
+        >
+          ▼ Show Tasks
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
-        width: isMobile ? "100%" : showTreePanel ? "35%" : "40%",
+        width: isMobile ? "100%" : sideBySide ? (showTreePanel ? "35%" : "40%") : undefined,
+        height: isMobile ? undefined : sideBySide ? undefined : height,
         flex: isMobile ? 1 : undefined,
-        borderRight: isMobile ? "none" : `1px solid ${colors.borderBase}`,
+        borderRight: sideBySide ? `1px solid ${colors.borderBase}` : "none",
+        borderBottom: isMobile || sideBySide ? "none" : `1px solid ${colors.borderBase}`,
         display: "flex",
         flexDirection: "column",
-        overflow: "auto",
-        transition: isMobile ? "none" : "width 0.25s ease",
+        overflow: sideBySide ? "auto" : "hidden",
+        flexShrink: sideBySide ? undefined : 0,
+        transition: sideBySide ? "width 0.25s ease" : "none",
       }}
     >
-      <div style={{ padding: isMobile ? "16px 16px" : "24px 28px", flex: 1, overflow: "auto" }}>
+      <div style={{ padding: isMobile ? "16px 16px" : sideBySide ? "24px 28px" : "16px 24px", flex: 1, overflow: "auto", position: "relative" }}>
+        {/* Collapse button (desktop only) */}
+        {!isMobile && onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            style={{
+              position: "absolute",
+              top: 8,
+              right: 12,
+              background: "transparent",
+              border: `1px solid ${colors.borderDim}`,
+              color: colors.textSecondary,
+              padding: "2px 8px",
+              borderRadius: 4,
+              cursor: "pointer",
+              fontSize: fontSizes.sm,
+              fontFamily: "inherit",
+              zIndex: 1,
+            }}
+            title="Collapse task panel"
+          >
+            ▲
+          </button>
+        )}
         {/* Lesson description */}
         <div style={{ marginBottom: 24 }}>
           <MarkdownLite text={lesson.description} />

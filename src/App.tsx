@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { ConsoleEntry } from "./types";
 import { LESSONS } from "./lessons/loader";
 import { VIRTUAL_TREE } from "./engine/virtualTree";
@@ -31,6 +31,11 @@ export default function SPETutorial() {
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("lesson");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [lessonPanelHeight, setLessonPanelHeight] = useState(200);
+  const [lessonPanelCollapsed, setLessonPanelCollapsed] = useState(false);
+  const [layoutStacked, setLayoutStacked] = useState(true);
+  const lessonPanelRef = useRef<HTMLDivElement>(null);
+  const isDraggingLessonPanel = useRef(false);
 
   const isMobile = useMediaQuery("(max-width: 767px)");
   const isTablet = useMediaQuery("(min-width: 768px) and (max-width: 1024px)");
@@ -179,6 +184,39 @@ export default function SPETutorial() {
       setSidebarCollapsed(true);
     }
   }, [isTablet]);
+
+  // Lesson panel resize drag handlers
+  const handleLessonDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDraggingLessonPanel.current = true;
+    document.body.style.cursor = "row-resize";
+    document.body.style.userSelect = "none";
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingLessonPanel.current || !lessonPanelRef.current) return;
+      const panelTop = lessonPanelRef.current.getBoundingClientRect().top;
+      const containerHeight = lessonPanelRef.current.parentElement!.getBoundingClientRect().height;
+      const newHeight = e.clientY - panelTop;
+      const maxHeight = containerHeight * 0.5;
+      const clamped = Math.max(80, Math.min(newHeight, maxHeight));
+      setLessonPanelHeight(clamped);
+    };
+    const handleMouseUp = () => {
+      if (isDraggingLessonPanel.current) {
+        isDraggingLessonPanel.current = false;
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      }
+    };
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, []);
 
   // --- MOBILE LAYOUT ---
   if (isMobile) {
@@ -417,6 +455,22 @@ export default function SPETutorial() {
           </div>
           <div style={{ flex: 1 }} />
           <button
+            onClick={() => setLayoutStacked(!layoutStacked)}
+            title={layoutStacked ? "Switch to side-by-side layout" : "Switch to stacked layout"}
+            style={{
+              background: "transparent",
+              border: `1px solid ${colors.borderMedium}`,
+              color: colors.textSecondary,
+              padding: "5px 12px",
+              borderRadius: 4,
+              cursor: "pointer",
+              fontSize: fontSizes.base,
+              fontFamily: "inherit",
+            }}
+          >
+            {layoutStacked ? "⬌ Side-by-side" : "⬍ Stacked"}
+          </button>
+          <button
             onClick={() => setShowTreePanel(!showTreePanel)}
             style={{
               background: showTreePanel ? colors.bgActive : "transparent",
@@ -456,60 +510,154 @@ export default function SPETutorial() {
           </div>
         </div>
 
-        {/* Split pane */}
-        <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-          {/* LEFT — Lesson panel */}
-          <LessonPanel
-            lesson={lesson}
-            task={task}
-            currentTask={currentTask}
-            currentLesson={currentLesson}
-            currentTaskComplete={currentTaskComplete}
-            showHint={showHint}
-            showTreePanel={showTreePanel}
-            onToggleHint={() => setShowHint(!showHint)}
-            onAdvanceTask={advanceTask}
-            onGoToTask={goToTask}
-            isTaskComplete={isTaskComplete}
-            lessonsLength={LESSONS.length}
-          />
+        {/* Split pane — stacked or side-by-side */}
+        {layoutStacked ? (
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            {/* TOP — Lesson panel (collapsible, resizable) */}
+            <div ref={lessonPanelRef}>
+              <LessonPanel
+                lesson={lesson}
+                task={task}
+                currentTask={currentTask}
+                currentLesson={currentLesson}
+                currentTaskComplete={currentTaskComplete}
+                showHint={showHint}
+                showTreePanel={showTreePanel}
+                onToggleHint={() => setShowHint(!showHint)}
+                onAdvanceTask={advanceTask}
+                onGoToTask={goToTask}
+                isTaskComplete={isTaskComplete}
+                lessonsLength={LESSONS.length}
+                collapsed={lessonPanelCollapsed}
+                onToggleCollapse={() => setLessonPanelCollapsed(!lessonPanelCollapsed)}
+                height={lessonPanelCollapsed ? undefined : lessonPanelHeight}
+              />
+            </div>
 
-          {/* MIDDLE — Editor + Console (mode-aware) */}
-          <div
-            style={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              minWidth: 0,
-            }}
-          >
-            {isISE ? (
-              <IseEditor
-                code={code}
-                onCodeChange={setCode}
-                onRun={handleRun}
-                onClear={() => setConsoleOutput([])}
-                consoleOutput={consoleOutput}
-                tree={VIRTUAL_TREE}
-              />
-            ) : (
-              <ReplEditor
-                code={code}
-                onCodeChange={setCode}
-                onRun={handleRun}
-                onClear={() => setConsoleOutput([])}
-                consoleOutput={consoleOutput}
-                commandHistory={commandHistory}
-                historyIndex={historyIndex}
-                onHistoryIndexChange={setHistoryIndex}
-                tree={VIRTUAL_TREE}
-              />
+            {/* Resize handle (hidden when collapsed) */}
+            {!lessonPanelCollapsed && (
+              <div
+                onMouseDown={handleLessonDragStart}
+                style={{
+                  height: 6,
+                  background: colors.borderBase,
+                  cursor: "row-resize",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  transition: "background 0.15s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = colors.bgResizeHover)}
+                onMouseLeave={(e) => {
+                  if (!isDraggingLessonPanel.current)
+                    e.currentTarget.style.background = colors.borderBase;
+                }}
+              >
+                <div
+                  style={{
+                    width: 32,
+                    height: 2,
+                    background: colors.borderDim,
+                    borderRadius: 1,
+                  }}
+                />
+              </div>
             )}
-          </div>
 
-          {/* RIGHT — Content Tree Panel (toggle) */}
-          {showTreePanel && <TreePanel tree={VIRTUAL_TREE} />}
-        </div>
+            {/* BOTTOM — Editor + Console row with optional Tree panel */}
+            <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+              <div
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  minWidth: 0,
+                }}
+              >
+                {isISE ? (
+                  <IseEditor
+                    code={code}
+                    onCodeChange={setCode}
+                    onRun={handleRun}
+                    onClear={() => setConsoleOutput([])}
+                    consoleOutput={consoleOutput}
+                    tree={VIRTUAL_TREE}
+                  />
+                ) : (
+                  <ReplEditor
+                    code={code}
+                    onCodeChange={setCode}
+                    onRun={handleRun}
+                    onClear={() => setConsoleOutput([])}
+                    consoleOutput={consoleOutput}
+                    commandHistory={commandHistory}
+                    historyIndex={historyIndex}
+                    onHistoryIndexChange={setHistoryIndex}
+                    tree={VIRTUAL_TREE}
+                  />
+                )}
+              </div>
+
+              {showTreePanel && <TreePanel tree={VIRTUAL_TREE} />}
+            </div>
+          </div>
+        ) : (
+          <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+            {/* LEFT — Lesson panel (side-by-side) */}
+            <LessonPanel
+              lesson={lesson}
+              task={task}
+              currentTask={currentTask}
+              currentLesson={currentLesson}
+              currentTaskComplete={currentTaskComplete}
+              showHint={showHint}
+              showTreePanel={showTreePanel}
+              onToggleHint={() => setShowHint(!showHint)}
+              onAdvanceTask={advanceTask}
+              onGoToTask={goToTask}
+              isTaskComplete={isTaskComplete}
+              lessonsLength={LESSONS.length}
+              sideBySide={true}
+            />
+
+            {/* MIDDLE — Editor + Console */}
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                minWidth: 0,
+              }}
+            >
+              {isISE ? (
+                <IseEditor
+                  code={code}
+                  onCodeChange={setCode}
+                  onRun={handleRun}
+                  onClear={() => setConsoleOutput([])}
+                  consoleOutput={consoleOutput}
+                  tree={VIRTUAL_TREE}
+                />
+              ) : (
+                <ReplEditor
+                  code={code}
+                  onCodeChange={setCode}
+                  onRun={handleRun}
+                  onClear={() => setConsoleOutput([])}
+                  consoleOutput={consoleOutput}
+                  commandHistory={commandHistory}
+                  historyIndex={historyIndex}
+                  onHistoryIndexChange={setHistoryIndex}
+                  tree={VIRTUAL_TREE}
+                />
+              )}
+            </div>
+
+            {/* RIGHT — Content Tree Panel (toggle) */}
+            {showTreePanel && <TreePanel tree={VIRTUAL_TREE} />}
+          </div>
+        )}
       </div>
     </div>
   );
