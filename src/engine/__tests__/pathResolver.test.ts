@@ -88,8 +88,8 @@ describe("getChildren", () => {
   });
 
   it("returns empty array for leaf nodes", () => {
-    const team = resolvePath('master:\\content\\Home\\About\\Team', tree)!.node;
-    const children = getChildren(team);
+    const history = resolvePath('master:\\content\\Home\\About\\History', tree)!.node;
+    const children = getChildren(history);
     expect(children).toHaveLength(0);
   });
 });
@@ -100,8 +100,8 @@ describe("getAllDescendants", () => {
   it("returns all descendants recursively", () => {
     const home = resolvePath('master:\\content\\Home', tree)!.node;
     const descendants = getAllDescendants(home, "/sitecore/content/Home");
-    // Home has: About, Team, History, Products, Product A/B/C, News, 2025 Roadmap, Sitecore Launch = 10
-    expect(descendants).toHaveLength(10);
+    // Home has: About (Team + 4 employees, History, Careers), Products (A + Features + 2, B, C, D), News (4 articles) = 21
+    expect(descendants).toHaveLength(21);
   });
 
   it("includes paths for all descendants", () => {

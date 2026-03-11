@@ -261,7 +261,7 @@ describe("executeScript", () => {
       '$items = Get-ChildItem -Path "master:\\content\\Home" -Recurse\n$items | Measure-Object'
     );
     expect(result.error).toBeNull();
-    expect(result.output).toContain("Count    : 10");
+    expect(result.output).toContain("Count    : 21");
   });
 
   it("handles continuation lines (pipe at end)", () => {
@@ -269,7 +269,7 @@ describe("executeScript", () => {
       'Get-ChildItem -Path "master:\\content\\Home" -Recurse |\nMeasure-Object'
     );
     expect(result.error).toBeNull();
-    expect(result.output).toContain("Count    : 10");
+    expect(result.output).toContain("Count    : 21");
   });
 
   it("skips comments", () => {

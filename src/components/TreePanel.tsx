@@ -2,6 +2,22 @@ import { useState } from "react";
 import type { SitecoreNode } from "../types";
 import { colors, fonts, fontSizes } from "../theme";
 
+function getTemplateIcon(template: string, hasChildren: boolean): string {
+  const t = template.toLowerCase();
+  if (t === "image") return "\uD83D\uDDBC\uFE0F";
+  if (t === "pdf") return "\uD83D\uDCC4";
+  if (t === "article") return "\uD83D\uDCF0";
+  if (t === "product") return "\uD83D\uDCE6";
+  if (t === "employee") return "\uD83D\uDC64";
+  if (t === "configuration") return "\u2699\uFE0F";
+  if (t === "landing page") return "\uD83C\uDFAF";
+  if (t === "feature") return "\u2B50";
+  if (t === "lookup item") return "\uD83D\uDD16";
+  if (t.includes("folder")) return "\uD83D\uDCC1";
+  if (hasChildren) return "\uD83D\uDCC2";
+  return "\uD83D\uDCC4";
+}
+
 function TreeNode({
   name,
   node,
@@ -54,11 +70,7 @@ function TreeNode({
           {hasChildren ? (expanded ? "▼" : "▶") : " "}
         </span>
         <span style={{ color: hasChildren ? colors.accentFolder : colors.textOutput }}>
-          {(node._template || "").includes("Folder")
-            ? "📁"
-            : hasChildren
-              ? "📂"
-              : "📄"}
+          {getTemplateIcon(node._template || "", hasChildren)}
         </span>
         <span>{name}</span>
         <span
