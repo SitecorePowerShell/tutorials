@@ -543,7 +543,8 @@ export function executeCommandWithContext(
         if (!pipelineData)
           return { output: "", error: "Select-Object : No pipeline input." };
         const propParam =
-          stage.params.Property || stage.params.property;
+          stage.params.Property || stage.params.property ||
+          (stage.params._positional && stage.params._positional[0]);
         if (propParam) {
           const props = expandPropertyWildcard(propParam.split(",").map((p) => p.trim()), pipelineData);
           (pipelineData as SitecoreItemArray)._selectedProperties = props;
@@ -685,7 +686,8 @@ export function executeCommandWithContext(
           return { output: "", error: "Show-ListView : No pipeline input." };
         }
         const propParam =
-          stage.params.Property || stage.params.property;
+          stage.params.Property || stage.params.property ||
+          (stage.params._positional && stage.params._positional[0]);
         const title =
           stage.params.Title || stage.params.title || "List View";
         let props: string[] | null = null;

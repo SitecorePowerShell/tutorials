@@ -103,6 +103,29 @@ describe("executeCommandWithContext", () => {
       expect(result.output).toContain("TemplateName");
     });
 
+    it("supports positional wildcard (Select-Object *)", () => {
+      const result = executeCommandWithContext(
+        'Get-ChildItem -Path "master:\\content\\Home" | Select-Object *',
+        ctx,
+        tree
+      );
+      expect(result.error).toBeNull();
+      // Wildcard expands all properties
+      expect(result.output).toContain("Name");
+      expect(result.output).toContain("TemplateName");
+    });
+
+    it("supports positional property list (Select-Object Name,TemplateName)", () => {
+      const result = executeCommandWithContext(
+        'Get-ChildItem -Path "master:\\content\\Home" | Select-Object Name,TemplateName',
+        ctx,
+        tree
+      );
+      expect(result.error).toBeNull();
+      expect(result.output).toContain("Name");
+      expect(result.output).toContain("TemplateName");
+    });
+
     it("supports -First", () => {
       const result = executeCommandWithContext(
         'Get-ChildItem -Path "master:\\content\\Home" -Recurse | Select-Object -First 2',
@@ -161,6 +184,17 @@ describe("executeCommandWithContext", () => {
       expect(result.error).toBeNull();
       expect(result.output).toContain("Test Report");
       expect(result.output).toContain("3 item(s) displayed.");
+    });
+
+    it("supports positional wildcard (Show-ListView *)", () => {
+      const result = executeCommandWithContext(
+        'Get-ChildItem -Path "master:\\content\\Home" | Show-ListView *',
+        ctx,
+        tree
+      );
+      expect(result.error).toBeNull();
+      expect(result.output).toContain("Name");
+      expect(result.output).toContain("TemplateName");
     });
   });
 
