@@ -25,6 +25,8 @@ interface IseEditorProps {
   tree?: { sitecore: SitecoreNode };
   userVariables?: string[];
   isMobile?: boolean;
+  initialEditorHeight?: number;
+  onEditorHeightChange?: (height: number) => void;
 }
 
 export function IseEditor({
@@ -37,6 +39,8 @@ export function IseEditor({
   tree,
   userVariables,
   isMobile,
+  initialEditorHeight,
+  onEditorHeightChange,
 }: IseEditorProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const overlayRef = useRef<HTMLPreElement>(null);
@@ -44,7 +48,7 @@ export function IseEditor({
   const consoleEndRef = useRef<HTMLDivElement>(null);
   const editorPaneRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
-  const [editorHeight, setEditorHeight] = useState(250);
+  const [editorHeight, setEditorHeight] = useState(initialEditorHeight ?? 250);
   const [completion, setCompletion] = useState<CompletionState | null>(null);
   const [cursorPos, setCursorPos] = useState(0);
 
@@ -95,7 +99,8 @@ export function IseEditor({
   const handleTouchEnd = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
     isDragging.current = false;
     (e.currentTarget as HTMLDivElement).style.background = colors.borderBase;
-  }, []);
+    setEditorHeight((h) => { onEditorHeightChange?.(h); return h; });
+  }, [onEditorHeightChange]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -115,6 +120,7 @@ export function IseEditor({
         isDragging.current = false;
         document.body.style.cursor = "";
         document.body.style.userSelect = "";
+        setEditorHeight((h) => { onEditorHeightChange?.(h); return h; });
       }
     };
     document.addEventListener("mousemove", handleMouseMove);
@@ -123,7 +129,7 @@ export function IseEditor({
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, []);
+  }, [onEditorHeightChange]);
 
   // Sync scroll between textarea, overlay, and line numbers
   const handleScroll = useCallback(() => {

@@ -5,6 +5,7 @@ import { VIRTUAL_TREE } from "./engine/virtualTree";
 import { executeScript, executeCommand } from "./engine/executor";
 import { validateTask } from "./validation/validator";
 import { loadProgress, saveProgress, clearProgress } from "./hooks/useSessionProgress";
+import { loadUIPreferences, saveUIPreferences } from "./hooks/useUIPreferences";
 import { useMediaQuery } from "./hooks/useMediaQuery";
 import { Sidebar } from "./components/Sidebar";
 import { LessonPanel } from "./components/LessonPanel";
@@ -15,6 +16,7 @@ import { MobileTabBar, type MobilePanel } from "./components/MobileTabBar";
 import { colors, fonts, fontSizes, fontSizesMobile } from "./theme";
 
 const initialProgress = loadProgress();
+const initialPrefs = loadUIPreferences();
 
 export default function SPETutorial() {
   const [currentLesson, setCurrentLesson] = useState(initialProgress.currentLesson);
@@ -27,16 +29,18 @@ export default function SPETutorial() {
   const [taskAttempts, setTaskAttempts] = useState<Record<string, number>>(initialProgress.taskAttempts);
   const [revealedHintLevel, setRevealedHintLevel] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(initialProgress.sidebarCollapsed);
-  const [showTreePanel, setShowTreePanel] = useState(false);
+  const [showTreePanel, setShowTreePanel] = useState(initialPrefs.showTreePanel);
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("lesson");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [lessonPanelHeight, setLessonPanelHeight] = useState(200);
-  const [lessonPanelCollapsed, setLessonPanelCollapsed] = useState(false);
-  const [layoutStacked, setLayoutStacked] = useState(true);
+  const [lessonPanelCollapsed, setLessonPanelCollapsed] = useState(initialPrefs.lessonPanelCollapsed);
+  const [layoutStacked, setLayoutStacked] = useState(initialPrefs.layoutStacked);
   const lessonPanelRef = useRef<HTMLDivElement>(null);
   const isDraggingLessonPanel = useRef(false);
+  const editorHeightRef = useRef(initialPrefs.editorHeight);
+  const hasInitializedHeight = useRef(false);
 
   const isMobile = useMediaQuery("(max-width: 767px)");
   const isTablet = useMediaQuery("(min-width: 768px) and (max-width: 1024px)");
@@ -58,6 +62,37 @@ export default function SPETutorial() {
       sidebarCollapsed,
     });
   }, [currentLesson, currentTask, completedTasks, taskAttempts, sidebarCollapsed]);
+
+  // Initialize lesson panel height from saved percentage once container is measured
+  useEffect(() => {
+    if (hasInitializedHeight.current) return;
+    const container = lessonPanelRef.current?.parentElement;
+    if (!container) return;
+    const containerH = container.getBoundingClientRect().height;
+    if (containerH > 0) {
+      const maxHeight = containerH * 0.5;
+      const targetHeight = containerH * (initialPrefs.lessonPanelHeightPercent / 100);
+      setLessonPanelHeight(Math.max(80, Math.min(targetHeight, maxHeight)));
+      hasInitializedHeight.current = true;
+    }
+  });
+
+  // Persist UI preferences to localStorage
+  useEffect(() => {
+    const container = lessonPanelRef.current?.parentElement;
+    const containerH = container?.getBoundingClientRect().height;
+    const heightPercent = containerH && containerH > 0
+      ? (lessonPanelHeight / containerH) * 100
+      : initialPrefs.lessonPanelHeightPercent;
+
+    saveUIPreferences({
+      layoutStacked,
+      lessonPanelHeightPercent: Math.round(heightPercent),
+      editorHeight: editorHeightRef.current,
+      showTreePanel,
+      lessonPanelCollapsed,
+    });
+  }, [layoutStacked, lessonPanelHeight, showTreePanel, lessonPanelCollapsed]);
 
   const handleResetProgress = useCallback(() => {
     clearProgress();
@@ -595,6 +630,19 @@ export default function SPETutorial() {
                     consoleOutput={consoleOutput}
                     commandHistory={commandHistory}
                     tree={VIRTUAL_TREE}
+                    initialEditorHeight={initialPrefs.editorHeight}
+                    onEditorHeightChange={(h) => {
+                      editorHeightRef.current = h;
+                      saveUIPreferences({
+                        layoutStacked,
+                        lessonPanelHeightPercent: Math.round(
+                          ((lessonPanelHeight / (lessonPanelRef.current?.parentElement?.getBoundingClientRect().height || 1)) * 100)
+                        ),
+                        editorHeight: h,
+                        showTreePanel,
+                        lessonPanelCollapsed,
+                      });
+                    }}
                   />
                 ) : (
                   <ReplEditor
@@ -653,6 +701,19 @@ export default function SPETutorial() {
                   onClear={() => setConsoleOutput([])}
                   consoleOutput={consoleOutput}
                   tree={VIRTUAL_TREE}
+                  initialEditorHeight={initialPrefs.editorHeight}
+                  onEditorHeightChange={(h) => {
+                    editorHeightRef.current = h;
+                    saveUIPreferences({
+                      layoutStacked,
+                      lessonPanelHeightPercent: Math.round(
+                        ((lessonPanelHeight / (lessonPanelRef.current?.parentElement?.getBoundingClientRect().height || 1)) * 100)
+                      ),
+                      editorHeight: h,
+                      showTreePanel,
+                      lessonPanelCollapsed,
+                    });
+                  }}
                 />
               ) : (
                 <ReplEditor
