@@ -44,18 +44,19 @@ description: |
           History
           Careers
         Products/
-          Product A/
+          XM Cloud/
             Features/
-              Cloud Integration
-              API Access
-          Product B
-          Product C
-          Product D
+              Pages Editor
+              Components
+              Forms
+          Content Hub
+          Sitecore Search
+          Sitecore Send
         News/
-          2025 Roadmap
-          Sitecore Launch
-          Company Update
-          Security Best Practices
+          SPE 7.0 Released
+          SPE Remoting Update
+          SPE XM Cloud Support
+          SPE 6.4 Security Patch
       Data/
         Settings
         Lookups/

@@ -26,3 +26,22 @@ export function getItemProperty(item: SitecoreItem, prop: string): string {
   }
   return "";
 }
+
+const BUILTIN_PROPERTIES = [
+  "Name",
+  "ID",
+  "TemplateName",
+  "TemplateID",
+  "ItemPath",
+  "Version",
+  "HasChildren",
+  "Database",
+  "DisplayName",
+  "Language",
+];
+
+/** Returns all property names for an item (built-in + dynamic fields) */
+export function getAllPropertyNames(item: SitecoreItem): string[] {
+  const fieldNames = item.node._fields ? Object.keys(item.node._fields) : [];
+  return [...BUILTIN_PROPERTIES, ...fieldNames];
+}

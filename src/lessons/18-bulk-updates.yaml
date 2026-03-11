@@ -38,7 +38,7 @@ tasks:
       foreach($item in $items) { Set-ItemProperty -Path $item.ItemPath -Name "Title" -Value "Featured: $($item.Name)" }
       Get-ChildItem -Path "master:\content\Home\Products" | Format-Table -Property Name,Title
     starterCode: |
-      # Bulk Update Product Titles
+      # Bulk Update Sitecore Product Titles
       $items = Get-ChildItem -Path "master:\content\Home\Products"
       foreach($item in $items) { Set-ItemProperty -Path $item.ItemPath -Name "Title" -Value "Featured: $($item.Name)" }
       Get-ChildItem -Path "master:\content\Home\Products" | Format-Table -Property Name,Title

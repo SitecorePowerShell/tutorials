@@ -62,7 +62,7 @@ describe("executeCommandWithContext", () => {
       );
       expect(result.error).toBeNull();
       expect(result.output).toContain("Contributors");
-      expect(result.output).toContain("Product A");
+      expect(result.output).toContain("XM Cloud");
     });
   });
 
@@ -81,13 +81,13 @@ describe("executeCommandWithContext", () => {
 
     it("filters by Name -like wildcard", () => {
       const result = executeCommandWithContext(
-        'Get-ChildItem -Path "master:\\content\\Home" -Recurse | Where-Object { $_.Name -like "*Product*" }',
+        'Get-ChildItem -Path "master:\\content\\Home" -Recurse | Where-Object { $_.Name -like "*Sitecore*" }',
         ctx,
         tree
       );
       expect(result.error).toBeNull();
-      expect(result.output).toContain("Product A");
-      expect(result.output).toContain("Product B");
+      expect(result.output).toContain("Sitecore Search");
+      expect(result.output).toContain("Sitecore Send");
     });
   });
 
@@ -261,7 +261,7 @@ describe("executeScript", () => {
       '$items = Get-ChildItem -Path "master:\\content\\Home" -Recurse\n$items | Measure-Object'
     );
     expect(result.error).toBeNull();
-    expect(result.output).toContain("Count    : 42");
+    expect(result.output).toContain("Count    : 43");
   });
 
   it("handles continuation lines (pipe at end)", () => {
@@ -269,7 +269,7 @@ describe("executeScript", () => {
       'Get-ChildItem -Path "master:\\content\\Home" -Recurse |\nMeasure-Object'
     );
     expect(result.error).toBeNull();
-    expect(result.output).toContain("Count    : 42");
+    expect(result.output).toContain("Count    : 43");
   });
 
   it("skips comments", () => {

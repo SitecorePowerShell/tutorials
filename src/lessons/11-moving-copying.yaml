@@ -64,14 +64,14 @@ tasks:
     successMessage: |
       Renaming preserves the item's ID, fields, and children — only the name changes. The pipeline pattern (`Get-Item | Rename-Item`) is idiomatic SPE and works with all item manipulation commands.
   - instruction: |
-      Finally, move "Product C" from Products to the About section. Verify by listing both Products and About children.
+      Finally, move "Sitecore Search" from Products to the About section. Verify by listing both Products and About children.
     hint: |
-      Move-Item -Path "master:\content\Home\Products\Product C" -Destination "master:\content\Home\About"
+      Move-Item -Path "master:\content\Home\Products\Sitecore Search" -Destination "master:\content\Home\About"
       Get-ChildItem -Path "master:\content\Home\Products"
       Get-ChildItem -Path "master:\content\Home\About"
     starterCode: |
-      # Move Product C into About
-      Move-Item -Path "master:\content\Home\Products\Product C" -Destination "master:\content\Home\About"
+      # Move Sitecore Search into About
+      Move-Item -Path "master:\content\Home\Products\Sitecore Search" -Destination "master:\content\Home\About"
 
       # Verify both locations
       Write-Host "--- Products ---"

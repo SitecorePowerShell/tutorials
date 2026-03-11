@@ -14,15 +14,15 @@ description: |
   These operators let you build powerful content queries without writing Sitecore Query or LINQ.
 tasks:
   - instruction: |
-      Find all items under Home whose Name contains "Product" using the `-like` operator with wildcards.
+      Find all items under Home whose Name contains "Sitecore" using the `-like` operator with wildcards.
     hint: |
-      Get-ChildItem -Path "master:\content\Home" -Recurse | Where-Object { $_.Name -like "*Product*" }
+      Get-ChildItem -Path "master:\content\Home" -Recurse | Where-Object { $_.Name -like "*Sitecore*" }
     validation:
       type: "pipeline"
       stages:
         - "get-childitem"
         - "where-object"
-      outputContains: "Product"
+      outputContains: "Sitecore"
     successMessage: |
       Wildcard matching with `-like` is perfect for finding items by naming convention — a very common Sitecore pattern.
   - instruction: |

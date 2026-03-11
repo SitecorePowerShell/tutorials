@@ -68,9 +68,9 @@ describe("resolvePath", () => {
   });
 
   it("resolves items with spaces in names", () => {
-    const result = resolvePath('master:\\content\\Home\\Products\\Product A', tree);
+    const result = resolvePath('master:\\content\\Home\\Products\\XM Cloud', tree);
     expect(result).not.toBeNull();
-    expect(result!.name).toBe("Product A");
+    expect(result!.name).toBe("XM Cloud");
   });
 });
 
@@ -101,7 +101,7 @@ describe("getAllDescendants", () => {
     const home = resolvePath('master:\\content\\Home', tree)!.node;
     const descendants = getAllDescendants(home, "/sitecore/content/Home");
     // Home has: About (Contributors + 25 contributors, History, Careers), Products (A + Features + 2, B, C, D), News (4 articles) = 42
-    expect(descendants).toHaveLength(42);
+    expect(descendants).toHaveLength(43);
   });
 
   it("includes paths for all descendants", () => {

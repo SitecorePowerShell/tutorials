@@ -59,3 +59,23 @@ export function formatPropertyTable(
   );
   return [headerLine, sep, ...rowLines].join("\n");
 }
+
+export function formatPropertyList(
+  items: SitecoreItem[],
+  properties: string[]
+): string {
+  const displayNames = properties.map((p) =>
+    p.toLowerCase() === "id" ? "ID" : p
+  );
+  const maxLen = Math.max(...displayNames.map((n) => n.length));
+  return items
+    .map((item) =>
+      properties
+        .map((p, i) => {
+          const val = getItemProperty(item, p) || "-";
+          return `${displayNames[i].padStart(maxLen)} : ${val}`;
+        })
+        .join("\n")
+    )
+    .join("\n\n");
+}
