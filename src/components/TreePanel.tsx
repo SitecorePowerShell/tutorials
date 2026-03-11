@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { SitecoreNode } from "../types";
 import { colors, fonts, fontSizes } from "../theme";
+import { getItemProperty, getAllPropertyNames } from "../engine/properties";
 
 function getTemplateIcon(template: string, hasChildren: boolean): string {
   const t = template.toLowerCase();
@@ -18,31 +19,198 @@ function getTemplateIcon(template: string, hasChildren: boolean): string {
   return "\uD83D\uDCC4";
 }
 
+function resolveNode(
+  tree: { sitecore: SitecoreNode },
+  path: string
+): { name: string; node: SitecoreNode; path: string } | null {
+  const segments = path.split("/").filter(Boolean);
+  if (segments.length === 0) return null;
+  if (segments[0] !== "sitecore") return null;
+
+  let current = tree.sitecore;
+  let builtPath = "/sitecore";
+
+  for (let i = 1; i < segments.length; i++) {
+    const seg = segments[i];
+    const children = current._children || {};
+    if (!(seg in children)) return null;
+    current = children[seg];
+    builtPath += "/" + seg;
+  }
+
+  return { name: segments[segments.length - 1], node: current, path: builtPath };
+}
+
+function PropertyDetailView({
+  item,
+  tree,
+  onBack,
+  onNavigate,
+  isMobile,
+}: {
+  item: { name: string; node: SitecoreNode; path: string };
+  tree: { sitecore: SitecoreNode };
+  onBack: () => void;
+  onNavigate: (item: { name: string; node: SitecoreNode; path: string }) => void;
+  isMobile?: boolean;
+}) {
+  const [copiedProp, setCopiedProp] = useState<string | null>(null);
+
+  const sitecoreItem = { name: item.name, node: item.node, path: item.path };
+  const propNames = getAllPropertyNames(sitecoreItem);
+
+  const segments = item.path.split("/").filter(Boolean);
+
+  const handleCopy = (propName: string, value: string) => {
+    navigator.clipboard.writeText(value);
+    setCopiedProp(propName);
+    setTimeout(() => setCopiedProp(null), 1500);
+  };
+
+  return (
+    <div style={{ padding: "8px 12px" }}>
+      <div
+        onClick={onBack}
+        style={{
+          color: colors.accentLink,
+          cursor: "pointer",
+          fontSize: fontSizes.sm,
+          padding: "4px 0 8px",
+          fontFamily: fonts.monoShort,
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
+        onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+      >
+        ← Back to Tree
+      </div>
+
+      <div
+        style={{
+          fontSize: fontSizes.sm,
+          fontFamily: fonts.monoShort,
+          color: colors.textMuted,
+          padding: "4px 0 10px",
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          gap: 2,
+        }}
+      >
+        {segments.map((seg, i) => {
+          const isLast = i === segments.length - 1;
+          const segPath = "/" + segments.slice(0, i + 1).join("/");
+          return (
+            <span key={segPath} style={{ display: "inline-flex", alignItems: "center", gap: 2 }}>
+              {i > 0 && (
+                <span style={{ color: colors.textDimmed, margin: "0 2px" }}>&gt;</span>
+              )}
+              {isLast ? (
+                <span style={{ color: colors.textPrimary, fontWeight: 600 }}>{seg}</span>
+              ) : (
+                <span
+                  onClick={() => {
+                    const resolved = resolveNode(tree, segPath);
+                    if (resolved) onNavigate(resolved);
+                  }}
+                  style={{ color: colors.accentLink, cursor: "pointer" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
+                  onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
+                >
+                  {seg}
+                </span>
+              )}
+            </span>
+          );
+        })}
+      </div>
+
+      <div
+        style={{
+          borderTop: `1px solid ${colors.borderBase}`,
+        }}
+      >
+        {propNames.map((propName) => {
+          const value = getItemProperty(sitecoreItem, propName);
+          const isCopied = copiedProp === propName;
+          return (
+            <div
+              key={propName}
+              onClick={() => handleCopy(propName, value)}
+              style={{
+                display: "flex",
+                padding: isMobile ? "8px 4px" : "4px 4px",
+                minHeight: isMobile ? 36 : undefined,
+                cursor: "pointer",
+                fontSize: fontSizes.sm,
+                fontFamily: fonts.monoShort,
+                borderBottom: `1px solid ${colors.borderLight}`,
+                borderRadius: 2,
+                transition: "background 0.15s",
+                alignItems: "center",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = colors.bgHover)}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+            >
+              <span
+                style={{
+                  color: colors.textMuted,
+                  width: "40%",
+                  flexShrink: 0,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {propName}
+              </span>
+              <span
+                style={{
+                  color: isCopied ? colors.statusSuccess : colors.textOutput,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  flex: 1,
+                }}
+              >
+                {isCopied ? "Copied!" : value || "—"}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function TreeNode({
   name,
   node,
   depth = 0,
   isMobile,
+  parentPath,
+  onSelect,
 }: {
   name: string;
   node: SitecoreNode;
   depth?: number;
   isMobile?: boolean;
+  parentPath: string;
+  onSelect: (item: { name: string; node: SitecoreNode; path: string }) => void;
 }) {
   const [expanded, setExpanded] = useState(depth < 2);
   const children = Object.entries(node._children || {});
   const hasChildren = children.length > 0;
+  const currentPath = parentPath ? `${parentPath}/${name}` : `/${name}`;
 
   return (
     <div>
       <div
-        onClick={() => hasChildren && setExpanded(!expanded)}
         style={{
           paddingLeft: depth * 18 + 8,
           paddingTop: isMobile ? 8 : 3,
           paddingBottom: isMobile ? 8 : 3,
           minHeight: isMobile ? 40 : undefined,
-          cursor: hasChildren ? "pointer" : "default",
+          cursor: "pointer",
           fontSize: fontSizes.md,
           fontFamily: fonts.monoShort,
           color: hasChildren ? colors.accentLink : colors.textSubtle,
@@ -60,28 +228,40 @@ function TreeNode({
         }
       >
         <span
+          onClick={(e) => {
+            e.stopPropagation();
+            if (hasChildren) setExpanded(!expanded);
+          }}
           style={{
             width: 14,
             fontSize: fontSizes.xs,
             color: colors.accentPrimary,
             flexShrink: 0,
+            cursor: hasChildren ? "pointer" : "default",
+            padding: "2px 0",
           }}
         >
           {hasChildren ? (expanded ? "▼" : "▶") : " "}
         </span>
-        <span style={{ color: hasChildren ? colors.accentFolder : colors.textOutput }}>
-          {getTemplateIcon(node._template || "", hasChildren)}
-        </span>
-        <span>{name}</span>
         <span
-          style={{
-            color: colors.textMuted,
-            fontSize: fontSizes.sm,
-            marginLeft: "auto",
-            paddingRight: 8,
-          }}
+          onClick={() => onSelect({ name, node, path: currentPath })}
+          style={{ display: "flex", alignItems: "center", gap: 6, flex: 1, overflow: "hidden" }}
         >
-          {node._template?.split("/").pop() || ""}
+          <span style={{ color: hasChildren ? colors.accentFolder : colors.textOutput, flexShrink: 0 }}>
+            {getTemplateIcon(node._template || "", hasChildren)}
+          </span>
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</span>
+          <span
+            style={{
+              color: colors.textMuted,
+              fontSize: fontSizes.sm,
+              marginLeft: "auto",
+              paddingRight: 8,
+              flexShrink: 0,
+            }}
+          >
+            {node._template?.split("/").pop() || ""}
+          </span>
         </span>
       </div>
       {expanded &&
@@ -92,6 +272,8 @@ function TreeNode({
             node={childNode}
             depth={depth + 1}
             isMobile={isMobile}
+            parentPath={currentPath}
+            onSelect={onSelect}
           />
         ))}
     </div>
@@ -104,6 +286,12 @@ interface TreePanelProps {
 }
 
 export function TreePanel({ tree, isMobile }: TreePanelProps) {
+  const [selectedItem, setSelectedItem] = useState<{
+    name: string;
+    node: SitecoreNode;
+    path: string;
+  } | null>(null);
+
   return (
     <div
       style={{
@@ -115,22 +303,41 @@ export function TreePanel({ tree, isMobile }: TreePanelProps) {
         flexShrink: 0,
       }}
     >
-      <div
-        style={{
-          padding: "14px 16px",
-          borderBottom: `1px solid ${colors.borderBase}`,
-          fontSize: fontSizes.base,
-          fontWeight: 600,
-          color: colors.textSecondary,
-          textTransform: "uppercase",
-          letterSpacing: "0.06em",
-        }}
-      >
-        Sitecore Content Tree
-      </div>
-      <div style={{ padding: "8px 0" }}>
-        <TreeNode name="sitecore" node={tree.sitecore} depth={0} isMobile={isMobile} />
-      </div>
+      {selectedItem ? (
+        <PropertyDetailView
+          item={selectedItem}
+          tree={tree}
+          onBack={() => setSelectedItem(null)}
+          onNavigate={setSelectedItem}
+          isMobile={isMobile}
+        />
+      ) : (
+        <>
+          <div
+            style={{
+              padding: "14px 16px",
+              borderBottom: `1px solid ${colors.borderBase}`,
+              fontSize: fontSizes.base,
+              fontWeight: 600,
+              color: colors.textSecondary,
+              textTransform: "uppercase",
+              letterSpacing: "0.06em",
+            }}
+          >
+            Sitecore Content Tree
+          </div>
+          <div style={{ padding: "8px 0" }}>
+            <TreeNode
+              name="sitecore"
+              node={tree.sitecore}
+              depth={0}
+              isMobile={isMobile}
+              parentPath=""
+              onSelect={setSelectedItem}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }
