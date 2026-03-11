@@ -231,7 +231,7 @@ export default function SPETutorial() {
     return (
       <div
         style={{
-          height: "100vh",
+          height: "100dvh",
           width: "100vw",
           display: "flex",
           flexDirection: "column",
