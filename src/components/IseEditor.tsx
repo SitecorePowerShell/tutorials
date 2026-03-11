@@ -7,6 +7,7 @@ import { getCompletions, type CompletionResult } from "../engine/completions";
 import { createBracketAutoCloseHandler } from "../hooks/useBracketAutoClose";
 import { useBracketMatching } from "../hooks/useBracketMatching";
 import { useGhostText } from "../hooks/useGhostText";
+import { MobileAccessoryRow } from "./MobileAccessoryRow";
 
 interface CompletionState {
   result: CompletionResult;
@@ -175,6 +176,72 @@ export function IseEditor({
       ),
     [code, onCodeChange]
   );
+
+  // Trigger Ctrl+Space completion programmatically (for mobile accessory row)
+  const triggerCompletion = useCallback(() => {
+    const ta = inputRef.current;
+    if (!ta) return;
+    const pos = ta.selectionStart ?? 0;
+
+    if (completion) {
+      const nextIndex = (completion.index + 1) % completion.result.matches.length;
+      const match = completion.result.matches[nextIndex];
+      const newCode =
+        completion.originalText.slice(0, completion.result.replaceStart) +
+        match +
+        completion.originalText.slice(completion.result.replaceEnd);
+      onCodeChange(newCode);
+      const newCursor = completion.result.replaceStart + match.length;
+      setCompletion({ ...completion, index: nextIndex });
+      requestAnimationFrame(() => {
+        ta.selectionStart = ta.selectionEnd = newCursor;
+      });
+    } else {
+      const result = getCompletions(code, pos, tree, userVariables);
+      if (result && result.matches.length > 0) {
+        const match = result.matches[0];
+        const newCode =
+          code.slice(0, result.replaceStart) +
+          match +
+          code.slice(result.replaceEnd);
+        onCodeChange(newCode);
+        const newCursor = result.replaceStart + match.length;
+        setCompletion({
+          result,
+          index: 0,
+          originalText: code,
+          originalCursor: pos,
+        });
+        requestAnimationFrame(() => {
+          ta.selectionStart = ta.selectionEnd = newCursor;
+        });
+      }
+    }
+  }, [code, completion, tree, userVariables, onCodeChange]);
+
+  // Insert a character at cursor position (for mobile accessory row)
+  const handleAccessoryInsert = useCallback((char: string, pair?: string) => {
+    const ta = inputRef.current;
+    if (!ta) return;
+    const pos = ta.selectionStart ?? 0;
+    const newCode = pair
+      ? code.slice(0, pos) + char + pair + code.slice(pos)
+      : code.slice(0, pos) + char + code.slice(pos);
+    onCodeChange(newCode);
+    const newCursor = pos + char.length;
+    requestAnimationFrame(() => {
+      ta.selectionStart = ta.selectionEnd = newCursor;
+      ta.focus();
+    });
+  }, [code, onCodeChange]);
+
+  // Handle accessory row actions
+  const handleAccessoryAction = useCallback((action: string) => {
+    if (action === "tab") {
+      triggerCompletion();
+    }
+    inputRef.current?.focus();
+  }, [triggerCompletion]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -561,11 +628,34 @@ export function IseEditor({
             </span>
           )}
           {showGhost && (
-            <span style={{ color: colors.textDimmed, marginLeft: completion ? undefined : "auto" }}>
-              → accept
-            </span>
+            <button
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                onCodeChange(code + ghostText);
+                inputRef.current?.focus();
+              }}
+              style={{
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+                color: colors.textDimmed,
+                fontFamily: "inherit",
+                fontSize: fontSizes.sm,
+                marginLeft: completion ? undefined : "auto",
+                padding: "2px 6px",
+                touchAction: "manipulation",
+              }}
+            >
+              Tab →
+            </button>
           )}
         </div>
+        {isMobile && (
+          <MobileAccessoryRow
+            onInsert={handleAccessoryInsert}
+            onAction={handleAccessoryAction}
+          />
+        )}
       </div>
 
       {/* Resize handle */}
