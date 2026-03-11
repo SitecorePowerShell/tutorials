@@ -50,9 +50,9 @@ describe("resolvePath", () => {
   });
 
   it("resolves deep paths", () => {
-    const result = resolvePath('master:\\content\\Home\\About\\Team', tree);
+    const result = resolvePath('master:\\content\\Home\\About\\Contributors', tree);
     expect(result).not.toBeNull();
-    expect(result!.name).toBe("Team");
+    expect(result!.name).toBe("Contributors");
     expect(result!.node._id).toBe("{B1111111-1111-1111-1111-111111111111}");
   });
 
@@ -100,15 +100,15 @@ describe("getAllDescendants", () => {
   it("returns all descendants recursively", () => {
     const home = resolvePath('master:\\content\\Home', tree)!.node;
     const descendants = getAllDescendants(home, "/sitecore/content/Home");
-    // Home has: About (Team + 4 employees, History, Careers), Products (A + Features + 2, B, C, D), News (4 articles) = 21
-    expect(descendants).toHaveLength(21);
+    // Home has: About (Contributors + 25 contributors, History, Careers), Products (A + Features + 2, B, C, D), News (4 articles) = 42
+    expect(descendants).toHaveLength(42);
   });
 
   it("includes paths for all descendants", () => {
     const home = resolvePath('master:\\content\\Home', tree)!.node;
     const descendants = getAllDescendants(home, "/sitecore/content/Home");
-    const team = descendants.find((d) => d.name === "Team");
-    expect(team).toBeDefined();
-    expect(team!.path).toBe("/sitecore/content/Home/About/Team");
+    const contributors = descendants.find((d) => d.name === "Contributors");
+    expect(contributors).toBeDefined();
+    expect(contributors!.path).toBe("/sitecore/content/Home/About/Contributors");
   });
 });

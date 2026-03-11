@@ -47,7 +47,7 @@ tasks:
       # Remove the Contact Us page
       Remove-Item -Path "master:\content\Home\About\Contact Us"
 
-      # Verify - should show Team, History, and Careers
+      # Verify - should show Contributors, History, and Careers
       Get-ChildItem -Path "master:\content\Home\About"
     validation:
       type: "pipeline"

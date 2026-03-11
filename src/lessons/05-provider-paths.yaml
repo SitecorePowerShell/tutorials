@@ -45,4 +45,4 @@ tasks:
         - "master:\\content\\home\\about"
         - "master:/content/Home/About"
     successMessage: |
-      Team, History, and Careers are nested under About. You now know how to navigate any depth of the content tree. In real projects, you'd use these patterns to script bulk operations across entire site sections.
+      Contributors, History, and Careers are nested under About. You now know how to navigate any depth of the content tree. In real projects, you'd use these patterns to script bulk operations across entire site sections.

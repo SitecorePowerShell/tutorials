@@ -9,29 +9,29 @@ description: |
 
   **`Move-Item`** — moves an item (and its subtree) to a new parent:
   ```
-  Move-Item -Path "master:\content\Home\About\Team" -Destination "master:\content\Home\Products"
+  Move-Item -Path "master:\content\Home\About\Contributors" -Destination "master:\content\Home\Products"
   ```
 
   **`Copy-Item`** — duplicates an item to a new location (new ID assigned):
   ```
-  Copy-Item -Path "master:\content\Home\About\Team" -Destination "master:\content\Home\News"
+  Copy-Item -Path "master:\content\Home\About\Contributors" -Destination "master:\content\Home\News"
   ```
 
   **`Rename-Item`** — changes an item's name in place:
   ```
-  Get-Item -Path "master:\content\Home\About\Team" | Rename-Item -NewName "Our People"
+  Get-Item -Path "master:\content\Home\About\Contributors" | Rename-Item -NewName "Our People"
   ```
 
   These operations are common during content restructuring and site migrations.
 tasks:
   - instruction: |
-      Copy the "Team" item from under About to under News. Then list the children of News to confirm it's there alongside the existing news items.
+      Copy the "Contributors" item from under About to under News. Then list the children of News to confirm it's there alongside the existing news items.
     hint: |
-      Copy-Item -Path "master:\content\Home\About\Team" -Destination "master:\content\Home\News"
+      Copy-Item -Path "master:\content\Home\About\Contributors" -Destination "master:\content\Home\News"
       Get-ChildItem -Path "master:\content\Home\News"
     starterCode: |
-      # Copy Team into the News section
-      Copy-Item -Path "master:\content\Home\About\Team" -Destination "master:\content\Home\News"
+      # Copy Contributors into the News section
+      Copy-Item -Path "master:\content\Home\About\Contributors" -Destination "master:\content\Home\News"
 
       # Verify the copy
       Get-ChildItem -Path "master:\content\Home\News"
@@ -40,7 +40,7 @@ tasks:
       stages:
         - "copy-item"
         - "get-childitem"
-      outputContains: "Team"
+      outputContains: "Contributors"
     successMessage: |
       The copied item gets a new ID — it's a fully independent item, not a clone. The original under About is untouched. In real SPE, add `-Recurse` to copy an entire subtree.
   - instruction: |

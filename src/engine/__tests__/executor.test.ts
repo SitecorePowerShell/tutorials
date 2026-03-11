@@ -61,7 +61,7 @@ describe("executeCommandWithContext", () => {
         tree
       );
       expect(result.error).toBeNull();
-      expect(result.output).toContain("Team");
+      expect(result.output).toContain("Contributors");
       expect(result.output).toContain("Product A");
     });
   });
@@ -205,27 +205,27 @@ describe("executeCommandWithContext", () => {
   describe("Move-Item", () => {
     it("moves an item to a new parent", () => {
       executeCommandWithContext(
-        'Move-Item -Path "master:\\content\\Home\\About\\Team" -Destination "master:\\content\\Home\\Products"',
+        'Move-Item -Path "master:\\content\\Home\\About\\Contributors" -Destination "master:\\content\\Home\\Products"',
         ctx,
         tree
       );
-      expect(tree.sitecore._children.content._children.Home._children.About._children["Team"]).toBeUndefined();
-      expect(tree.sitecore._children.content._children.Home._children.Products._children["Team"]).toBeDefined();
+      expect(tree.sitecore._children.content._children.Home._children.About._children["Contributors"]).toBeUndefined();
+      expect(tree.sitecore._children.content._children.Home._children.Products._children["Contributors"]).toBeDefined();
     });
   });
 
   describe("Copy-Item", () => {
     it("copies an item with a new ID", () => {
-      const originalId = tree.sitecore._children.content._children.Home._children.About._children.Team._id;
+      const originalId = tree.sitecore._children.content._children.Home._children.About._children.Contributors._id;
       executeCommandWithContext(
-        'Copy-Item -Path "master:\\content\\Home\\About\\Team" -Destination "master:\\content\\Home\\News"',
+        'Copy-Item -Path "master:\\content\\Home\\About\\Contributors" -Destination "master:\\content\\Home\\News"',
         ctx,
         tree
       );
       // Original still exists
-      expect(tree.sitecore._children.content._children.Home._children.About._children["Team"]).toBeDefined();
+      expect(tree.sitecore._children.content._children.Home._children.About._children["Contributors"]).toBeDefined();
       // Copy exists in News
-      const copied = tree.sitecore._children.content._children.Home._children.News._children["Team"];
+      const copied = tree.sitecore._children.content._children.Home._children.News._children["Contributors"];
       expect(copied).toBeDefined();
       // Different ID
       expect(copied._id).not.toBe(originalId);
@@ -261,7 +261,7 @@ describe("executeScript", () => {
       '$items = Get-ChildItem -Path "master:\\content\\Home" -Recurse\n$items | Measure-Object'
     );
     expect(result.error).toBeNull();
-    expect(result.output).toContain("Count    : 21");
+    expect(result.output).toContain("Count    : 42");
   });
 
   it("handles continuation lines (pipe at end)", () => {
@@ -269,7 +269,7 @@ describe("executeScript", () => {
       'Get-ChildItem -Path "master:\\content\\Home" -Recurse |\nMeasure-Object'
     );
     expect(result.error).toBeNull();
-    expect(result.output).toContain("Count    : 21");
+    expect(result.output).toContain("Count    : 42");
   });
 
   it("skips comments", () => {
