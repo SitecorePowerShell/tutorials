@@ -15,15 +15,34 @@ description: |
     content/
       Home/
         About/
-          Team
+          Team/
+            Jane Smith
+            Marcus Johnson
+            Priya Patel
+            David Chen
           History
+          Careers
         Products/
-          Product A
+          Product A/
+            Features/
+              Cloud Integration
+              API Access
           Product B
           Product C
+          Product D
         News/
           2025 Roadmap
           Sitecore Launch
+          Company Update
+          Security Best Practices
+      Data/
+        Settings
+        Lookups/
+          Countries/
+          Categories/
+    media library/
+      Images/
+      Documents/
   ```
 
   Let's start with the most fundamental command in SPE.
