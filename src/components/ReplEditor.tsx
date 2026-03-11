@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import type { ConsoleEntry, SitecoreNode } from "../types";
 import { OutputPane } from "./OutputPane";
 import { colors, gradients, fonts, fontSizes } from "../theme";
@@ -6,6 +6,7 @@ import { getCompletions, type CompletionResult } from "../engine/completions";
 import { createBracketAutoCloseHandler } from "../hooks/useBracketAutoClose";
 import { useGhostText } from "../hooks/useGhostText";
 import { useReverseSearch } from "../hooks/useReverseSearch";
+import { MobileAccessoryRow } from "./MobileAccessoryRow";
 
 interface CompletionState {
   result: CompletionResult;
@@ -275,7 +276,74 @@ export function ReplEditor({
     setCursorPos(inputRef.current?.selectionStart ?? 0);
   };
 
+  // Trigger tab completion programmatically (for mobile accessory row)
+  const triggerTabCompletion = useCallback(() => {
+    const input = inputRef.current;
+    if (!input) return;
+    const pos = input.selectionStart ?? code.length;
+
+    if (completion) {
+      const nextIndex = (completion.index + 1) % completion.result.matches.length;
+      const match = completion.result.matches[nextIndex];
+      const newCode =
+        completion.originalText.slice(0, completion.result.replaceStart) +
+        match +
+        completion.originalText.slice(completion.result.replaceEnd);
+      onCodeChange(newCode);
+      const newCursor = completion.result.replaceStart + match.length;
+      setCompletion({ ...completion, index: nextIndex });
+      requestAnimationFrame(() => {
+        input.selectionStart = input.selectionEnd = newCursor;
+      });
+    } else {
+      const result = getCompletions(code, pos, tree, userVariables);
+      if (result && result.matches.length > 0) {
+        const match = result.matches[0];
+        const newCode =
+          code.slice(0, result.replaceStart) +
+          match +
+          code.slice(result.replaceEnd);
+        onCodeChange(newCode);
+        const newCursor = result.replaceStart + match.length;
+        setCompletion({
+          result,
+          index: 0,
+          originalText: code,
+          originalCursor: pos,
+        });
+        requestAnimationFrame(() => {
+          input.selectionStart = input.selectionEnd = newCursor;
+        });
+      }
+    }
+  }, [code, completion, tree, userVariables, onCodeChange]);
+
+  // Insert a character at cursor position (for mobile accessory row)
+  const handleAccessoryInsert = useCallback((char: string, pair?: string) => {
+    const input = inputRef.current;
+    if (!input) return;
+    const pos = input.selectionStart ?? code.length;
+    const newCode = pair
+      ? code.slice(0, pos) + char + pair + code.slice(pos)
+      : code.slice(0, pos) + char + code.slice(pos);
+    onCodeChange(newCode);
+    const newCursor = pos + char.length;
+    requestAnimationFrame(() => {
+      input.selectionStart = input.selectionEnd = newCursor;
+      input.focus();
+    });
+  }, [code, onCodeChange]);
+
+  // Handle accessory row actions
+  const handleAccessoryAction = useCallback((action: string) => {
+    if (action === "tab") {
+      triggerTabCompletion();
+    }
+    inputRef.current?.focus();
+  }, [triggerTabCompletion]);
+
   return (
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
     <div
       style={{
         flex: 1,
@@ -461,16 +529,27 @@ export function ReplEditor({
               </span>
             )}
             {showGhost && (
-              <span
+              <button
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCodeChange(code + ghostText);
+                  inputRef.current?.focus();
+                }}
                 style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
                   color: colors.textDimmed,
                   fontFamily: fonts.monoShort,
                   fontSize: fontSizes.xs,
                   whiteSpace: "nowrap",
+                  padding: "4px 8px",
+                  touchAction: "manipulation",
                 }}
               >
-                →
-              </span>
+                Tab →
+              </button>
             )}
             {isMobile && (
               <button
@@ -500,6 +579,13 @@ export function ReplEditor({
 
       {/* Scroll anchor */}
       <div ref={consoleEndRef} />
+    </div>
+    {isMobile && (
+      <MobileAccessoryRow
+        onInsert={handleAccessoryInsert}
+        onAction={handleAccessoryAction}
+      />
+    )}
     </div>
   );
 }
