@@ -5,6 +5,7 @@ import { colors, gradients, fonts, fontSizes } from "../theme";
 import { getCompletions, type CompletionResult } from "../engine/completions";
 import { createBracketAutoCloseHandler } from "../hooks/useBracketAutoClose";
 import { useGhostText } from "../hooks/useGhostText";
+import { needsContinuation } from "../engine/needsContinuation";
 import { useReverseSearch } from "../hooks/useReverseSearch";
 import { MobileAccessoryRow } from "./MobileAccessoryRow";
 
@@ -18,7 +19,7 @@ interface CompletionState {
 interface ReplEditorProps {
   code: string;
   onCodeChange: (code: string) => void;
-  onRun: () => void;
+  onRun: (codeOverride?: string) => void;
   onClear: () => void;
   consoleOutput: ConsoleEntry[];
   commandHistory: string[];
@@ -47,6 +48,7 @@ export function ReplEditor({
   const consoleEndRef = useRef<HTMLDivElement>(null);
   const [completion, setCompletion] = useState<CompletionState | null>(null);
   const [cursorPos, setCursorPos] = useState(0);
+  const [continuationLines, setContinuationLines] = useState<string[]>([]);
 
   // Ghost text
   const ghostText = useGhostText(
@@ -97,6 +99,15 @@ export function ReplEditor({
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const input = e.currentTarget;
+
+    // Backspace — pop last continuation line back into input when empty
+    if (e.key === "Backspace" && continuationLines.length > 0 && code === "") {
+      e.preventDefault();
+      const lastLine = continuationLines[continuationLines.length - 1];
+      setContinuationLines((prev) => prev.slice(0, -1));
+      onCodeChange(lastLine);
+      return;
+    }
 
     // Ctrl+R — reverse history search
     if (e.key === "r" && e.ctrlKey && !isMobile) {
@@ -189,6 +200,14 @@ export function ReplEditor({
       return;
     }
 
+    // Escape — cancel continuation mode
+    if (e.key === "Escape" && continuationLines.length > 0) {
+      e.preventDefault();
+      setContinuationLines([]);
+      onCodeChange("");
+      return;
+    }
+
     // Escape — cancel completion, revert to original
     if (e.key === "Escape" && completion) {
       e.preventDefault();
@@ -202,8 +221,10 @@ export function ReplEditor({
     }
 
     // ArrowUp/ArrowDown — dismiss completion and handle history
+    // Disabled during continuation mode
     if (e.key === "ArrowUp") {
       e.preventDefault();
+      if (continuationLines.length > 0) return;
       if (completion) setCompletion(null);
       if (commandHistory.length === 0) return;
       const newIndex =
@@ -217,6 +238,7 @@ export function ReplEditor({
 
     if (e.key === "ArrowDown") {
       e.preventDefault();
+      if (continuationLines.length > 0) return;
       if (completion) setCompletion(null);
       if (historyIndex === -1) return;
       const newIndex = historyIndex + 1;
@@ -233,7 +255,15 @@ export function ReplEditor({
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       if (completion) setCompletion(null);
-      onRun();
+      const currentLine = code.trim();
+      const fullText = [...continuationLines, currentLine].join("\n");
+      if (needsContinuation(fullText)) {
+        setContinuationLines((prev) => [...prev, currentLine]);
+        onCodeChange("");
+      } else {
+        setContinuationLines([]);
+        onRun(fullText);
+      }
       return;
     }
 
@@ -389,6 +419,13 @@ export function ReplEditor({
 
       <OutputPane entries={consoleOutput} isISE={false} />
 
+      {/* Continuation lines */}
+      {continuationLines.map((line, i) => (
+        <div key={i} style={{ color: colors.textPrimary, fontFamily: fonts.mono }}>
+          <span style={{ color: colors.textMuted }}>{">> "}</span>{line}
+        </div>
+      ))}
+
       {/* Inline prompt line */}
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         {reverseSearch.state.active ? (
@@ -460,7 +497,7 @@ export function ReplEditor({
                 whiteSpace: "nowrap",
               }}
             >
-              {isMobile ? "PS>" : "PS master:\\content\\Home>"}
+              {continuationLines.length > 0 ? ">> " : isMobile ? "PS>" : "PS master:\\content\\Home>"}
             </span>
             <div style={{ position: "relative", flex: 1 }}>
               {/* Ghost text underlay */}

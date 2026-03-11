@@ -116,15 +116,17 @@ export default function SPETutorial() {
     }
   }, [currentLesson, currentTask]);
 
-  const handleRun = useCallback(() => {
-    if (!code.trim()) return;
+  const handleRun = useCallback((codeOverride?: string) => {
+    const effective = typeof codeOverride === "string" ? codeOverride : code;
+    if (!effective.trim()) return;
     const taskKey = `${currentLesson}-${currentTask}`;
 
     // Handle clear commands in console mode
-    const trimmed = code.trim().toLowerCase();
+    const trimmed = effective.trim().toLowerCase();
     if (trimmed === "clear-host" || trimmed === "clear" || trimmed === "cls") {
       setConsoleOutput([]);
-      setCommandHistory((prev) => [...prev, code.trim()]);
+      const historyEntry = effective.trim().split("\n").map((l) => l.trim()).filter(Boolean).join(" ");
+      setCommandHistory((prev) => [...prev, historyEntry]);
       setHistoryIndex(-1);
       setCode("");
       return;
@@ -132,18 +134,18 @@ export default function SPETutorial() {
 
     const newOutput: ConsoleEntry[] = isISE
       ? [...consoleOutput]
-      : [...consoleOutput, { type: "command", text: code.trim() }];
+      : [...consoleOutput, { type: "command", text: effective.trim() }];
 
     if (isISE) {
-      newOutput.push({ type: "script", text: code.trim() });
+      newOutput.push({ type: "script", text: effective.trim() });
     }
 
     // Execute
     let result;
     if (isISE) {
-      result = executeScript(code);
+      result = executeScript(effective);
     } else {
-      const normalized = code
+      const normalized = effective
         .split("\n")
         .map((l) => l.trim())
         .filter((l) => l && !l.startsWith("#"))
@@ -159,7 +161,7 @@ export default function SPETutorial() {
 
     // Validate against current task
     if (task) {
-      const validation = validateTask(code.trim(), task);
+      const validation = validateTask(effective.trim(), task);
       if (validation.passed) {
         newOutput.push({
           type: "success",
@@ -186,7 +188,8 @@ export default function SPETutorial() {
 
     setConsoleOutput(newOutput);
     if (!isISE) {
-      setCommandHistory((prev) => [...prev, code.trim()]);
+      const historyEntry = effective.trim().split("\n").map((l) => l.trim()).filter(Boolean).join(" ");
+      setCommandHistory((prev) => [...prev, historyEntry]);
       setHistoryIndex(-1);
       setCode("");
     }
