@@ -5,7 +5,7 @@ import { VIRTUAL_TREE } from "./engine/virtualTree";
 import { executeScript, executeCommand } from "./engine/executor";
 import { validateTask } from "./validation/validator";
 import { loadProgress, saveProgress, clearProgress } from "./hooks/useSessionProgress";
-import { loadUIPreferences, saveUIPreferences } from "./hooks/useUIPreferences";
+import { loadUIPreferences, saveUIPreferences, type ActivePanel } from "./hooks/useUIPreferences";
 import { useMediaQuery } from "./hooks/useMediaQuery";
 import { Sidebar } from "./components/Sidebar";
 import { LessonPanel } from "./components/LessonPanel";
@@ -29,7 +29,7 @@ export default function SPETutorial() {
   const [taskAttempts, setTaskAttempts] = useState<Record<string, number>>(initialProgress.taskAttempts);
   const [revealedHintLevel, setRevealedHintLevel] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(initialProgress.sidebarCollapsed);
-  const [showTreePanel, setShowTreePanel] = useState(initialPrefs.showTreePanel);
+  const [activePanel, setActivePanel] = useState<ActivePanel>(initialPrefs.activePanel);
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [mobilePanel, setMobilePanel] = useState<MobilePanel>("lesson");
@@ -89,10 +89,10 @@ export default function SPETutorial() {
       layoutStacked,
       lessonPanelHeightPercent: Math.round(heightPercent),
       editorHeight: editorHeightRef.current,
-      showTreePanel,
+      activePanel,
       lessonPanelCollapsed,
     });
-  }, [layoutStacked, lessonPanelHeight, showTreePanel, lessonPanelCollapsed]);
+  }, [layoutStacked, lessonPanelHeight, activePanel, lessonPanelCollapsed]);
 
   const handleResetProgress = useCallback(() => {
     clearProgress();
@@ -389,7 +389,6 @@ export default function SPETutorial() {
               attempts={currentAttempts}
               revealedHintLevel={revealedHintLevel}
               onRevealHint={(level) => setRevealedHintLevel(level)}
-              showTreePanel={false}
               onAdvanceTask={advanceTask}
               onGoToTask={goToTask}
               isTaskComplete={isTaskComplete}
@@ -518,21 +517,6 @@ export default function SPETutorial() {
           >
             {layoutStacked ? "⬌ Side-by-side" : "⬍ Stacked"}
           </button>
-          <button
-            onClick={() => setShowTreePanel(!showTreePanel)}
-            style={{
-              background: showTreePanel ? colors.bgActive : "transparent",
-              border: `1px solid ${colors.borderMedium}`,
-              color: showTreePanel ? colors.accentLink : colors.textSecondary,
-              padding: "5px 12px",
-              borderRadius: 4,
-              cursor: "pointer",
-              fontSize: fontSizes.base,
-              fontFamily: "inherit",
-            }}
-          >
-            🌲 Content Tree
-          </button>
           <div
             style={{
               fontSize: fontSizes.sm,
@@ -561,26 +545,69 @@ export default function SPETutorial() {
         {/* Split pane — stacked or side-by-side */}
         {layoutStacked ? (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-            {/* TOP — Lesson panel (collapsible, resizable) */}
+            {/* TOP — Tabbed panel (Lesson / Content Tree) */}
             <div ref={lessonPanelRef}>
-              <LessonPanel
-                lesson={lesson}
-                task={task}
-                currentTask={currentTask}
-                currentLesson={currentLesson}
-                currentTaskComplete={currentTaskComplete}
-                attempts={currentAttempts}
-                revealedHintLevel={revealedHintLevel}
-                onRevealHint={(level) => setRevealedHintLevel(level)}
-                showTreePanel={showTreePanel}
-                onAdvanceTask={advanceTask}
-                onGoToTask={goToTask}
-                isTaskComplete={isTaskComplete}
-                lessonsLength={LESSONS.length}
-                collapsed={lessonPanelCollapsed}
-                onToggleCollapse={() => setLessonPanelCollapsed(!lessonPanelCollapsed)}
-                height={lessonPanelCollapsed ? undefined : lessonPanelHeight}
-              />
+              {/* Tab bar */}
+              {!lessonPanelCollapsed && (
+                <div
+                  style={{
+                    height: 36,
+                    display: "flex",
+                    background: colors.bgPanel,
+                    borderBottom: `1px solid ${colors.borderBase}`,
+                    flexShrink: 0,
+                  }}
+                >
+                  {(["lesson", "tree"] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setActivePanel(tab)}
+                      style={{
+                        flex: 1,
+                        background: "transparent",
+                        border: "none",
+                        borderBottom: activePanel === tab
+                          ? `2px solid ${colors.accentPrimary}`
+                          : "2px solid transparent",
+                        color: activePanel === tab ? colors.textPrimary : colors.textSecondary,
+                        fontWeight: activePanel === tab ? 600 : 400,
+                        fontSize: fontSizes.sm,
+                        fontFamily: "inherit",
+                        cursor: "pointer",
+                        padding: "0 12px",
+                        transition: "color 0.15s, border-color 0.15s",
+                      }}
+                    >
+                      {tab === "lesson" ? "📖 Lesson" : "🌲 Content Tree"}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Panel content */}
+              {activePanel === "lesson" ? (
+                <LessonPanel
+                  lesson={lesson}
+                  task={task}
+                  currentTask={currentTask}
+                  currentLesson={currentLesson}
+                  currentTaskComplete={currentTaskComplete}
+                  attempts={currentAttempts}
+                  revealedHintLevel={revealedHintLevel}
+                  onRevealHint={(level) => setRevealedHintLevel(level)}
+                  onAdvanceTask={advanceTask}
+                  onGoToTask={goToTask}
+                  isTaskComplete={isTaskComplete}
+                  lessonsLength={LESSONS.length}
+                  collapsed={lessonPanelCollapsed}
+                  onToggleCollapse={() => setLessonPanelCollapsed(!lessonPanelCollapsed)}
+                  height={lessonPanelCollapsed ? undefined : lessonPanelHeight}
+                />
+              ) : (
+                <div style={{ height: lessonPanelCollapsed ? undefined : lessonPanelHeight, overflow: "auto" }}>
+                  <TreePanel tree={VIRTUAL_TREE} embedded />
+                </div>
+              )}
             </div>
 
             {/* Resize handle (hidden when collapsed) */}
@@ -614,80 +641,140 @@ export default function SPETutorial() {
               </div>
             )}
 
-            {/* BOTTOM — Editor + Console row with optional Tree panel */}
-            <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-              <div
-                style={{
-                  flex: 1,
-                  display: "flex",
-                  flexDirection: "column",
-                  minWidth: 0,
-                }}
-              >
-                {isISE ? (
-                  <IseEditor
-                    code={code}
-                    onCodeChange={setCode}
-                    onRun={handleRun}
-                    onClear={() => setConsoleOutput([])}
-                    consoleOutput={consoleOutput}
-                    commandHistory={commandHistory}
-                    tree={VIRTUAL_TREE}
-                    initialEditorHeight={initialPrefs.editorHeight}
-                    onEditorHeightChange={(h) => {
-                      editorHeightRef.current = h;
-                      saveUIPreferences({
-                        layoutStacked,
-                        lessonPanelHeightPercent: Math.round(
-                          ((lessonPanelHeight / (lessonPanelRef.current?.parentElement?.getBoundingClientRect().height || 1)) * 100)
-                        ),
-                        editorHeight: h,
-                        showTreePanel,
-                        lessonPanelCollapsed,
-                      });
-                    }}
-                  />
-                ) : (
-                  <ReplEditor
-                    code={code}
-                    onCodeChange={setCode}
-                    onRun={handleRun}
-                    onClear={() => setConsoleOutput([])}
-                    consoleOutput={consoleOutput}
-                    commandHistory={commandHistory}
-                    historyIndex={historyIndex}
-                    onHistoryIndexChange={setHistoryIndex}
-                    tree={VIRTUAL_TREE}
-                  />
-                )}
-              </div>
-
-              {showTreePanel && <TreePanel tree={VIRTUAL_TREE} />}
+            {/* BOTTOM — Editor + Console */}
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
+              {isISE ? (
+                <IseEditor
+                  code={code}
+                  onCodeChange={setCode}
+                  onRun={handleRun}
+                  onClear={() => setConsoleOutput([])}
+                  consoleOutput={consoleOutput}
+                  commandHistory={commandHistory}
+                  tree={VIRTUAL_TREE}
+                  initialEditorHeight={initialPrefs.editorHeight}
+                  onEditorHeightChange={(h) => {
+                    editorHeightRef.current = h;
+                    saveUIPreferences({
+                      layoutStacked,
+                      lessonPanelHeightPercent: Math.round(
+                        ((lessonPanelHeight / (lessonPanelRef.current?.parentElement?.getBoundingClientRect().height || 1)) * 100)
+                      ),
+                      editorHeight: h,
+                      activePanel,
+                      lessonPanelCollapsed,
+                    });
+                  }}
+                />
+              ) : (
+                <ReplEditor
+                  code={code}
+                  onCodeChange={setCode}
+                  onRun={handleRun}
+                  onClear={() => setConsoleOutput([])}
+                  consoleOutput={consoleOutput}
+                  commandHistory={commandHistory}
+                  historyIndex={historyIndex}
+                  onHistoryIndexChange={setHistoryIndex}
+                  tree={VIRTUAL_TREE}
+                />
+              )}
             </div>
           </div>
         ) : (
           <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-            {/* LEFT — Lesson panel (side-by-side, collapsible) */}
-            <LessonPanel
-              lesson={lesson}
-              task={task}
-              currentTask={currentTask}
-              currentLesson={currentLesson}
-              currentTaskComplete={currentTaskComplete}
-              attempts={currentAttempts}
-              revealedHintLevel={revealedHintLevel}
-              onRevealHint={(level) => setRevealedHintLevel(level)}
-              showTreePanel={showTreePanel}
-              onAdvanceTask={advanceTask}
-              onGoToTask={goToTask}
-              isTaskComplete={isTaskComplete}
-              lessonsLength={LESSONS.length}
-              sideBySide={true}
-              collapsed={lessonPanelCollapsed}
-              onToggleCollapse={() => setLessonPanelCollapsed(!lessonPanelCollapsed)}
-            />
+            {/* LEFT — Tabbed panel (Lesson / Content Tree) */}
+            {!lessonPanelCollapsed ? (
+              <div
+                style={{
+                  width: "40%",
+                  display: "flex",
+                  flexDirection: "column",
+                  borderRight: `1px solid ${colors.borderBase}`,
+                  overflow: "hidden",
+                  transition: "width 0.25s ease",
+                }}
+              >
+                {/* Tab bar */}
+                <div
+                  style={{
+                    height: 36,
+                    display: "flex",
+                    background: colors.bgPanel,
+                    borderBottom: `1px solid ${colors.borderBase}`,
+                    flexShrink: 0,
+                  }}
+                >
+                  {(["lesson", "tree"] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setActivePanel(tab)}
+                      style={{
+                        flex: 1,
+                        background: "transparent",
+                        border: "none",
+                        borderBottom: activePanel === tab
+                          ? `2px solid ${colors.accentPrimary}`
+                          : "2px solid transparent",
+                        color: activePanel === tab ? colors.textPrimary : colors.textSecondary,
+                        fontWeight: activePanel === tab ? 600 : 400,
+                        fontSize: fontSizes.sm,
+                        fontFamily: "inherit",
+                        cursor: "pointer",
+                        padding: "0 12px",
+                        transition: "color 0.15s, border-color 0.15s",
+                      }}
+                    >
+                      {tab === "lesson" ? "📖 Lesson" : "🌲 Content Tree"}
+                    </button>
+                  ))}
+                </div>
 
-            {/* MIDDLE — Editor + Console */}
+                {/* Panel content */}
+                <div style={{ flex: 1, overflow: "auto" }}>
+                  {activePanel === "lesson" ? (
+                    <LessonPanel
+                      lesson={lesson}
+                      task={task}
+                      currentTask={currentTask}
+                      currentLesson={currentLesson}
+                      currentTaskComplete={currentTaskComplete}
+                      attempts={currentAttempts}
+                      revealedHintLevel={revealedHintLevel}
+                      onRevealHint={(level) => setRevealedHintLevel(level)}
+                      onAdvanceTask={advanceTask}
+                      onGoToTask={goToTask}
+                      isTaskComplete={isTaskComplete}
+                      lessonsLength={LESSONS.length}
+                      collapsed={lessonPanelCollapsed}
+                      onToggleCollapse={() => setLessonPanelCollapsed(!lessonPanelCollapsed)}
+                    />
+                  ) : (
+                    <TreePanel tree={VIRTUAL_TREE} embedded />
+                  )}
+                </div>
+              </div>
+            ) : (
+              <LessonPanel
+                lesson={lesson}
+                task={task}
+                currentTask={currentTask}
+                currentLesson={currentLesson}
+                currentTaskComplete={currentTaskComplete}
+                attempts={currentAttempts}
+                revealedHintLevel={revealedHintLevel}
+                onRevealHint={(level) => setRevealedHintLevel(level)}
+                onAdvanceTask={advanceTask}
+                onGoToTask={goToTask}
+                isTaskComplete={isTaskComplete}
+                lessonsLength={LESSONS.length}
+                sideBySide={true}
+                collapsed={true}
+                onToggleCollapse={() => setLessonPanelCollapsed(!lessonPanelCollapsed)}
+              />
+            )}
+
+            {/* RIGHT — Editor + Console */}
             <div
               style={{
                 flex: 1,
@@ -713,7 +800,7 @@ export default function SPETutorial() {
                         ((lessonPanelHeight / (lessonPanelRef.current?.parentElement?.getBoundingClientRect().height || 1)) * 100)
                       ),
                       editorHeight: h,
-                      showTreePanel,
+                      activePanel,
                       lessonPanelCollapsed,
                     });
                   }}
@@ -732,9 +819,6 @@ export default function SPETutorial() {
                 />
               )}
             </div>
-
-            {/* RIGHT — Content Tree Panel (toggle) */}
-            {showTreePanel && <TreePanel tree={VIRTUAL_TREE} />}
           </div>
         )}
       </div>

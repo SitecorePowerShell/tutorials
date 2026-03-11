@@ -1,12 +1,14 @@
 const UI_PREFS_KEY = "spe-tutorial-ui-prefs";
-const CURRENT_VERSION = 1;
+const CURRENT_VERSION = 2;
+
+export type ActivePanel = "lesson" | "tree";
 
 export interface UIPreferences {
   version: number;
   layoutStacked: boolean;
   lessonPanelHeightPercent: number;
   editorHeight: number;
-  showTreePanel: boolean;
+  activePanel: ActivePanel;
   lessonPanelCollapsed: boolean;
 }
 
@@ -15,7 +17,7 @@ const DEFAULTS: UIPreferences = {
   layoutStacked: true,
   lessonPanelHeightPercent: 50,
   editorHeight: 250,
-  showTreePanel: false,
+  activePanel: "lesson",
   lessonPanelCollapsed: false,
 };
 
@@ -44,10 +46,10 @@ export function loadUIPreferences(): UIPreferences {
         typeof parsed.editorHeight === "number"
           ? parsed.editorHeight
           : DEFAULTS.editorHeight,
-      showTreePanel:
-        typeof parsed.showTreePanel === "boolean"
-          ? parsed.showTreePanel
-          : DEFAULTS.showTreePanel,
+      activePanel:
+        parsed.activePanel === "lesson" || parsed.activePanel === "tree"
+          ? parsed.activePanel
+          : DEFAULTS.activePanel,
       lessonPanelCollapsed:
         typeof parsed.lessonPanelCollapsed === "boolean"
           ? parsed.lessonPanelCollapsed

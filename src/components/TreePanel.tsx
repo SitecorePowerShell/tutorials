@@ -283,9 +283,10 @@ function TreeNode({
 interface TreePanelProps {
   tree: { sitecore: SitecoreNode };
   isMobile?: boolean;
+  embedded?: boolean;
 }
 
-export function TreePanel({ tree, isMobile }: TreePanelProps) {
+export function TreePanel({ tree, isMobile, embedded }: TreePanelProps) {
   const [selectedItem, setSelectedItem] = useState<{
     name: string;
     node: SitecoreNode;
@@ -295,9 +296,9 @@ export function TreePanel({ tree, isMobile }: TreePanelProps) {
   return (
     <div
       style={{
-        width: isMobile ? "100%" : 280,
-        flex: isMobile ? 1 : undefined,
-        borderLeft: isMobile ? "none" : `1px solid ${colors.borderBase}`,
+        width: isMobile || embedded ? "100%" : 280,
+        flex: isMobile || embedded ? 1 : undefined,
+        borderLeft: isMobile || embedded ? "none" : `1px solid ${colors.borderBase}`,
         background: colors.bgSurface,
         overflow: "auto",
         flexShrink: 0,

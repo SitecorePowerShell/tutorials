@@ -12,7 +12,6 @@ interface LessonPanelProps {
   attempts: number;
   revealedHintLevel: number;
   onRevealHint: (level: number) => void;
-  showTreePanel: boolean;
   onAdvanceTask: () => void;
   onGoToTask: (taskIdx: number) => void;
   isTaskComplete: (lessonIdx: number, taskIdx: number) => boolean;
@@ -42,7 +41,6 @@ export function LessonPanel({
   onToggleCollapse,
   height,
   sideBySide,
-  showTreePanel,
 }: LessonPanelProps) {
   // Determine which hint tiers are unlocked
   const hasNudge = !!task?.nudge;
@@ -184,7 +182,7 @@ export function LessonPanel({
   return (
     <div
       style={{
-        width: isMobile ? "100%" : sideBySide ? (showTreePanel ? "35%" : "40%") : undefined,
+        width: isMobile ? "100%" : sideBySide ? "40%" : undefined,
         height: isMobile ? undefined : sideBySide ? undefined : height,
         flex: isMobile ? 1 : undefined,
         borderRight: sideBySide ? `1px solid ${colors.borderBase}` : "none",
