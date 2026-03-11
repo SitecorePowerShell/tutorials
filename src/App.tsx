@@ -368,6 +368,7 @@ export default function SPETutorial() {
                   onRun={handleRun}
                   onClear={() => setConsoleOutput([])}
                   consoleOutput={consoleOutput}
+                  commandHistory={commandHistory}
                   tree={VIRTUAL_TREE}
                   isMobile={true}
                 />
@@ -592,6 +593,7 @@ export default function SPETutorial() {
                     onRun={handleRun}
                     onClear={() => setConsoleOutput([])}
                     consoleOutput={consoleOutput}
+                    commandHistory={commandHistory}
                     tree={VIRTUAL_TREE}
                   />
                 ) : (

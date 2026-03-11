@@ -1,9 +1,12 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import type { ConsoleEntry, SitecoreNode } from "../types";
 import { OutputPane } from "./OutputPane";
-import { tokenize, renderTokens } from "./HighlightedCode";
+import { tokenize, renderTokens, renderTokensWithHighlights } from "./HighlightedCode";
 import { colors, gradients, fonts, fontSizes } from "../theme";
 import { getCompletions, type CompletionResult } from "../engine/completions";
+import { createBracketAutoCloseHandler } from "../hooks/useBracketAutoClose";
+import { useBracketMatching } from "../hooks/useBracketMatching";
+import { useGhostText } from "../hooks/useGhostText";
 
 interface CompletionState {
   result: CompletionResult;
@@ -18,6 +21,7 @@ interface IseEditorProps {
   onRun: () => void;
   onClear: () => void;
   consoleOutput: ConsoleEntry[];
+  commandHistory?: string[];
   tree?: { sitecore: SitecoreNode };
   userVariables?: string[];
   isMobile?: boolean;
@@ -29,6 +33,7 @@ export function IseEditor({
   onRun,
   onClear,
   consoleOutput,
+  commandHistory = [],
   tree,
   userVariables,
   isMobile,
@@ -41,6 +46,20 @@ export function IseEditor({
   const isDragging = useRef(false);
   const [editorHeight, setEditorHeight] = useState(250);
   const [completion, setCompletion] = useState<CompletionState | null>(null);
+  const [cursorPos, setCursorPos] = useState(0);
+
+  // Bracket matching highlights (ISE-only feature)
+  const bracketHighlights = useBracketMatching(code, cursorPos);
+
+  // Ghost text
+  const ghostText = useGhostText(
+    code,
+    cursorPos,
+    commandHistory,
+    tree,
+    userVariables
+  );
+  const showGhost = ghostText && !completion && cursorPos === code.length;
 
   useEffect(() => {
     if (consoleEndRef.current) {
@@ -126,14 +145,53 @@ export function IseEditor({
     setCompletion(null);
   }, []);
 
+  // Track cursor position for bracket matching and ghost text
+  const handleSelect = useCallback(() => {
+    setCursorPos(inputRef.current?.selectionStart ?? 0);
+  }, []);
+
+  // Auto-close bracket handler
+  const autoCloseHandler = useMemo(
+    () =>
+      createBracketAutoCloseHandler(
+        code,
+        () => inputRef.current?.selectionStart ?? 0,
+        (newCode, newCursor) => {
+          onCodeChange(newCode);
+          requestAnimationFrame(() => {
+            const ta = inputRef.current;
+            if (ta) {
+              ta.selectionStart = ta.selectionEnd = newCursor;
+              setCursorPos(newCursor);
+            }
+          });
+        }
+      ),
+    [code, onCodeChange]
+  );
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       const ta = e.currentTarget;
 
+      // ArrowRight — accept ghost text
+      if (
+        e.key === "ArrowRight" &&
+        showGhost &&
+        cursorPos === code.length
+      ) {
+        e.preventDefault();
+        onCodeChange(code + ghostText);
+        return;
+      }
+
+      // Auto-close brackets/quotes (before Tab/completion handling)
+      if (autoCloseHandler(e)) return;
+
       // Ctrl+Space — trigger/cycle completion
       if (e.key === " " && e.ctrlKey) {
         e.preventDefault();
-        const cursorPos = ta.selectionStart;
+        const pos = ta.selectionStart;
 
         if (completion) {
           // Cycle to next match
@@ -151,7 +209,7 @@ export function IseEditor({
           });
         } else {
           // Start new completion
-          const result = getCompletions(code, cursorPos, tree, userVariables);
+          const result = getCompletions(code, pos, tree, userVariables);
           if (result && result.matches.length > 0) {
             const match = result.matches[0];
             const newCode =
@@ -164,7 +222,7 @@ export function IseEditor({
               result,
               index: 0,
               originalText: code,
-              originalCursor: cursorPos,
+              originalCursor: pos,
             });
             requestAnimationFrame(() => {
               ta.selectionStart = ta.selectionEnd = newCursor;
@@ -293,14 +351,18 @@ export function IseEditor({
         return;
       }
     },
-    [onRun, onClear, onCodeChange, completion, dismissCompletion, code, tree, userVariables]
+    [onRun, onClear, onCodeChange, completion, dismissCompletion, code, tree, userVariables, autoCloseHandler, showGhost, ghostText, cursorPos]
   );
 
   // Render syntax-highlighted overlay content
-  const tokens = tokenize(code);
-  // Ensure trailing newline so overlay height matches textarea
   const overlayContent = code.endsWith("\n") ? code + " " : code;
   const overlayTokens = tokenize(overlayContent);
+
+  // Choose rendering: with bracket highlights or plain
+  const renderedOverlay =
+    bracketHighlights.length > 0
+      ? renderTokensWithHighlights(overlayTokens, bracketHighlights)
+      : renderTokens(overlayTokens);
 
   return (
     <>
@@ -427,7 +489,10 @@ export function IseEditor({
                   background: "transparent",
                 }}
               >
-                {renderTokens(overlayTokens)}
+                {renderedOverlay}
+                {showGhost && (
+                  <span style={{ color: colors.ghostText }}>{ghostText}</span>
+                )}
               </pre>
               {/* Transparent textarea (foreground — captures input) */}
               <textarea
@@ -437,6 +502,9 @@ export function IseEditor({
                 onChange={(e) => onCodeChange(e.target.value)}
                 onKeyDown={handleKeyDown}
                 onScroll={handleScroll}
+                onSelect={handleSelect}
+                onKeyUp={handleSelect}
+                onClick={handleSelect}
                 spellCheck={false}
                 placeholder="Write your script here, then press Ctrl+Enter to run..."
                 style={{
@@ -484,6 +552,11 @@ export function IseEditor({
             <span style={{ color: colors.accentPrimary, marginLeft: "auto" }}>
               {completion.index + 1}/{completion.result.matches.length}:{" "}
               {completion.result.matches[completion.index]}
+            </span>
+          )}
+          {showGhost && (
+            <span style={{ color: colors.textDimmed, marginLeft: completion ? undefined : "auto" }}>
+              → accept
             </span>
           )}
         </div>

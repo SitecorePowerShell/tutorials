@@ -50,6 +50,10 @@ export const colors = {
   syntaxOperator: "#80deea",
   syntaxType: "#4dd0e1",
   syntaxNumber: "#ffb74d",
+
+  ghostText: "#4a4a68",
+  bracketMatch: "#2a2a5a",
+  bracketUnmatched: "#5a2020",
 };
 
 export const gradients = {
