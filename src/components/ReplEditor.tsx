@@ -1,8 +1,11 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import type { ConsoleEntry, SitecoreNode } from "../types";
 import { OutputPane } from "./OutputPane";
 import { colors, gradients, fonts, fontSizes } from "../theme";
 import { getCompletions, type CompletionResult } from "../engine/completions";
+import { createBracketAutoCloseHandler } from "../hooks/useBracketAutoClose";
+import { useGhostText } from "../hooks/useGhostText";
+import { useReverseSearch } from "../hooks/useReverseSearch";
 
 interface CompletionState {
   result: CompletionResult;
@@ -39,8 +42,23 @@ export function ReplEditor({
   isMobile,
 }: ReplEditorProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const consoleEndRef = useRef<HTMLDivElement>(null);
   const [completion, setCompletion] = useState<CompletionState | null>(null);
+  const [cursorPos, setCursorPos] = useState(0);
+
+  // Ghost text
+  const ghostText = useGhostText(
+    code,
+    cursorPos,
+    commandHistory,
+    tree,
+    userVariables
+  );
+  const showGhost = ghostText && !completion && cursorPos === code.length;
+
+  // Reverse search
+  const reverseSearch = useReverseSearch(commandHistory);
 
   useEffect(() => {
     if (consoleEndRef.current) {
@@ -52,13 +70,62 @@ export function ReplEditor({
     inputRef.current?.focus();
   }, []);
 
+  // Focus search input when search activates
+  useEffect(() => {
+    if (reverseSearch.state.active) {
+      requestAnimationFrame(() => searchInputRef.current?.focus());
+    }
+  }, [reverseSearch.state.active]);
+
+  // Auto-close bracket handler
+  const autoCloseHandler = useMemo(
+    () =>
+      createBracketAutoCloseHandler(
+        code,
+        () => inputRef.current?.selectionStart ?? code.length,
+        (newCode, newCursor) => {
+          onCodeChange(newCode);
+          requestAnimationFrame(() => {
+            const input = inputRef.current;
+            if (input) input.selectionStart = input.selectionEnd = newCursor;
+          });
+        }
+      ),
+    [code, onCodeChange]
+  );
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const input = e.currentTarget;
+
+    // Ctrl+R — reverse history search
+    if (e.key === "r" && e.ctrlKey && !isMobile) {
+      e.preventDefault();
+      if (reverseSearch.state.active) {
+        reverseSearch.nextMatch();
+      } else {
+        reverseSearch.activate();
+      }
+      return;
+    }
+
+    // ArrowRight — accept ghost text
+    if (
+      e.key === "ArrowRight" &&
+      showGhost &&
+      cursorPos === code.length
+    ) {
+      e.preventDefault();
+      onCodeChange(code + ghostText);
+      return;
+    }
+
+    // Auto-close brackets/quotes
+    if (autoCloseHandler(e)) return;
 
     // Tab — trigger/cycle completion
     if (e.key === "Tab" && !e.shiftKey) {
       e.preventDefault();
-      const cursorPos = input.selectionStart ?? code.length;
+      const pos = input.selectionStart ?? code.length;
 
       if (completion) {
         // Cycle to next match
@@ -76,7 +143,7 @@ export function ReplEditor({
         });
       } else {
         // Start new completion
-        const result = getCompletions(code, cursorPos, tree, userVariables);
+        const result = getCompletions(code, pos, tree, userVariables);
         if (result && result.matches.length > 0) {
           const match = result.matches[0];
           const newCode =
@@ -89,7 +156,7 @@ export function ReplEditor({
             result,
             index: 0,
             originalText: code,
-            originalCursor: cursorPos,
+            originalCursor: pos,
           });
           requestAnimationFrame(() => {
             input.selectionStart = input.selectionEnd = newCursor;
@@ -175,10 +242,37 @@ export function ReplEditor({
     }
   };
 
+  // Handle keydown in reverse search mode
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      reverseSearch.deactivate();
+      requestAnimationFrame(() => inputRef.current?.focus());
+      return;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const match = reverseSearch.accept();
+      if (match) onCodeChange(match);
+      requestAnimationFrame(() => inputRef.current?.focus());
+      return;
+    }
+    if (e.key === "r" && e.ctrlKey) {
+      e.preventDefault();
+      reverseSearch.nextMatch();
+      return;
+    }
+  };
+
   const [clearHover, setClearHover] = useState(false);
 
   const focusInput = () => {
     inputRef.current?.focus();
+  };
+
+  // Track cursor position for ghost text
+  const handleSelect = () => {
+    setCursorPos(inputRef.current?.selectionStart ?? 0);
   };
 
   return (
@@ -229,75 +323,178 @@ export function ReplEditor({
 
       {/* Inline prompt line */}
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span
-          style={{
-            color: colors.accentPrimary,
-            fontFamily: fonts.monoShort,
-            fontSize: isMobile ? 13 : fontSizes.body,
-            fontWeight: 600,
-            whiteSpace: "nowrap",
-          }}
-        >
-          {isMobile ? "PS>" : "PS master:\\content\\Home>"}
-        </span>
-        <input
-          ref={inputRef}
-          type="text"
-          value={code}
-          onChange={(e) => {
-            if (completion) setCompletion(null);
-            onCodeChange(e.target.value);
-          }}
-          onKeyDown={handleKeyDown}
-          placeholder="Type your SPE command here..."
-          spellCheck={false}
-          autoComplete="off"
-          style={{
-            flex: 1,
-            background: "transparent",
-            border: "none",
-            outline: "none",
-            color: colors.textPrimary,
-            fontFamily: fonts.mono,
-            fontSize: isMobile ? 15 : fontSizes.body,
-            caretColor: colors.accentPrimary,
-            minHeight: isMobile ? 44 : undefined,
-            padding: isMobile ? "8px 0" : undefined,
-          }}
-        />
-        {completion && (
-          <span
-            style={{
-              color: colors.accentPrimary,
-              fontFamily: fonts.monoShort,
-              fontSize: fontSizes.sm,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {completion.index + 1}/{completion.result.matches.length}
-          </span>
-        )}
-        {isMobile && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onRun();
-            }}
-            style={{
-              background: code.trim() ? gradients.accent : colors.borderBase,
-              border: "none",
-              color: code.trim() ? colors.textWhite : colors.textMuted,
-              padding: "6px 12px",
-              borderRadius: 4,
-              cursor: code.trim() ? "pointer" : "default",
-              fontSize: 14,
-              fontWeight: 600,
-              fontFamily: "inherit",
-              whiteSpace: "nowrap",
-            }}
-          >
-            Run ⏎
-          </button>
+        {reverseSearch.state.active ? (
+          /* Reverse search mode */
+          <>
+            <span
+              style={{
+                color: colors.textMuted,
+                fontFamily: fonts.monoShort,
+                fontSize: isMobile ? 13 : fontSizes.body,
+                whiteSpace: "nowrap",
+              }}
+            >
+              (reverse-i-search)`
+            </span>
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={reverseSearch.state.query}
+              onChange={(e) => reverseSearch.updateQuery(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              spellCheck={false}
+              autoComplete="off"
+              style={{
+                background: "transparent",
+                border: "none",
+                outline: "none",
+                color: colors.accentPrimary,
+                fontFamily: fonts.mono,
+                fontSize: isMobile ? 15 : fontSizes.body,
+                caretColor: colors.accentPrimary,
+                width: Math.max(20, (reverseSearch.state.query.length + 1) * 8),
+                padding: 0,
+              }}
+            />
+            <span
+              style={{
+                color: colors.textMuted,
+                fontFamily: fonts.monoShort,
+                fontSize: isMobile ? 13 : fontSizes.body,
+                whiteSpace: "nowrap",
+              }}
+            >
+              ':
+            </span>
+            <span
+              style={{
+                color: colors.textPrimary,
+                fontFamily: fonts.mono,
+                fontSize: isMobile ? 15 : fontSizes.body,
+                flex: 1,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {reverseSearch.state.currentMatch ?? ""}
+            </span>
+          </>
+        ) : (
+          /* Normal prompt mode */
+          <>
+            <span
+              style={{
+                color: colors.accentPrimary,
+                fontFamily: fonts.monoShort,
+                fontSize: isMobile ? 13 : fontSizes.body,
+                fontWeight: 600,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {isMobile ? "PS>" : "PS master:\\content\\Home>"}
+            </span>
+            <div style={{ position: "relative", flex: 1 }}>
+              {/* Ghost text underlay */}
+              {showGhost && (
+                <div
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    pointerEvents: "none",
+                    whiteSpace: "pre",
+                    fontFamily: fonts.mono,
+                    fontSize: isMobile ? 15 : fontSizes.body,
+                    lineHeight: "inherit",
+                    padding: isMobile ? "8px 0" : undefined,
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  <span style={{ visibility: "hidden" }}>{code}</span>
+                  <span style={{ color: colors.ghostText }}>{ghostText}</span>
+                </div>
+              )}
+              <input
+                ref={inputRef}
+                type="text"
+                value={code}
+                onChange={(e) => {
+                  if (completion) setCompletion(null);
+                  onCodeChange(e.target.value);
+                }}
+                onKeyDown={handleKeyDown}
+                onSelect={handleSelect}
+                onKeyUp={handleSelect}
+                placeholder="Type your SPE command here..."
+                spellCheck={false}
+                autoComplete="off"
+                style={{
+                  width: "100%",
+                  background: "transparent",
+                  border: "none",
+                  outline: "none",
+                  color: colors.textPrimary,
+                  fontFamily: fonts.mono,
+                  fontSize: isMobile ? 15 : fontSizes.body,
+                  caretColor: colors.accentPrimary,
+                  minHeight: isMobile ? 44 : undefined,
+                  padding: isMobile ? "8px 0" : undefined,
+                  position: "relative",
+                }}
+              />
+            </div>
+            {completion && (
+              <span
+                style={{
+                  color: colors.accentPrimary,
+                  fontFamily: fonts.monoShort,
+                  fontSize: fontSizes.sm,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {completion.index + 1}/{completion.result.matches.length}
+              </span>
+            )}
+            {showGhost && (
+              <span
+                style={{
+                  color: colors.textDimmed,
+                  fontFamily: fonts.monoShort,
+                  fontSize: fontSizes.xs,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                →
+              </span>
+            )}
+            {isMobile && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRun();
+                }}
+                style={{
+                  background: code.trim() ? gradients.accent : colors.borderBase,
+                  border: "none",
+                  color: code.trim() ? colors.textWhite : colors.textMuted,
+                  padding: "6px 12px",
+                  borderRadius: 4,
+                  cursor: code.trim() ? "pointer" : "default",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  fontFamily: "inherit",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Run ⏎
+              </button>
+            )}
+          </>
         )}
       </div>
 

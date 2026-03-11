@@ -1,7 +1,7 @@
 import type React from "react";
 import { colors, fonts, fontSizes } from "../theme";
 
-interface Token {
+export interface Token {
   type: string;
   text: string;
 }
@@ -68,6 +68,71 @@ export function renderTokens(tokens: Token[]): React.ReactElement[] {
       </span>
     );
   });
+}
+
+/** Render tokenized code with bracket match highlights overlaid */
+export function renderTokensWithHighlights(
+  tokens: Token[],
+  highlights: Array<{ pos: number; type: "matched" | "unmatched" }>
+): React.ReactElement[] {
+  if (highlights.length === 0) return renderTokens(tokens);
+
+  const highlightSet = new Map<number, "matched" | "unmatched">();
+  for (const h of highlights) highlightSet.set(h.pos, h.type);
+
+  const elements: React.ReactElement[] = [];
+  let charOffset = 0;
+  let key = 0;
+
+  for (const tok of tokens) {
+    const tokenStyle = tokenColors[tok.type] ?? { color: colors.textPrimary };
+    let lastSplit = 0;
+
+    for (let i = 0; i < tok.text.length; i++) {
+      const absPos = charOffset + i;
+      if (highlightSet.has(absPos)) {
+        // Emit text before this highlight
+        if (i > lastSplit) {
+          elements.push(
+            <span key={key++} style={tokenStyle}>
+              {tok.text.slice(lastSplit, i)}
+            </span>
+          );
+        }
+        // Emit highlighted character
+        const hType = highlightSet.get(absPos)!;
+        elements.push(
+          <span
+            key={key++}
+            style={{
+              ...tokenStyle,
+              backgroundColor:
+                hType === "matched"
+                  ? colors.bracketMatch
+                  : colors.bracketUnmatched,
+              borderRadius: 2,
+            }}
+          >
+            {tok.text[i]}
+          </span>
+        );
+        lastSplit = i + 1;
+      }
+    }
+
+    // Emit remaining text in token
+    if (lastSplit < tok.text.length) {
+      elements.push(
+        <span key={key++} style={tokenStyle}>
+          {tok.text.slice(lastSplit)}
+        </span>
+      );
+    }
+
+    charOffset += tok.text.length;
+  }
+
+  return elements;
 }
 
 /** Syntax highlighter for PowerShell (used in output pane) */
