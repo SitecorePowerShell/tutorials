@@ -38,9 +38,9 @@ describe("getItemProperty", () => {
   });
 
   it("returns HasChildren False for leaf nodes", () => {
-    const teamResolved = resolvePath('master:\\content\\Home\\About\\Team', tree)!;
-    const team = { name: teamResolved.name, node: teamResolved.node, path: teamResolved.path };
-    expect(getItemProperty(team, "HasChildren")).toBe("False");
+    const historyResolved = resolvePath('master:\\content\\Home\\About\\History', tree)!;
+    const history = { name: historyResolved.name, node: historyResolved.node, path: historyResolved.path };
+    expect(getItemProperty(history, "HasChildren")).toBe("False");
   });
 
   it("returns Database", () => {
