@@ -12,12 +12,20 @@ import {
   getAllDescendants,
 } from "./pathResolver";
 import { parseCommand } from "./parser";
-import { getItemProperty } from "./properties";
-import { formatItemTable, formatPropertyTable } from "./formatter";
+import { getAllPropertyNames, getItemProperty } from "./properties";
+import { formatItemTable, formatPropertyList, formatPropertyTable } from "./formatter";
 import { ScriptContext } from "./scriptContext";
 import { evaluateExpression } from "./expressionEval";
 import { evaluateFilter } from "./filterEval";
 import { findMatchingDelimiter } from "./expressionEval";
+
+/** Expand a wildcard `*` in a -Property list to all properties of the first item */
+function expandPropertyWildcard(props: string[], pipelineData: SitecoreItem[]): string[] {
+  if (props.length === 1 && props[0] === "*" && pipelineData.length > 0) {
+    return getAllPropertyNames(pipelineData[0]);
+  }
+  return props;
+}
 
 /** Canonical alias → cmdlet map (lowercase keys, lowercase cmdlet values) */
 const ALIAS_MAP: Record<string, string> = {
@@ -537,7 +545,7 @@ export function executeCommandWithContext(
         const propParam =
           stage.params.Property || stage.params.property;
         if (propParam) {
-          const props = propParam.split(",").map((p) => p.trim());
+          const props = expandPropertyWildcard(propParam.split(",").map((p) => p.trim()), pipelineData);
           (pipelineData as SitecoreItemArray)._selectedProperties = props;
         }
         const first = stage.params.First || stage.params.first;
@@ -682,11 +690,15 @@ export function executeCommandWithContext(
           stage.params.Title || stage.params.title || "List View";
         let props: string[] | null = null;
         if (propParam) {
-          props = propParam.split(",").map((p) => p.trim());
+          props = expandPropertyWildcard(propParam.split(",").map((p) => p.trim()), pipelineData);
         }
         let output = `\n  ${title}\n  ${"─".repeat(title.length)}\n\n`;
         if (props) {
-          output += formatPropertyTable(pipelineData, props);
+          if (props.length > 4) {
+            output += formatPropertyList(pipelineData, props);
+          } else {
+            output += formatPropertyTable(pipelineData, props);
+          }
         } else {
           output += formatItemTable(pipelineData);
         }
@@ -996,7 +1008,10 @@ export function executeCommandWithContext(
           stage.params.property ||
           (stage.params._positional && stage.params._positional[0]);
         if (propParam) {
-          const props = propParam.split(",").map((p) => p.trim());
+          const props = expandPropertyWildcard(propParam.split(",").map((p) => p.trim()), pipelineData);
+          if (props.length > 4) {
+            return { output: formatPropertyList(pipelineData, props), error: null };
+          }
           return {
             output: formatPropertyTable(pipelineData, props),
             error: null,
@@ -1064,8 +1079,10 @@ export function executeCommandWithContext(
   const selectedProps = (pipelineData as SitecoreItemArray)
     ._selectedProperties;
   if (selectedProps) {
+    const formatter =
+      selectedProps.length > 4 ? formatPropertyList : formatPropertyTable;
     return {
-      output: formatPropertyTable(pipelineData, selectedProps),
+      output: formatter(pipelineData, selectedProps),
       error: null,
       pipelineData,
     };
