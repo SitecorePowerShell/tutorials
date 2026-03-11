@@ -6,7 +6,6 @@ dist/
 .DS_Store
 *.log
 bun.lockb
-bun.lock
 .claude_worklog.md
 tsconfig.tsbuildinfo
 .claude/
