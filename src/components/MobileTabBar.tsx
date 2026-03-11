@@ -23,6 +23,7 @@ export function MobileTabBar({ activeTab, onTabChange, showTreeTab }: MobileTabB
         display: "flex",
         background: colors.bgPanel,
         borderTop: `1px solid ${colors.borderBase}`,
+        paddingBottom: "env(safe-area-inset-bottom)",
         flexShrink: 0,
       }}
     >
