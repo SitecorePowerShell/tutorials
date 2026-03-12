@@ -252,6 +252,45 @@ describe("executeCommandWithContext", () => {
       executeCommandWithContext("cd About", ctx, tree);
       expect(ctx.cwd).toBe("/sitecore/content/Home/About");
     });
+
+    it("works via executeCommand (console mode)", () => {
+      const result = executeCommand("Get-Location", ctx);
+      expect(result.error).toBeNull();
+      expect(result.output).toContain("master:\\content\\Home");
+    });
+
+    it("cd + Get-Location works via executeCommand (console mode)", () => {
+      executeCommand('cd "master:\\content"', ctx);
+      expect(ctx.cwd).toBe("/sitecore/content");
+      const result = executeCommand("Get-Location", ctx);
+      expect(result.output).toContain("master:\\content");
+      expect(result.output).not.toContain("master:\\content\\Home");
+    });
+
+    it("cd + Get-Location works in ISE multi-line script", () => {
+      const script = 'Get-Location\ncd "master:\\content"\nGet-Location';
+      const result = executeScript(script, ctx);
+      expect(result.error).toBeNull();
+      expect(ctx.cwd).toBe("/sitecore/content");
+      // Both Get-Location calls should produce different output
+      const parts = ctx.outputs;
+      expect(parts).toHaveLength(2);
+      expect(parts[0]).toContain("master:\\content\\Home");
+      expect(parts[1]).toContain("master:\\content");
+      expect(parts[1]).not.toContain("master:\\content\\Home");
+    });
+
+    it("cd without quotes works in ISE script", () => {
+      const script = "Get-Location\ncd master:\\content\nGet-Location";
+      const result = executeScript(script, ctx);
+      expect(result.error).toBeNull();
+      expect(ctx.cwd).toBe("/sitecore/content");
+      const parts = ctx.outputs;
+      expect(parts).toHaveLength(2);
+      expect(parts[0]).toContain("master:\\content\\Home");
+      expect(parts[1]).toContain("master:\\content");
+      expect(parts[1]).not.toContain("master:\\content\\Home");
+    });
   });
 
   describe("Show-ListView", () => {

@@ -525,7 +525,7 @@ export function IseEditor({
                 fontFamily: fonts.monoShort,
                 lineHeight: "20px",
                 userSelect: "none",
-                minWidth: 36,
+                minWidth: 44,
                 paddingRight: 8,
                 borderRight: `1px solid ${colors.borderBase}`,
                 background: colors.bgDeep,
@@ -616,39 +616,44 @@ export function IseEditor({
             gap: 16,
           }}
         >
-          <span>Ctrl+Enter run</span>
-          <span>Ctrl+Space complete</span>
-          <span>Tab indent</span>
-          <span>Ctrl+/ comment</span>
-          <span>Ctrl+L clear</span>
+          {!isMobile && (
+            <>
+              <span>Ctrl+Enter run</span>
+              <span>Ctrl+Space complete</span>
+              <span>Tab indent</span>
+              <span>Ctrl+/ comment</span>
+              <span>Ctrl+L clear</span>
+            </>
+          )}
           {completion && (
             <span style={{ color: colors.accentPrimary, marginLeft: "auto" }}>
               {completion.index + 1}/{completion.result.matches.length}:{" "}
               {completion.result.matches[completion.index]}
             </span>
           )}
-          {showGhost && (
-            <button
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
+          <button
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              if (showGhost) {
                 onCodeChange(code + ghostText);
                 inputRef.current?.focus();
-              }}
-              style={{
-                background: "transparent",
-                border: "none",
-                cursor: "pointer",
-                color: colors.textDimmed,
-                fontFamily: "inherit",
-                fontSize: fontSizes.sm,
-                marginLeft: completion ? undefined : "auto",
-                padding: "2px 6px",
-                touchAction: "manipulation",
-              }}
-            >
-              Tab →
-            </button>
-          )}
+              }
+            }}
+            style={{
+              background: "transparent",
+              border: "none",
+              cursor: showGhost ? "pointer" : "default",
+              color: colors.textDimmed,
+              fontFamily: "inherit",
+              fontSize: fontSizes.sm,
+              marginLeft: completion ? undefined : "auto",
+              padding: "2px 6px",
+              touchAction: "manipulation",
+              visibility: showGhost ? "visible" : "hidden",
+            }}
+          >
+            Tab →
+          </button>
         </div>
         {isMobile && (
           <MobileAccessoryRow
