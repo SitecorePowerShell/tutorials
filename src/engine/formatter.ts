@@ -1,5 +1,7 @@
-import type { SitecoreItem } from "../types";
+import type { SitecoreItem, PropertySpec } from "../types";
 import { getItemProperty } from "./properties";
+import { getPropertyLabel, evaluatePropertySpec } from "./propertySpec";
+import type { ScriptContext } from "./scriptContext";
 
 export function formatItemTable(items: SitecoreItem[]): string {
   if (items.length === 0) return "";
@@ -33,19 +35,21 @@ export function formatItemTable(items: SitecoreItem[]): string {
 
 export function formatPropertyTable(
   items: SitecoreItem[],
-  properties: string[]
+  properties: PropertySpec[],
+  ctx?: ScriptContext
 ): string {
   if (items.length === 0) return "";
 
-  // Normalize property names to match real SPE behavior
-  // "Id" always displays as "ID" in headers (property name is ID)
-  const displayHeaders = properties.map((p) => {
-    if (p.toLowerCase() === "id") return "ID";
-    return p;
-  });
+  const displayHeaders = properties.map((p) => getPropertyLabel(p));
 
   const rows = items.map((item) =>
-    properties.map((p) => getItemProperty(item, p) || "-")
+    properties.map((p) => {
+      if (p.type === "calculated" && ctx) {
+        return evaluatePropertySpec(p, item, ctx);
+      }
+      const name = p.type === "plain" ? p.name : p.label;
+      return getItemProperty(item, name) || "-";
+    })
   );
   const colWidths = displayHeaders.map((h, i) =>
     Math.max(h.length, ...rows.map((r) => String(r[i]).length))
@@ -62,17 +66,22 @@ export function formatPropertyTable(
 
 export function formatPropertyList(
   items: SitecoreItem[],
-  properties: string[]
+  properties: PropertySpec[],
+  ctx?: ScriptContext
 ): string {
-  const displayNames = properties.map((p) =>
-    p.toLowerCase() === "id" ? "ID" : p
-  );
+  const displayNames = properties.map((p) => getPropertyLabel(p));
   const maxLen = Math.max(...displayNames.map((n) => n.length));
   return items
     .map((item) =>
       properties
         .map((p, i) => {
-          const val = getItemProperty(item, p) || "-";
+          let val: string;
+          if (p.type === "calculated" && ctx) {
+            val = evaluatePropertySpec(p, item, ctx);
+          } else {
+            const name = p.type === "plain" ? p.name : p.label;
+            val = getItemProperty(item, name) || "-";
+          }
           return `${displayNames[i].padStart(maxLen)} : ${val}`;
         })
         .join("\n")

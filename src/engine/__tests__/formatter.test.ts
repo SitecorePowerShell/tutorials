@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { formatItemTable, formatPropertyTable } from "../formatter";
 import { createVirtualTree } from "../virtualTree";
 import { resolvePath, getChildren } from "../pathResolver";
+import type { PropertySpec } from "../../types";
 
 describe("formatItemTable", () => {
   const tree = createVirtualTree();
@@ -53,20 +54,23 @@ describe("formatPropertyTable", () => {
     path: "/sitecore/content/Home/" + c.name,
   }));
 
+  const plain = (...names: string[]): PropertySpec[] =>
+    names.map((n) => ({ type: "plain", name: n }));
+
   it("formats selected properties", () => {
-    const result = formatPropertyTable(children, ["Name", "TemplateName"]);
+    const result = formatPropertyTable(children, plain("Name", "TemplateName"));
     expect(result).toContain("Name");
     expect(result).toContain("TemplateName");
     expect(result).toContain("About");
   });
 
   it("displays Id as ID in header", () => {
-    const result = formatPropertyTable(children, ["Name", "Id"]);
+    const result = formatPropertyTable(children, plain("Name", "Id"));
     const firstLine = result.split("\n")[0];
     expect(firstLine).toContain("ID");
   });
 
   it("returns empty string for empty array", () => {
-    expect(formatPropertyTable([], ["Name"])).toBe("");
+    expect(formatPropertyTable([], plain("Name"))).toBe("");
   });
 });

@@ -22,9 +22,23 @@ export interface SitecoreItem {
   path?: string;
 }
 
+/** A property specifier — either a plain name or a calculated @{} expression */
+export interface PlainProperty {
+  type: "plain";
+  name: string;
+}
+
+export interface CalculatedProperty {
+  type: "calculated";
+  label: string;
+  expression: string;
+}
+
+export type PropertySpec = PlainProperty | CalculatedProperty;
+
 /** Augmented array with optional Select-Object metadata */
 export interface SitecoreItemArray extends Array<SitecoreItem> {
-  _selectedProperties?: string[];
+  _selectedProperties?: PropertySpec[];
 }
 
 export interface ResolvedPath {

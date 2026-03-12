@@ -5,6 +5,7 @@ export interface CmdletParam {
   type: ParamType;
   required?: boolean;
   placeholder?: string;
+  defaultValue?: string;
 }
 
 export interface CmdletDef {
@@ -23,7 +24,7 @@ export const CMDLET_REGISTRY: Record<string, CmdletDef> = {
     color: "#5c6bc0",
     icon: "📄",
     params: [
-      { name: "Path", type: "string", required: true, placeholder: '"master:\\content\\Home"' },
+      { name: "Path", type: "string", required: true, defaultValue: "master:", placeholder: "master:\\content\\Home" },
     ],
     switches: [],
   },
@@ -33,7 +34,7 @@ export const CMDLET_REGISTRY: Record<string, CmdletDef> = {
     color: "#7986cb",
     icon: "📂",
     params: [
-      { name: "Path", type: "string", required: true, placeholder: '"master:\\content\\Home"' },
+      { name: "Path", type: "string", required: true, defaultValue: "master:", placeholder: "master:\\content\\Home" },
     ],
     switches: ["Recurse"],
   },

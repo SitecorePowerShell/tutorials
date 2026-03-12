@@ -4,6 +4,7 @@ import type {
   SitecoreItemArray,
   ExecutionResult,
   ScriptResult,
+  PropertySpec,
 } from "../types";
 import { VIRTUAL_TREE } from "./virtualTree";
 import {
@@ -18,13 +19,14 @@ import { ScriptContext } from "./scriptContext";
 import { evaluateExpression } from "./expressionEval";
 import { evaluateFilter } from "./filterEval";
 import { findMatchingDelimiter } from "./expressionEval";
+import { parsePropertyList } from "./propertySpec";
 
 /** Expand a wildcard `*` in a -Property list to all properties of the first item */
-function expandPropertyWildcard(props: string[], pipelineData: SitecoreItem[]): string[] {
-  if (props.length === 1 && props[0] === "*" && pipelineData.length > 0) {
-    return getAllPropertyNames(pipelineData[0]);
+function expandPropertyWildcard(specs: PropertySpec[], pipelineData: SitecoreItem[]): PropertySpec[] {
+  if (specs.length === 1 && specs[0].type === "plain" && specs[0].name === "*" && pipelineData.length > 0) {
+    return getAllPropertyNames(pipelineData[0]).map((n) => ({ type: "plain", name: n }));
   }
-  return props;
+  return specs;
 }
 
 /** Canonical alias → cmdlet map (lowercase keys, lowercase cmdlet values) */
@@ -547,8 +549,8 @@ export function executeCommandWithContext(
           stage.params.Property || stage.params.property ||
           (stage.params._positional && stage.params._positional[0]);
         if (propParam) {
-          const props = expandPropertyWildcard(propParam.split(",").map((p) => p.trim()), pipelineData);
-          (pipelineData as SitecoreItemArray)._selectedProperties = props;
+          const specs = expandPropertyWildcard(parsePropertyList(propParam), pipelineData);
+          (pipelineData as SitecoreItemArray)._selectedProperties = specs;
         }
         const first = stage.params.First || stage.params.first;
         if (first) pipelineData = pipelineData.slice(0, parseInt(first));
@@ -712,16 +714,16 @@ export function executeCommandWithContext(
           (stage.params._positional && stage.params._positional[0]);
         const title =
           stage.params.Title || stage.params.title || "List View";
-        let props: string[] | null = null;
+        let specs: PropertySpec[] | null = null;
         if (propParam) {
-          props = expandPropertyWildcard(propParam.split(",").map((p) => p.trim()), pipelineData);
+          specs = expandPropertyWildcard(parsePropertyList(propParam), pipelineData);
         }
         let output = `\n  ${title}\n  ${"─".repeat(title.length)}\n\n`;
-        if (props) {
-          if (props.length > 4) {
-            output += formatPropertyList(pipelineData, props);
+        if (specs) {
+          if (specs.length > 4) {
+            output += formatPropertyList(pipelineData, specs, ctx);
           } else {
-            output += formatPropertyTable(pipelineData, props);
+            output += formatPropertyTable(pipelineData, specs, ctx);
           }
         } else {
           output += formatItemTable(pipelineData);
@@ -1032,12 +1034,12 @@ export function executeCommandWithContext(
           stage.params.property ||
           (stage.params._positional && stage.params._positional[0]);
         if (propParam) {
-          const props = expandPropertyWildcard(propParam.split(",").map((p) => p.trim()), pipelineData);
-          if (props.length > 4) {
-            return { output: formatPropertyList(pipelineData, props), error: null };
+          const specs = expandPropertyWildcard(parsePropertyList(propParam), pipelineData);
+          if (specs.length > 4) {
+            return { output: formatPropertyList(pipelineData, specs, ctx), error: null };
           }
           return {
-            output: formatPropertyTable(pipelineData, props),
+            output: formatPropertyTable(pipelineData, specs, ctx),
             error: null,
           };
         }
@@ -1106,7 +1108,7 @@ export function executeCommandWithContext(
     const formatter =
       selectedProps.length > 4 ? formatPropertyList : formatPropertyTable;
     return {
-      output: formatter(pipelineData, selectedProps),
+      output: formatter(pipelineData, selectedProps, ctx),
       error: null,
       pipelineData,
     };
