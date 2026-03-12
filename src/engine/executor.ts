@@ -47,6 +47,7 @@ const ALIAS_MAP: Record<string, string> = {
   rni: "rename-item", ren: "rename-item",
   sp: "set-itemproperty",
   gal: "get-alias",
+  cd: "set-location", sl: "set-location", chdir: "set-location",
 };
 
 /** Cmdlet-like tokens that should be executed as commands, not expressions */
@@ -98,8 +99,8 @@ function hasTopLevelPipe(expr: string): boolean {
 // Multi-line script executor
 // ============================================================================
 
-export function executeScript(script: string): ScriptResult {
-  const ctx = new ScriptContext();
+export function executeScript(script: string, sharedCtx?: ScriptContext): ScriptResult {
+  const ctx = sharedCtx ?? new ScriptContext();
   const lines = script.split("\n");
 
   // Pre-process: join continuation lines (ending with |, `, or opening {)
@@ -391,7 +392,7 @@ export function executeCommandWithContext(
           stage.params.path ||
           (stage.params._positional && stage.params._positional[0]) ||
           ".";
-        const resolved = resolvePath(path, tree);
+        const resolved = resolvePath(path, tree, ctx.cwd);
         if (!resolved)
           return {
             output: "",
@@ -427,7 +428,7 @@ export function executeCommandWithContext(
             }
           }
         } else {
-          const resolved = resolvePath(path || ".", tree);
+          const resolved = resolvePath(path || ".", tree, ctx.cwd);
           if (!resolved)
             return {
               output: "",
@@ -675,10 +676,31 @@ export function executeCommandWithContext(
           "Visualization           Property   Sitecore.Data.Items.ItemVisualization Visualization {get;}",
         ];
         return { output: members.join("\n"), error: null };
+      } else if (cmdLower === "set-location") {
+        const path =
+          stage.params.Path ||
+          stage.params.path ||
+          (stage.params._positional && stage.params._positional[0]);
+        if (!path) {
+          return {
+            output: "",
+            error: "Set-Location : Missing -Path parameter.",
+          };
+        }
+        const resolved = resolvePath(path, tree, ctx.cwd);
+        if (!resolved) {
+          return {
+            output: "",
+            error: `Set-Location : Cannot find path '${path}' because it does not exist.`,
+          };
+        }
+        ctx.cwd = resolved.path;
+        return { output: "", error: null };
       } else if (cmdLower === "get-location") {
+        const cwdDisplay = ctx.cwd.replace(/^\/sitecore\//, "").replace(/\//g, "\\");
         return {
           output:
-            "\nPath                \n----                \nmaster:\\content\\Home\n",
+            `\nPath                \n----                \nmaster:\\${cwdDisplay}\n`,
           error: null,
         };
       } else if (cmdLower === "show-listview") {
@@ -756,7 +778,7 @@ export function executeCommandWithContext(
             error: "New-Item : Missing -Path and/or -Name parameter.",
           };
         }
-        const resolved = resolvePath(parentPath, tree);
+        const resolved = resolvePath(parentPath, tree, ctx.cwd);
         if (!resolved)
           return {
             output: "",
@@ -803,7 +825,7 @@ export function executeCommandWithContext(
           return { output: "", error: null };
         }
         if (targetPath) {
-          const resolved = resolvePath(targetPath, tree);
+          const resolved = resolvePath(targetPath, tree, ctx.cwd);
           if (!resolved)
             return {
               output: "",
@@ -827,13 +849,13 @@ export function executeCommandWithContext(
             error: "Move-Item : Missing -Path and/or -Destination parameter.",
           };
         }
-        const sourceResolved = resolvePath(sourcePath, tree);
+        const sourceResolved = resolvePath(sourcePath, tree, ctx.cwd);
         if (!sourceResolved)
           return {
             output: "",
             error: `Move-Item : Cannot find path '${sourcePath}'`,
           };
-        const destResolved = resolvePath(destPath, tree);
+        const destResolved = resolvePath(destPath, tree, ctx.cwd);
         if (!destResolved)
           return {
             output: "",
@@ -865,13 +887,13 @@ export function executeCommandWithContext(
               "Copy-Item : Missing -Path and/or -Destination parameter.",
           };
         }
-        const sourceResolved = resolvePath(sourcePath, tree);
+        const sourceResolved = resolvePath(sourcePath, tree, ctx.cwd);
         if (!sourceResolved)
           return {
             output: "",
             error: `Copy-Item : Cannot find path '${sourcePath}'`,
           };
-        const destResolved = resolvePath(destPath, tree);
+        const destResolved = resolvePath(destPath, tree, ctx.cwd);
         if (!destResolved)
           return {
             output: "",
@@ -910,7 +932,7 @@ export function executeCommandWithContext(
           targetItem = pipelineData[0];
           targetPath = targetItem.path!;
         } else if (sourcePath) {
-          const resolved = resolvePath(sourcePath, tree);
+          const resolved = resolvePath(sourcePath, tree, ctx.cwd);
           if (!resolved)
             return {
               output: "",
@@ -985,7 +1007,7 @@ export function executeCommandWithContext(
         if (pipelineData && !targetPath) {
           items = [...pipelineData];
         } else if (targetPath) {
-          const resolved = resolvePath(targetPath, tree);
+          const resolved = resolvePath(targetPath, tree, ctx.cwd);
           if (!resolved)
             return {
               output: "",
@@ -1061,7 +1083,7 @@ export function executeCommandWithContext(
       } else {
         return {
           output: "",
-          error: `${stage.cmdlet} : The term '${stage.cmdlet}' is not recognized. Supported commands: Get-Item, Get-ChildItem, Where-Object, ForEach-Object, Select-Object, Sort-Object, Group-Object, Measure-Object, Get-Member, Get-Alias, Show-ListView, New-Item, Remove-Item, Move-Item, Copy-Item, Rename-Item, Set-ItemProperty, Format-Table, ConvertTo-Json, Write-Host, Show-Alert, Read-Variable`,
+          error: `${stage.cmdlet} : The term '${stage.cmdlet}' is not recognized. Supported commands: Get-Item, Get-ChildItem, Set-Location, Where-Object, ForEach-Object, Select-Object, Sort-Object, Group-Object, Measure-Object, Get-Member, Get-Alias, Show-ListView, New-Item, Remove-Item, Move-Item, Copy-Item, Rename-Item, Set-ItemProperty, Format-Table, ConvertTo-Json, Write-Host, Show-Alert, Read-Variable`,
         };
       }
     } catch (err) {
@@ -1130,7 +1152,7 @@ export function removeFromTree(
 }
 
 /** Backward-compatible wrapper — single command execution without context */
-export function executeCommand(input: string): ExecutionResult {
-  const ctx = new ScriptContext();
+export function executeCommand(input: string, sharedCtx?: ScriptContext): ExecutionResult {
+  const ctx = sharedCtx ?? new ScriptContext();
   return executeCommandWithContext(input, ctx);
 }

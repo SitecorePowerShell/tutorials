@@ -172,6 +172,86 @@ describe("executeCommandWithContext", () => {
       const result = executeCommandWithContext("Get-Location", ctx, tree);
       expect(result.output).toContain("master:\\content\\Home");
     });
+
+    it("reflects changed cwd after Set-Location", () => {
+      executeCommandWithContext('Set-Location -Path "master:\\content"', ctx, tree);
+      const result = executeCommandWithContext("Get-Location", ctx, tree);
+      expect(result.output).toContain("master:\\content");
+      expect(result.output).not.toContain("master:\\content\\Home");
+    });
+  });
+
+  describe("Set-Location", () => {
+    it("changes cwd with absolute path", () => {
+      const result = executeCommandWithContext(
+        'Set-Location -Path "master:\\content"',
+        ctx,
+        tree
+      );
+      expect(result.error).toBeNull();
+      expect(ctx.cwd).toBe("/sitecore/content");
+    });
+
+    it("changes cwd with cd alias", () => {
+      const result = executeCommandWithContext(
+        'cd "master:\\content"',
+        ctx,
+        tree
+      );
+      expect(result.error).toBeNull();
+      expect(ctx.cwd).toBe("/sitecore/content");
+    });
+
+    it("changes cwd with positional parameter", () => {
+      const result = executeCommandWithContext(
+        'cd "master:\\content\\Home\\About"',
+        ctx,
+        tree
+      );
+      expect(result.error).toBeNull();
+      expect(ctx.cwd).toBe("/sitecore/content/Home/About");
+    });
+
+    it("navigates to parent with cd ..", () => {
+      const result = executeCommandWithContext("cd ..", ctx, tree);
+      expect(result.error).toBeNull();
+      expect(ctx.cwd).toBe("/sitecore/content");
+    });
+
+    it("returns error for nonexistent path", () => {
+      const result = executeCommandWithContext(
+        'cd "master:\\content\\DoesNotExist"',
+        ctx,
+        tree
+      );
+      expect(result.error).toContain("Cannot find path");
+      // CWD should not change
+      expect(ctx.cwd).toBe("/sitecore/content/Home");
+    });
+
+    it("returns error when no path given", () => {
+      const result = executeCommandWithContext("Set-Location", ctx, tree);
+      expect(result.error).toContain("Missing -Path");
+    });
+
+    it("Get-Item . resolves to new cwd after cd", () => {
+      executeCommandWithContext('cd "master:\\content\\Home\\About"', ctx, tree);
+      const result = executeCommandWithContext("Get-Item .", ctx, tree);
+      expect(result.error).toBeNull();
+      expect(result.output).toContain("About");
+    });
+
+    it("Get-ChildItem uses new cwd after cd", () => {
+      executeCommandWithContext('cd "master:\\content"', ctx, tree);
+      const result = executeCommandWithContext("Get-ChildItem", ctx, tree);
+      expect(result.error).toBeNull();
+      expect(result.output).toContain("Home");
+    });
+
+    it("supports bare relative name to navigate into child", () => {
+      executeCommandWithContext("cd About", ctx, tree);
+      expect(ctx.cwd).toBe("/sitecore/content/Home/About");
+    });
   });
 
   describe("Show-ListView", () => {

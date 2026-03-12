@@ -1,12 +1,14 @@
 import type { SitecoreNode, SitecoreItem, ResolvedPath } from "../types";
 import { VIRTUAL_TREE } from "./virtualTree";
+import { DEFAULT_CWD } from "./scriptContext";
 
-// The current working directory — matches real SPE ISE default
-export const CWD = "/sitecore/content/Home";
+/** @deprecated Use DEFAULT_CWD from scriptContext instead */
+export const CWD = DEFAULT_CWD;
 
 export function resolvePath(
   pathStr: string,
-  tree: { sitecore: SitecoreNode } = VIRTUAL_TREE
+  tree: { sitecore: SitecoreNode } = VIRTUAL_TREE,
+  cwd: string = DEFAULT_CWD
 ): ResolvedPath | null {
   let clean = pathStr.replace(/['"]/g, "").trim();
 
@@ -17,18 +19,27 @@ export function resolvePath(
 
   // Handle "master:" (bare, no backslash) → current location (same as ".")
   if (/^(master|core|web):$/i.test(clean)) {
-    return resolveAbsolutePath(CWD, tree);
+    return resolveAbsolutePath(cwd, tree);
   }
 
   // Strip drive prefix: master:\content\Home → content\Home
+  const hadDrivePrefix = /^(master|core|web):[\\/]?/i.test(clean);
   clean = clean.replace(/^(master|core|web):[\\/]?/i, "");
   clean = clean.replace(/\\/g, "/");
 
-  // Handle dot-paths relative to CWD
+  // Handle dot-paths relative to cwd
   if (clean === "." || clean === "") {
-    return resolveAbsolutePath(CWD, tree);
+    return resolveAbsolutePath(cwd, tree);
+  } else if (clean === "..") {
+    // Parent directory
+    const parentPath = cwd.replace(/\/[^/]+$/, "") || "/sitecore";
+    return resolveAbsolutePath(parentPath, tree);
+  } else if (clean.startsWith("../")) {
+    // Parent-relative path
+    const parentPath = cwd.replace(/\/[^/]+$/, "") || "/sitecore";
+    clean = parentPath + "/" + clean.substring(3);
   } else if (clean.startsWith("./")) {
-    clean = CWD + clean.substring(1);
+    clean = cwd + clean.substring(1);
   } else if (clean.startsWith("/sitecore")) {
     // Already absolute with /sitecore prefix — keep as-is
   } else if (
@@ -36,9 +47,13 @@ export function resolvePath(
     clean.toLowerCase() === "sitecore"
   ) {
     clean = "/" + clean;
-  } else {
-    // Relative path segment (e.g. "content/Home") — resolve from /sitecore
+  } else if (hadDrivePrefix || clean.includes("/")) {
+    // Path had a drive prefix (e.g. master:\content\Home → content/Home)
+    // or contains slashes — resolve from /sitecore root
     clean = "/sitecore/" + clean;
+  } else {
+    // Bare relative name (e.g. "Articles") — resolve from cwd
+    clean = cwd + "/" + clean;
   }
 
   return resolveAbsolutePath(clean, tree);

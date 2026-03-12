@@ -15,7 +15,8 @@ export function OutputPane({ entries, isISE, endRef }: OutputPaneProps) {
         <div style={{ color: colors.textDimmed, fontStyle: "italic", fontSize: fontSizes.base }}>
           {isISE
             ? "Output will appear here after you run your script..."
-            : "PS master:\\content\\Home> Type your command below and press Enter..."}
+            : "PS master:\\content\\Home> Type your command below and press Enter..."
+          }
         </div>
       )}
       {entries.map((entry, i) => (
@@ -23,7 +24,7 @@ export function OutputPane({ entries, isISE, endRef }: OutputPaneProps) {
           {entry.type === "command" && (
             <div>
               <span style={{ color: colors.accentPrimary }}>
-                PS master:\content\Home&gt;{" "}
+                PS {entry.cwd || "master:\\content\\Home"}&gt;{" "}
               </span>
               <HighlightedCode code={entry.text} />
             </div>

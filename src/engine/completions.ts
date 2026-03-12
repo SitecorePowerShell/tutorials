@@ -24,6 +24,7 @@ export const CMDLET_NAMES = [
   "Rename-Item",
   "Select-Object",
   "Set-ItemProperty",
+  "Set-Location",
   "Show-Alert",
   "Show-ListView",
   "Sort-Object",
@@ -54,6 +55,7 @@ export const CMDLET_ALIASES: Record<string, string> = {
   ci: "Copy-Item", cp: "Copy-Item", copy: "Copy-Item",
   rni: "Rename-Item", ren: "Rename-Item",
   sp: "Set-ItemProperty",
+  cd: "Set-Location", sl: "Set-Location", chdir: "Set-Location",
   gal: "Get-Alias",
 };
 
@@ -81,6 +83,7 @@ const CMDLET_PARAMS: Record<string, string[]> = {
   "Move-Item": ["-Path", "-Destination"],
   "Rename-Item": ["-Path", "-NewName"],
   "Set-ItemProperty": ["-Path", "-Name", "-Value"],
+  "Set-Location": ["-Path"],
   "Format-Table": ["-Property"],
   "Write-Host": ["-ForegroundColor"],
   "Write-Output": [],

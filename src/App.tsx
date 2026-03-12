@@ -3,6 +3,7 @@ import type { ConsoleEntry } from "./types";
 import { LESSONS } from "./lessons/loader";
 import { VIRTUAL_TREE } from "./engine/virtualTree";
 import { executeScript, executeCommand } from "./engine/executor";
+import { ScriptContext } from "./engine/scriptContext";
 import { validateTask } from "./validation/validator";
 import { loadProgress, saveProgress, clearProgress } from "./hooks/useSessionProgress";
 import { loadUIPreferences, saveUIPreferences, type ActivePanel } from "./hooks/useUIPreferences";
@@ -37,6 +38,8 @@ export default function SPETutorial() {
   const [lessonPanelHeight, setLessonPanelHeight] = useState(200);
   const [lessonPanelCollapsed, setLessonPanelCollapsed] = useState(initialPrefs.lessonPanelCollapsed);
   const [layoutStacked, setLayoutStacked] = useState(initialPrefs.layoutStacked);
+  const [cwd, setCwd] = useState("/sitecore/content/Home");
+  const sessionCtxRef = useRef(new ScriptContext());
   const lessonPanelRef = useRef<HTMLDivElement>(null);
   const isDraggingLessonPanel = useRef(false);
   const editorHeightRef = useRef(initialPrefs.editorHeight);
@@ -103,10 +106,13 @@ export default function SPETutorial() {
     setSidebarCollapsed(false);
   }, []);
 
-  // Reset editor and output when switching lessons or tasks
+  // Reset editor, output, and cwd when switching lessons or tasks
   useEffect(() => {
     setConsoleOutput([]);
     setRevealedHintLevel(0);
+    // Reset session context (cwd, variables) on lesson/task change
+    sessionCtxRef.current = new ScriptContext();
+    setCwd("/sitecore/content/Home");
     if (isISE && task?.starterCode) {
       setCode(task.starterCode);
     } else if (isISE) {
@@ -132,25 +138,39 @@ export default function SPETutorial() {
       return;
     }
 
+    const currentCwd = sessionCtxRef.current.cwd;
+    const cwdDisplay = `master:\\${currentCwd.replace(/^\/sitecore\//, "").replace(/\//g, "\\")}`;
     const newOutput: ConsoleEntry[] = isISE
       ? [...consoleOutput]
-      : [...consoleOutput, { type: "command", text: effective.trim() }];
+      : [...consoleOutput, { type: "command", text: effective.trim(), cwd: cwdDisplay }];
 
     if (isISE) {
       newOutput.push({ type: "script", text: effective.trim() });
     }
 
-    // Execute
+    // Execute using persistent session context (preserves cwd across commands)
+    const ctx = sessionCtxRef.current;
+    // Reset per-execution state but keep cwd
+    ctx.outputs = [];
+    ctx.errors = [];
+    ctx.dialogRequests = [];
+    ctx.variables = {};
+
     let result;
     if (isISE) {
-      result = executeScript(effective);
+      result = executeScript(effective, ctx);
     } else {
       const normalized = effective
         .split("\n")
         .map((l) => l.trim())
         .filter((l) => l && !l.startsWith("#"))
         .join(" ");
-      result = executeCommand(normalized);
+      result = executeCommand(normalized, ctx);
+    }
+
+    // Sync cwd from context to React state (for prompt display)
+    if (ctx.cwd !== cwd) {
+      setCwd(ctx.cwd);
     }
 
     if (result.error) {
@@ -277,7 +297,7 @@ export default function SPETutorial() {
           background: colors.bgBase,
           color: colors.textPrimary,
           overflow: "hidden",
-          minWidth: 390,
+          minWidth: 320,
         }}
       >
         <link
@@ -397,7 +417,7 @@ export default function SPETutorial() {
             />
           )}
           {mobilePanel === "editor" && (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
               {isISE ? (
                 <IseEditor
                   code={code}
@@ -421,6 +441,7 @@ export default function SPETutorial() {
                   onHistoryIndexChange={setHistoryIndex}
                   tree={VIRTUAL_TREE}
                   isMobile={true}
+                  cwd={cwd}
                 />
               )}
             </div>
@@ -677,6 +698,7 @@ export default function SPETutorial() {
                   historyIndex={historyIndex}
                   onHistoryIndexChange={setHistoryIndex}
                   tree={VIRTUAL_TREE}
+                  cwd={cwd}
                 />
               )}
             </div>
@@ -816,6 +838,7 @@ export default function SPETutorial() {
                   historyIndex={historyIndex}
                   onHistoryIndexChange={setHistoryIndex}
                   tree={VIRTUAL_TREE}
+                  cwd={cwd}
                 />
               )}
             </div>

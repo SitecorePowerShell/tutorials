@@ -1,5 +1,6 @@
 export { VIRTUAL_TREE, createVirtualTree } from "./virtualTree";
 export { resolvePath, resolveAbsolutePath, getChildren, getAllDescendants, CWD } from "./pathResolver";
+export { DEFAULT_CWD } from "./scriptContext";
 export { parseCommand, parseSingleCommand } from "./parser";
 export { getItemProperty } from "./properties";
 export { ScriptContext } from "./scriptContext";

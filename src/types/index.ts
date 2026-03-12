@@ -129,4 +129,5 @@ export interface Lesson {
 export interface ConsoleEntry {
   type: "command" | "script" | "output" | "error" | "success" | "hint" | "partial";
   text: string;
+  cwd?: string;
 }

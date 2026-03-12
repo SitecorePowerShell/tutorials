@@ -28,6 +28,7 @@ interface ReplEditorProps {
   tree?: { sitecore: SitecoreNode };
   userVariables?: string[];
   isMobile?: boolean;
+  cwd?: string;
 }
 
 export function ReplEditor({
@@ -42,6 +43,7 @@ export function ReplEditor({
   userVariables,
   onHistoryIndexChange,
   isMobile,
+  cwd = "/sitecore/content/Home",
 }: ReplEditorProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -398,9 +400,9 @@ export function ReplEditor({
           onMouseEnter={() => setClearHover(true)}
           onMouseLeave={() => setClearHover(false)}
           style={{
-            position: "sticky",
-            top: 0,
-            float: "right",
+            position: "absolute",
+            top: 16,
+            right: 20,
             background: clearHover ? colors.borderMedium : "transparent",
             border: `1px solid ${clearHover ? colors.borderMedium : "transparent"}`,
             color: clearHover ? colors.textPrimary : colors.textMuted,
@@ -497,7 +499,7 @@ export function ReplEditor({
                 whiteSpace: "nowrap",
               }}
             >
-              {continuationLines.length > 0 ? ">> " : isMobile ? "PS>" : "PS master:\\content\\Home>"}
+              {continuationLines.length > 0 ? ">> " : isMobile ? "PS>" : `PS master:\\${cwd.replace(/^\/sitecore\//, "").replace(/\//g, "\\")}>`}
             </span>
             <div style={{ position: "relative", flex: 1 }}>
               {/* Ghost text underlay */}
@@ -553,41 +555,43 @@ export function ReplEditor({
                 }}
               />
             </div>
-            {completion && (
-              <span
-                style={{
-                  color: colors.accentPrimary,
-                  fontFamily: fonts.monoShort,
-                  fontSize: fontSizes.sm,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {completion.index + 1}/{completion.result.matches.length}
-              </span>
-            )}
-            {showGhost && (
-              <button
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={(e) => {
-                  e.stopPropagation();
+            <span
+              style={{
+                color: colors.accentPrimary,
+                fontFamily: fonts.monoShort,
+                fontSize: fontSizes.sm,
+                whiteSpace: "nowrap",
+                visibility: completion ? "visible" : "hidden",
+              }}
+            >
+              {completion
+                ? `${completion.index + 1}/${completion.result.matches.length}`
+                : "\u00A0"}
+            </span>
+            <button
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (showGhost) {
                   onCodeChange(code + ghostText);
                   inputRef.current?.focus();
-                }}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  color: colors.textDimmed,
-                  fontFamily: fonts.monoShort,
-                  fontSize: fontSizes.xs,
-                  whiteSpace: "nowrap",
-                  padding: "4px 8px",
-                  touchAction: "manipulation",
-                }}
-              >
-                Tab →
-              </button>
-            )}
+                }
+              }}
+              style={{
+                background: "transparent",
+                border: "none",
+                cursor: showGhost ? "pointer" : "default",
+                color: colors.textDimmed,
+                fontFamily: fonts.monoShort,
+                fontSize: fontSizes.xs,
+                whiteSpace: "nowrap",
+                padding: "4px 8px",
+                touchAction: "manipulation",
+                visibility: showGhost ? "visible" : "hidden",
+              }}
+            >
+              Tab →
+            </button>
             {isMobile && (
               <button
                 onClick={(e) => {

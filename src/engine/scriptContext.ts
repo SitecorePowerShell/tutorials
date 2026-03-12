@@ -1,11 +1,15 @@
 import type { DialogRequest, SitecoreItem } from "../types";
 
+/** Default working directory — matches real SPE ISE default */
+export const DEFAULT_CWD = "/sitecore/content/Home";
+
 /** Script execution context — holds variable scope across lines */
 export class ScriptContext {
   variables: Record<string, unknown> = {};
   outputs: string[] = [];
   errors: string[] = [];
   dialogRequests: DialogRequest[] = [];
+  cwd: string = DEFAULT_CWD;
 
   setVar(name: string, value: unknown): void {
     this.variables[name.replace(/^\$/, "")] = value;
