@@ -1,12 +1,6 @@
 import type { ReactElement } from "react";
 import { colors, fonts, fontSizes } from "../theme";
 
-const calloutStyles: Record<string, { icon: string; label: string; border: string; bg: string }> = {
-  TIP: { icon: "\u{1F4A1}", label: "Tip", border: colors.statusSuccess, bg: "#0d1f0d" },
-  WARNING: { icon: "\u26A0", label: "Warning", border: colors.statusHint, bg: "#1a1508" },
-  NOTE: { icon: "\u2139", label: "Note", border: colors.accentPrimary, bg: colors.bgOverlay },
-};
-
 function processInline(line: string): string {
   return line
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
@@ -16,11 +10,20 @@ function processInline(line: string): string {
     );
 }
 
+function getCalloutStyles(): Record<string, { icon: string; label: string; border: string; bg: string }> {
+  return {
+    TIP: { icon: "\u{1F4A1}", label: "Tip", border: colors.statusSuccess, bg: colors.bgCardSuccess },
+    WARNING: { icon: "\u26A0", label: "Warning", border: colors.statusHint, bg: colors.bgHint },
+    NOTE: { icon: "\u2139", label: "Note", border: colors.accentPrimary, bg: colors.bgOverlay },
+  };
+}
+
 function renderCallout(lines: string[], key: number): ReactElement {
   const firstLine = lines[0];
   const typeMatch = firstLine.match(/^\[!(\w+)\]\s*(.*)/);
   const type = typeMatch ? typeMatch[1].toUpperCase() : null;
-  const style = type && calloutStyles[type] ? calloutStyles[type] : null;
+  const calloutStyleMap = getCalloutStyles();
+  const style = type && calloutStyleMap[type] ? calloutStyleMap[type] : null;
 
   const contentLines = style
     ? [typeMatch![2], ...lines.slice(1)].filter((l) => l !== "")

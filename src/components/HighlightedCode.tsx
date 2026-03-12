@@ -44,23 +44,26 @@ export function tokenize(code: string): Token[] {
   return tokens;
 }
 
-const tokenColors: Record<string, { color: string; fontWeight?: number }> = {
-  comment: { color: colors.syntaxComment },
-  string: { color: colors.syntaxString },
-  keyword: { color: colors.syntaxKeyword, fontWeight: 600 },
-  variable: { color: colors.syntaxVariable },
-  operator: { color: colors.syntaxOperator },
-  param: { color: colors.syntaxParam },
-  type: { color: colors.syntaxType },
-  number: { color: colors.syntaxNumber },
-  pipe: { color: colors.syntaxPipe, fontWeight: 700 },
-  brace: { color: colors.syntaxBrace },
-};
+function getTokenColors(): Record<string, { color: string; fontWeight?: number }> {
+  return {
+    comment: { color: colors.syntaxComment },
+    string: { color: colors.syntaxString },
+    keyword: { color: colors.syntaxKeyword, fontWeight: 600 },
+    variable: { color: colors.syntaxVariable },
+    operator: { color: colors.syntaxOperator },
+    param: { color: colors.syntaxParam },
+    type: { color: colors.syntaxType },
+    number: { color: colors.syntaxNumber },
+    pipe: { color: colors.syntaxPipe, fontWeight: 700 },
+    brace: { color: colors.syntaxBrace },
+  };
+}
 
 /** Render tokenized code as styled spans */
 export function renderTokens(tokens: Token[]): React.ReactElement[] {
+  const tokenColorMap = getTokenColors();
   return tokens.map((tok, i) => {
-    const style = tokenColors[tok.type];
+    const style = tokenColorMap[tok.type];
     if (!style) return <span key={i} style={{ color: colors.textPrimary }}>{tok.text}</span>;
     return (
       <span key={i} style={style}>
@@ -80,12 +83,13 @@ export function renderTokensWithHighlights(
   const highlightSet = new Map<number, "matched" | "unmatched">();
   for (const h of highlights) highlightSet.set(h.pos, h.type);
 
+  const tokenColorMap = getTokenColors();
   const elements: React.ReactElement[] = [];
   let charOffset = 0;
   let key = 0;
 
   for (const tok of tokens) {
-    const tokenStyle = tokenColors[tok.type] ?? { color: colors.textPrimary };
+    const tokenStyle = tokenColorMap[tok.type] ?? { color: colors.textPrimary };
     let lastSplit = 0;
 
     for (let i = 0; i < tok.text.length; i++) {

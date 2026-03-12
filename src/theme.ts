@@ -1,4 +1,6 @@
-export const colors = {
+export type ThemeMode = "dark" | "light";
+
+const darkColors = {
   bgBase: "#0d0d1a",
   bgPanel: "#0f0f24",
   bgSurface: "#0d0d1f",
@@ -28,7 +30,7 @@ export const colors = {
   textCode: "#c5c8d4",
   textWhite: "#fff",
 
-  accentPrimary: "#5c6bc0",
+  accentPrimary: "#7b8ad4",
   accentSecondary: "#7c4dff",
   accentTitle: "#8187dc",
   accentFolder: "#7986cb",
@@ -56,10 +58,92 @@ export const colors = {
   bracketUnmatched: "#5a2020",
 };
 
-export const gradients = {
-  accent: "linear-gradient(135deg, #5c6bc0, #7c4dff)",
-  progress: "linear-gradient(90deg, #5c6bc0, #7c4dff)",
+const lightColors: typeof darkColors = {
+  bgBase: "#f4f4fa",
+  bgPanel: "#eaeaf4",
+  bgSurface: "#f0f0f8",
+  bgDeep: "#e6e6f0",
+  bgCard: "#ffffff",
+  bgCardSuccess: "#e8f5e9",
+  bgHint: "#fff8e1",
+  bgOverlay: "#e2e2ee",
+  bgActive: "#d6d6ea",
+  bgHover: "#dcdcea",
+  bgResizeHover: "#c0c0d8",
+
+  borderBase: "#c8c8dc",
+  borderLight: "#d0d0e0",
+  borderMedium: "#b0b0c8",
+  borderDim: "#9898b0",
+  borderSuccess: "#81c784",
+  borderAccentIse: "#c8b8e8",
+
+  textPrimary: "#1a1a30",
+  textSecondary: "#3a3a58",
+  textMuted: "#5a5a78",
+  textDimmed: "#6a6a88",
+  textClear: "#4a4a68",
+  textSubtle: "#444464",
+  textOutput: "#2a2a48",
+  textCode: "#2d3040",
+  textWhite: "#fff",
+
+  accentPrimary: "#4a5aa8",
+  accentSecondary: "#6a3acc",
+  accentTitle: "#5060b0",
+  accentFolder: "#5a68b0",
+  accentLink: "#1a65c0",
+
+  statusSuccess: "#388e3c",
+  statusSuccessLight: "#4caf50",
+  statusError: "#d32f2f",
+  statusHint: "#f57c00",
+  statusHintDark: "#e65100",
+
+  syntaxString: "#2e7d32",
+  syntaxKeyword: "#1565c0",
+  syntaxParam: "#7b1fa2",
+  syntaxPipe: "#bf5b00",
+  syntaxVariable: "#c62828",
+  syntaxBrace: "#6d6a00",
+  syntaxComment: "#558b2f",
+  syntaxOperator: "#00838f",
+  syntaxType: "#00695c",
+  syntaxNumber: "#e65100",
+
+  ghostText: "#9898b0",
+  bracketMatch: "#c8c8e8",
+  bracketUnmatched: "#ffcdd2",
 };
+
+const darkGradients = {
+  accent: "linear-gradient(135deg, #7b8ad4, #7c4dff)",
+  progress: "linear-gradient(90deg, #7b8ad4, #7c4dff)",
+};
+
+const lightGradients: typeof darkGradients = {
+  accent: "linear-gradient(135deg, #4a5aa8, #6a3acc)",
+  progress: "linear-gradient(90deg, #4a5aa8, #6a3acc)",
+};
+
+// Mutable theme objects — mutated in place via applyTheme() so all
+// module-level references (including constants built from colors at
+// import time inside components) stay up-to-date on re-render.
+export const colors: typeof darkColors = { ...darkColors };
+export const gradients: typeof darkGradients = { ...darkGradients };
+
+export function applyTheme(mode: ThemeMode) {
+  Object.assign(colors, mode === "dark" ? darkColors : lightColors);
+  Object.assign(gradients, mode === "dark" ? darkGradients : lightGradients);
+}
+
+export function getInitialThemeMode(): ThemeMode {
+  try {
+    const stored = localStorage.getItem("spe-theme-mode");
+    if (stored === "light" || stored === "dark") return stored;
+  } catch { /* SSR / iframe sandbox */ }
+  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+}
 
 export const fonts = {
   sans: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
