@@ -13,6 +13,9 @@ export function needsContinuation(text: string): boolean {
   // Backtick line continuation
   if (trimmed.endsWith("`")) return true;
 
+  // Trailing comma (more array elements on next line, e.g. multi-criteria hashtables)
+  if (trimmed.endsWith(",")) return true;
+
   // Unbalanced braces
   const openBraces = (trimmed.match(/\{/g) || []).length;
   const closeBraces = (trimmed.match(/\}/g) || []).length;

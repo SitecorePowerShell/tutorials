@@ -13,14 +13,20 @@ export function OutputPane({ entries, isISE, isBuilder, endRef }: OutputPaneProp
   return (
     <div role="log" aria-live="polite" aria-label="Command output">
       {entries.length === 0 && (
-        <div style={{ color: colors.textDimmed, fontStyle: "italic", fontSize: fontSizes.base }}>
-          {isBuilder
-            ? "Build a pipeline above and click Run to see the output..."
-            : isISE
-              ? "Output will appear here after you run your script..."
-              : "PS master:\\content\\Home> Type your command below and press Enter..."
-          }
-        </div>
+        isBuilder ? (
+          <div style={{ color: colors.textDimmed, fontStyle: "italic", fontSize: fontSizes.base }}>
+            Build a pipeline above and click Run to see the output...
+          </div>
+        ) : isISE ? (
+          <div style={{ color: colors.textDimmed, fontStyle: "italic", fontSize: fontSizes.base }}>
+            Output will appear here after you run your script...
+          </div>
+        ) : (
+          <div style={{ color: colors.textDimmed, fontSize: fontSizes.base }}>
+            <div>Sitecore PowerShell Extensions</div>
+            <div>Copyright © 2010-{new Date().getFullYear()} Adam Najmanowicz, Michael West. All rights Reserved.</div>
+          </div>
+        )
       )}
       {entries.map((entry, i) => (
         <div key={i} style={{ marginBottom: 6 }}>

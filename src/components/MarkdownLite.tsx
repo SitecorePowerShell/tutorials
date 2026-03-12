@@ -7,6 +7,10 @@ function processInline(line: string): string {
     .replace(
       /`([^`]+)`/g,
       `<code style="background:${colors.bgOverlay};padding:2px 6px;border-radius:3px;font-family:${fonts.monoShort};font-size:${fontSizes.md}px;color:${colors.accentLink};border:1px solid ${colors.borderMedium}">$1</code>`
+    )
+    .replace(
+      /\[([^\]]+)\]\(([^)]+)\)/g,
+      `<a href="$2" target="_blank" rel="noopener noreferrer" style="color:${colors.accentLink};text-decoration:underline">$1</a>`
     );
 }
 

@@ -51,6 +51,11 @@ describe("needsContinuation", () => {
     expect(needsContinuation("Get-ChildItem |\nFormat-Table")).toBe(false);
   });
 
+  it("returns true for trailing comma (array continuation)", () => {
+    expect(needsContinuation('@{Filter = "Equals"; Field = "_templatename"; Value = "Contributor"},')).toBe(true);
+    expect(needsContinuation("1, 2,")).toBe(true);
+  });
+
   it("handles multi-line buffer with unclosed brace across lines", () => {
     expect(needsContinuation("@{\nName = 'test'")).toBe(true);
     expect(needsContinuation("@{\nName = 'test'\n}")).toBe(false);

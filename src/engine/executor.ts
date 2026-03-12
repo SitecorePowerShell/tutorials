@@ -20,6 +20,12 @@ import { evaluateExpression } from "./expressionEval";
 import { evaluateFilter } from "./filterEval";
 import { findMatchingDelimiter } from "./expressionEval";
 import { parsePropertyList } from "./propertySpec";
+import {
+  buildSearchIndex,
+  executeSearch,
+  entriesToItems,
+  parseCriteriaHashtables,
+} from "./searchIndex";
 
 /** Expand a wildcard `*` in a -Property list to all properties of the first item */
 function expandPropertyWildcard(specs: PropertySpec[], pipelineData: SitecoreItem[]): PropertySpec[] {
@@ -50,6 +56,7 @@ const ALIAS_MAP: Record<string, string> = {
   sp: "set-itemproperty",
   gal: "get-alias",
   cd: "set-location", sl: "set-location", chdir: "set-location",
+  fi: "find-item",
 };
 
 /** Cmdlet-like tokens that should be executed as commands, not expressions */
@@ -122,8 +129,9 @@ export function executeScript(script: string, sharedCtx?: ScriptContext): Script
     } else {
       buffer = trimmed;
     }
-    // Continue accumulating if line ends with | or backtick
-    if (trimmed.endsWith("|") || trimmed.endsWith("`")) {
+    // Continue accumulating if line ends with |, backtick, or comma
+    // (comma = more array elements on next line, e.g. multi-criteria hashtables)
+    if (trimmed.endsWith("|") || trimmed.endsWith("`") || trimmed.endsWith(",")) {
       buffer = buffer.replace(/[`]$/, "");
       continue;
     }
@@ -1071,6 +1079,53 @@ export function executeCommandWithContext(
           output: JSON.stringify(result, null, 2),
           error: null,
         };
+      } else if (cmdLower === "find-item") {
+        // Parse -Index parameter
+        const indexName = stage.params.Index || stage.params._positional?.[0] || "sitecore_master_index";
+        if (indexName.replace(/['"]/g, "").toLowerCase() !== "sitecore_master_index") {
+          return {
+            output: "",
+            error: `Find-Item : Index '${indexName}' not found. Available indexes: sitecore_master_index`,
+          };
+        }
+
+        // Parse -Criteria from raw command string
+        const rawStage = rawStages[i] || "";
+        const criteria = parseCriteriaHashtables(rawStage);
+        const hasHashtables = /@\{/.test(rawStage);
+        if (criteria.length === 0) {
+          if (hasHashtables) {
+            return {
+              output: "",
+              error: "Find-Item : Each criterion requires a Filter type (Equals, Contains, StartsWith, DescendantOf, etc.). Use @{Filter = \"...\"; Field = \"...\"; Value = \"...\"}",
+            };
+          }
+          return {
+            output: "",
+            error: "Find-Item : The -Criteria parameter is required. Use @{Filter = \"Equals\"; Field = \"_templatename\"; Value = \"...\"}",
+          };
+        }
+
+        // Parse options
+        const options: { orderBy?: string; first?: number; last?: number; skip?: number } = {};
+        if (stage.params.OrderBy) {
+          options.orderBy = stage.params.OrderBy.replace(/['"]/g, "");
+        }
+        if (stage.params.First) {
+          options.first = parseInt(stage.params.First, 10);
+        }
+        if (stage.params.Last) {
+          options.last = parseInt(stage.params.Last, 10);
+        }
+        if (stage.params.Skip) {
+          options.skip = parseInt(stage.params.Skip, 10);
+        }
+
+        // Build index and execute search
+        const searchIndex = buildSearchIndex(tree);
+        const results = executeSearch(searchIndex, criteria, options, tree);
+        pipelineData = entriesToItems(results, tree);
+
       } else if (cmdLower === "get-alias") {
         const entries = Object.entries(ALIAS_MAP)
           .map(([alias, cmdlet]) => ({ alias, cmdlet }))
@@ -1085,7 +1140,7 @@ export function executeCommandWithContext(
       } else {
         return {
           output: "",
-          error: `${stage.cmdlet} : The term '${stage.cmdlet}' is not recognized. Supported commands: Get-Item, Get-ChildItem, Set-Location, Where-Object, ForEach-Object, Select-Object, Sort-Object, Group-Object, Measure-Object, Get-Member, Get-Alias, Show-ListView, New-Item, Remove-Item, Move-Item, Copy-Item, Rename-Item, Set-ItemProperty, Format-Table, ConvertTo-Json, Write-Host, Show-Alert, Read-Variable`,
+          error: `${stage.cmdlet} : The term '${stage.cmdlet}' is not recognized. Supported commands: Get-Item, Get-ChildItem, Set-Location, Where-Object, ForEach-Object, Select-Object, Sort-Object, Group-Object, Measure-Object, Get-Member, Get-Alias, Show-ListView, New-Item, Remove-Item, Move-Item, Copy-Item, Rename-Item, Set-ItemProperty, Format-Table, ConvertTo-Json, Write-Host, Show-Alert, Read-Variable, Find-Item`,
         };
       }
     } catch (err) {

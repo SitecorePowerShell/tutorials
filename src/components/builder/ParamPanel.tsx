@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import type { PipelineStage } from "../../builder/assembleCommand";
-import { CMDLET_REGISTRY, COMMON_PROPERTIES, FILTER_OPERATORS, getCmdletColor } from "../../builder/cmdletRegistry";
+import { CMDLET_REGISTRY, COMMON_PROPERTIES, FILTER_OPERATORS, CRITERIA_FILTER_TYPES, INDEX_FIELDS, getCmdletColor } from "../../builder/cmdletRegistry";
 import { colors, fonts, fontSizes } from "../../theme";
 
 interface ParamPanelProps {
@@ -16,12 +16,37 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile }
   const [filterValue, setFilterValue] = useState("");
   const [useStructured, setUseStructured] = useState(true);
 
+  // Criteria builder state for Find-Item
+  interface CriterionRow {
+    Filter: string;
+    Field: string;
+    Value: string;
+    Invert: boolean;
+  }
+  const [criteriaRows, setCriteriaRows] = useState<CriterionRow[]>([{ Filter: "Equals", Field: "_templatename", Value: "", Invert: false }]);
+
   // Reset structured filter state when selected stage changes
   useEffect(() => {
     setFilterProperty("");
     setFilterOperator("-eq");
     setFilterValue("");
     setUseStructured(true);
+    // Parse existing criteria from stage params if present
+    if (stage?.params.Criteria) {
+      try {
+        const parsed = JSON.parse(stage.params.Criteria);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setCriteriaRows(parsed.map((c: CriterionRow) => ({
+            Filter: c.Filter || "Equals",
+            Field: c.Field || "_templatename",
+            Value: c.Value || "",
+            Invert: c.Invert || false,
+          })));
+          return;
+        }
+      } catch { /* ignore parse errors */ }
+    }
+    setCriteriaRows([{ Filter: "Equals", Field: "_templatename", Value: "", Invert: false }]);
   }, [stage?.id]);
 
   if (!stage) {
@@ -90,6 +115,32 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile }
     }
   };
 
+  const updateCriteriaParam = (rows: CriterionRow[]) => {
+    setCriteriaRows(rows);
+    const json = JSON.stringify(rows.map((r) => ({
+      Filter: r.Filter,
+      Field: r.Filter === "DescendantOf" ? undefined : r.Field,
+      Value: r.Value,
+      Invert: r.Invert || undefined,
+    })));
+    onUpdateParams(stage.id, { ...stage.params, Criteria: json });
+  };
+
+  const handleCriterionChange = (index: number, field: keyof CriterionRow, value: string | boolean) => {
+    const newRows = criteriaRows.map((row, i) => i === index ? { ...row, [field]: value } : row);
+    updateCriteriaParam(newRows);
+  };
+
+  const addCriterionRow = () => {
+    updateCriteriaParam([...criteriaRows, { Filter: "Equals", Field: "_templatename", Value: "", Invert: false }]);
+  };
+
+  const removeCriterionRow = (index: number) => {
+    if (criteriaRows.length <= 1) return;
+    const newRows = criteriaRows.filter((_, i) => i !== index);
+    updateCriteriaParam(newRows);
+  };
+
   const handleSwitchToggle = (sw: string) => {
     const newSwitches = stage.switches.includes(sw)
       ? stage.switches.filter((s) => s !== sw)
@@ -131,6 +182,139 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile }
       {def.params.map((paramDef) => {
         const isExpression = paramDef.type === "expression";
         const isFilterScript = paramDef.name === "FilterScript";
+
+        if (paramDef.type === "criteriaList") {
+          return (
+            <div key={paramDef.name}>
+              <label style={labelStyle}>
+                Criteria <span style={{ color: colors.statusError }}>*</span>
+                <span style={{ fontWeight: 400, color: colors.textMuted }}> (AND logic)</span>
+              </label>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {criteriaRows.map((row, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      display: "flex",
+                      gap: 4,
+                      flexWrap: isMobile ? "wrap" : "nowrap",
+                      alignItems: "center",
+                      padding: "4px 6px",
+                      background: colors.bgDeep,
+                      borderRadius: 4,
+                      border: `1px solid ${colors.borderLight}`,
+                    }}
+                  >
+                    <select
+                      aria-label="Filter type"
+                      value={row.Filter}
+                      onChange={(e) => handleCriterionChange(idx, "Filter", e.target.value)}
+                      disabled={stage.locked}
+                      style={{ ...selectStyle, minWidth: 90 }}
+                    >
+                      {CRITERIA_FILTER_TYPES.map((ft) => (
+                        <option key={ft} value={ft}>{ft}</option>
+                      ))}
+                    </select>
+                    {row.Filter !== "DescendantOf" && (
+                      <select
+                        aria-label="Index field"
+                        value={INDEX_FIELDS.includes(row.Field) ? row.Field : "__custom__"}
+                        onChange={(e) => {
+                          if (e.target.value !== "__custom__") {
+                            handleCriterionChange(idx, "Field", e.target.value);
+                          }
+                        }}
+                        disabled={stage.locked}
+                        style={{ ...selectStyle, minWidth: 100 }}
+                      >
+                        {INDEX_FIELDS.map((f) => (
+                          <option key={f} value={f}>{f}</option>
+                        ))}
+                        <option value="__custom__">custom...</option>
+                      </select>
+                    )}
+                    {row.Filter !== "DescendantOf" && !INDEX_FIELDS.includes(row.Field) && (
+                      <input
+                        type="text"
+                        aria-label="Custom field name"
+                        value={row.Field}
+                        onChange={(e) => handleCriterionChange(idx, "Field", e.target.value)}
+                        disabled={stage.locked}
+                        placeholder="field name"
+                        style={{ ...inputStyle, width: 90, flex: "none" }}
+                      />
+                    )}
+                    <input
+                      type="text"
+                      aria-label="Search value"
+                      value={row.Value}
+                      onChange={(e) => handleCriterionChange(idx, "Value", e.target.value)}
+                      disabled={stage.locked}
+                      placeholder={row.Filter === "DescendantOf" ? "master:\\content\\Home" : "Value"}
+                      style={{ ...inputStyle, flex: 1, minWidth: 80 }}
+                    />
+                    <label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 2,
+                        fontSize: fontSizes.xs,
+                        color: colors.textMuted,
+                        fontFamily: fonts.sans,
+                        cursor: stage.locked ? "default" : "pointer",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={row.Invert}
+                        onChange={(e) => handleCriterionChange(idx, "Invert", e.target.checked)}
+                        disabled={stage.locked}
+                      />
+                      NOT
+                    </label>
+                    {criteriaRows.length > 1 && !stage.locked && (
+                      <button
+                        onClick={() => removeCriterionRow(idx)}
+                        aria-label="Remove criterion"
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: colors.statusError,
+                          fontSize: fontSizes.sm,
+                          cursor: "pointer",
+                          padding: "0 2px",
+                          lineHeight: 1,
+                        }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {!stage.locked && (
+                <button
+                  onClick={addCriterionRow}
+                  style={{
+                    background: "none",
+                    border: `1px dashed ${colors.borderMedium}`,
+                    borderRadius: 4,
+                    color: colors.accentLink,
+                    fontSize: fontSizes.xs,
+                    cursor: "pointer",
+                    padding: "4px 10px",
+                    fontFamily: fonts.sans,
+                    marginTop: 4,
+                  }}
+                >
+                  + Add Criterion
+                </button>
+              )}
+            </div>
+          );
+        }
 
         if (isExpression && isFilterScript && useStructured) {
           return (

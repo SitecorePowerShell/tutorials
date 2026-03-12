@@ -3,11 +3,12 @@ import { colors, fonts, fontSizes } from "../../theme";
 
 interface CmdletPaletteProps {
   availableCmdlets?: string[];
+  usedCmdlets?: Set<string>;
   onAddStage: (cmdletName: string) => void;
   isMobile?: boolean;
 }
 
-export function CmdletPalette({ availableCmdlets, onAddStage, isMobile }: CmdletPaletteProps) {
+export function CmdletPalette({ availableCmdlets, usedCmdlets, onAddStage, isMobile }: CmdletPaletteProps) {
   const cmdlets = (availableCmdlets ?? ALL_CMDLET_NAMES)
     .filter((name) => CMDLET_REGISTRY[name]);
 
@@ -38,32 +39,36 @@ export function CmdletPalette({ availableCmdlets, onAddStage, isMobile }: Cmdlet
       {cmdlets.map((name) => {
         const def = CMDLET_REGISTRY[name];
         const clr = getCmdletColor(def);
+        const isUsed = usedCmdlets?.has(name) ?? false;
         return (
           <button
             key={name}
-            draggable={!isMobile}
+            draggable={!isMobile && !isUsed}
             onDragStart={(e) => {
+              if (isUsed) { e.preventDefault(); return; }
               e.dataTransfer.setData("application/x-builder-cmdlet", name);
               e.dataTransfer.effectAllowed = "copy";
             }}
-            onClick={() => onAddStage(name)}
+            onClick={() => { if (!isUsed) onAddStage(name); }}
+            disabled={isUsed}
             style={{
               display: "inline-flex",
               alignItems: "center",
               gap: 4,
               padding: "4px 10px",
-              background: `${clr}22`,
-              border: `1px solid ${clr}55`,
+              background: isUsed ? `${clr}0a` : `${clr}22`,
+              border: `1px solid ${isUsed ? `${clr}22` : `${clr}55`}`,
               borderRadius: 16,
-              color: clr,
+              color: isUsed ? `${clr}66` : clr,
               fontSize: isMobile ? fontSizes.sm : fontSizes.xs,
               fontFamily: fonts.mono,
               fontWeight: 500,
-              cursor: isMobile ? "pointer" : "grab",
+              cursor: isUsed ? "default" : isMobile ? "pointer" : "grab",
               whiteSpace: "nowrap",
               userSelect: "none",
+              opacity: isUsed ? 0.5 : 1,
             }}
-            title={isMobile ? `Tap to add ${name}` : `Drag to add ${name}`}
+            title={isUsed ? `${name} already in pipeline` : isMobile ? `Tap to add ${name}` : `Drag to add ${name}`}
           >
             <span>{def.icon}</span>
             <span>{def.shortLabel}</span>

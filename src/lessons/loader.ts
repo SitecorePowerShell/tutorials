@@ -21,11 +21,16 @@ import lesson15 from "./15-dotnet-types.yaml?raw";
 import lesson16 from "./16-data-export.yaml?raw";
 import lesson17 from "./17-conditionals.yaml?raw";
 import lesson18 from "./18-bulk-updates.yaml?raw";
+import lesson19 from "./19-find-item-intro.yaml?raw";
+import lesson20 from "./20-find-item-filters.yaml?raw";
+import lesson21 from "./21-find-item-advanced.yaml?raw";
+import lesson22 from "./22-find-vs-get.yaml?raw";
 
 const rawLessons = [
   lesson00, lesson01, lesson02, lesson03, lesson04, lesson05,
   lesson06, lesson07, lesson08, lesson09, lesson10, lesson11,
   lesson12, lesson13, lesson14, lesson15, lesson16, lesson17, lesson18,
+  lesson19, lesson20, lesson21, lesson22,
 ];
 
 export const LESSONS: Lesson[] = rawLessons.map((raw) => yaml.load(raw) as Lesson);

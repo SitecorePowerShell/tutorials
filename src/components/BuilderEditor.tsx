@@ -64,19 +64,23 @@ export function BuilderEditor({
   }, [consoleOutput]);
 
   const addStage = useCallback((cmdletName: string) => {
-    const newStage = createStage(cmdletName);
-    setStages((prev) => [...prev, newStage]);
-    setSelectedStageId(newStage.id);
+    setStages((prev) => {
+      if (prev.some((s) => s.cmdlet === cmdletName)) return prev;
+      const newStage = createStage(cmdletName);
+      setSelectedStageId(newStage.id);
+      return [...prev, newStage];
+    });
   }, []);
 
   const insertStage = useCallback((cmdletName: string, index: number) => {
-    const newStage = createStage(cmdletName);
     setStages((prev) => {
+      if (prev.some((s) => s.cmdlet === cmdletName)) return prev;
+      const newStage = createStage(cmdletName);
       const next = [...prev];
       next.splice(index, 0, newStage);
+      setSelectedStageId(newStage.id);
       return next;
     });
-    setSelectedStageId(newStage.id);
   }, []);
 
   const removeStage = useCallback((id: string) => {
@@ -106,6 +110,7 @@ export function BuilderEditor({
     );
   }, []);
 
+  const usedCmdlets = new Set(stages.map((s) => s.cmdlet));
   const selectedStage = stages.find((s) => s.id === selectedStageId) ?? null;
   const validationErrors = getValidationErrors(stages);
 
@@ -122,6 +127,7 @@ export function BuilderEditor({
       {/* Cmdlet palette */}
       <CmdletPalette
         availableCmdlets={builderConfig?.availableCmdlets}
+        usedCmdlets={usedCmdlets}
         onAddStage={addStage}
         isMobile={isMobile}
       />

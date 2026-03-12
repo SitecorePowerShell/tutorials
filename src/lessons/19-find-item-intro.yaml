@@ -1,0 +1,62 @@
+id: "find-item-intro"
+module: "Level 5 – Content Search"
+order: 19
+title: "Index Search with Find-Item"
+difficulty: "intermediate"
+mode: "builder"
+description: |
+  So far, you've found items by **walking the content tree** with `Get-ChildItem -Recurse` and filtering with `Where-Object`. That works great for small trees, but real Sitecore sites can have **millions of items** — tree traversal doesn't scale.
+
+  `Find-Item` queries the **content search index** (powered by Solr or Azure Search) for instant results, no matter how large the tree. The trade-off: you write **search criteria** instead of pipeline filters.
+
+  The syntax uses **hashtable criteria** — `@{Filter = "Equals"; Field = "_templatename"; Value = "..."}` — which looks intimidating. But the Visual Builder makes it point-and-click.
+
+  > [!TIP]
+  > For complex boolean queries, SPE also supports `-Where` with Dynamic LINQ syntax, but `-Criteria` covers most use cases. See the [Find-Item documentation](https://doc.sitecorepowershell.com/appendix/indexing/find-item) for all options.
+tasks:
+  - instruction: |
+      Drag **Find-Item** into the pipeline. In the Criteria Builder, set the filter to
+      `Equals`, the field to `_templatename`, and the value to `Contributor`. Click **Run**.
+    hint: Drag Find-Item, click it, set Filter to Equals, Field to _templatename, Value to Contributor.
+    builderConfig:
+      availableCmdlets: ["Find-Item"]
+    validation:
+      type: pipeline
+      stages: ["find-item"]
+      outputContains: "Contributor"
+    successMessage: |
+      You just searched the index for all items with `TemplateName` equal to "Contributor" — and got instant results. In a real Sitecore instance, this would query Solr and return results in milliseconds, even across millions of items.
+  - instruction: |
+      Now add **Measure-Object** after Find-Item to count how many Contributors exist.
+
+      Compare this to the tree-traversal equivalent:
+      `Get-ChildItem -Recurse | Where-Object { $_.TemplateName -eq "Contributor" } | Measure-Object`
+    hint: Drag Measure-Object to the right of Find-Item.
+    builderConfig:
+      availableCmdlets: ["Find-Item", "Measure-Object", "Select-Object"]
+      prefilled:
+        - cmdlet: "Find-Item"
+          params:
+            Index: "sitecore_master_index"
+            Criteria: '[{"Filter":"Equals","Field":"_templatename","Value":"Contributor"}]'
+          locked: true
+    validation:
+      type: pipeline
+      stages: ["find-item", "measure-object"]
+    successMessage: |
+      Same count, much faster approach. On large sites, `Find-Item` is orders of magnitude faster than `Get-ChildItem -Recurse` because it queries a pre-built search index instead of walking every node in the tree.
+  - instruction: |
+      Click the **Find-Item** stage and add a **second criterion**: set Filter to `Equals`,
+      Field to `country`, and Value to `United States`.
+
+      Then add **Select-Object** with Property set to `Name, Country` to see the results.
+    hint: Click Find-Item, click "+ Add Criterion", configure the new row, then drag Select-Object and set Property to Name, Country.
+    builderConfig:
+      availableCmdlets: ["Find-Item", "Select-Object", "Measure-Object"]
+    validation:
+      type: pipeline
+      stages: ["find-item", "select-object"]
+      outputContains: "United States"
+      outputNotContains: "Poland"
+    successMessage: |
+      Multiple criteria are combined with **AND logic** — both conditions must match. This is the search-index equivalent of `Where-Object { $_.TemplateName -eq "Contributor" -and $_.Country -eq "United States" }`, but it runs against the index instead of filtering in memory.

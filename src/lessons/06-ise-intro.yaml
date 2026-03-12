@@ -11,7 +11,7 @@ description: |
 
   The ISE lets you write a complete script, hit **Run**, and see all the output at once. This is how most real SPE work gets done — reporting, bulk operations, content auditing.
 
-  **`Show-ListView`** is one of SPE's most powerful commands. It takes pipeline input and renders it as an interactive report table with filtering, sorting, and export capabilities.
+  [**Show-ListView**](https://doc.sitecorepowershell.com/appendix/presentation/show-listview) is one of SPE's most powerful commands. It takes pipeline input and renders it as an interactive report table with filtering, sorting, and export capabilities.
 tasks:
   - instruction: |
       Write a multi-line script that:

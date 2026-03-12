@@ -433,6 +433,17 @@ describe("executeScript", () => {
     expect(result.output).toContain("master:\\content\\Home");
   });
 
+  it("handles continuation lines (trailing comma for multi-criteria)", () => {
+    const script = `# Multi-criteria search
+Find-Item -Index sitecore_master_index \`
+    -Criteria @{Filter = "Equals"; Field = "_templatename"; Value = "Contributor"},
+             @{Filter = "Equals"; Field = "country"; Value = "United States"} \`
+    -OrderBy "_name"`;
+    const result = executeScript(script);
+    expect(result.error).toBeNull();
+    expect(result.output).toContain("Michael West");
+  });
+
   it("handles foreach loops", () => {
     const script = `$items = Get-ChildItem -Path "master:\\content\\Home"
 foreach($item in $items) { Write-Host $item.Name }`;

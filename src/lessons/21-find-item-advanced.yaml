@@ -1,0 +1,82 @@
+id: "find-item-advanced"
+module: "Level 5 – Content Search"
+order: 21
+title: "Combining Criteria & Pagination"
+difficulty: "advanced"
+mode: "ise"
+description: |
+  Real-world searches often need **multiple criteria**, **sorting**, and **pagination**. `Find-Item` supports:
+
+  - **Multiple criteria** — comma-separated hashtables, all combined with AND
+  - **-OrderBy** — sort results by an index field name
+  - **-First / -Skip** — paginate through large result sets
+  - **Invert** — negate any criterion (NOT logic)
+
+  See the [Find-Item documentation](https://doc.sitecorepowershell.com/appendix/indexing/find-item) for additional parameters and advanced examples.
+
+  ```powershell
+  Find-Item -Index sitecore_master_index `
+      -Criteria @{Filter = "Equals"; Field = "_templatename"; Value = "Contributor"},
+               @{Filter = "Equals"; Field = "country"; Value = "United States"} `
+      -OrderBy "_name" -First 10
+  ```
+tasks:
+  - instruction: |
+      Find Contributors from the **United States** and sort them by name. Use two criteria hashtables and the `-OrderBy` parameter.
+    hint: |
+      Find-Item -Index sitecore_master_index `
+          -Criteria @{Filter = "Equals"; Field = "_templatename"; Value = "Contributor"},
+                   @{Filter = "Equals"; Field = "country"; Value = "United States"} `
+          -OrderBy "_name"
+    starterCode: |
+      # Multi-criteria search: US contributors, sorted by name
+      Find-Item -Index sitecore_master_index `
+          -Criteria @{Filter = "Equals"; Field = "_templatename"; Value = "Contributor"},
+                   @{Filter = "Equals"; Field = "country"; Value = ""} `
+          -OrderBy "_name"
+    validation:
+      type: pipeline
+      stages: ["find-item"]
+      outputContains: "Michael West"
+    successMessage: |
+      Multiple criteria narrow your results precisely. The `-OrderBy` parameter sorts at the index level — much more efficient than piping through `Sort-Object` for large result sets.
+  - instruction: |
+      Use **-First** and **-Skip** to paginate through Contributors. Get the first 5 results as page 1, then skip 5 and get the next 5 as page 2. Display both counts.
+    hint: |
+      $page1 = Find-Item -Index sitecore_master_index -Criteria @{Filter = "Equals"; Field = "_templatename"; Value = "Contributor"} -First 5
+      $page2 = Find-Item -Index sitecore_master_index -Criteria @{Filter = "Equals"; Field = "_templatename"; Value = "Contributor"} -First 5 -Skip 5
+      Write-Host "Page 1: $($page1.Count) items, Page 2: $($page2.Count) items"
+    starterCode: |
+      # Pagination: browse through results in pages of 5
+      $page1 = Find-Item -Index sitecore_master_index `
+          -Criteria @{Filter = "Equals"; Field = "_templatename"; Value = "Contributor"} `
+          -First 5
+      $page2 = Find-Item -Index sitecore_master_index `
+          -Criteria @{Filter = "Equals"; Field = "_templatename"; Value = "Contributor"} `
+          -First 5 -Skip ___
+      Write-Host "Page 1: $($page1.Count) items, Page 2: $($page2.Count) items"
+    validation:
+      type: pipeline
+      stages: ["find-item"]
+      outputContains: "Page 1"
+    successMessage: |
+      Pagination with `-First` and `-Skip` is essential when working with large result sets. On a real site with thousands of matches, you'd loop through pages rather than loading everything at once.
+  - instruction: |
+      Find Contributors who are **NOT** from the United States using `Invert = $true` on the country criterion. Pipe the results to `Select-Object` showing Name and Country.
+    hint: |
+      Find-Item -Index sitecore_master_index `
+          -Criteria @{Filter = "Equals"; Field = "_templatename"; Value = "Contributor"},
+                   @{Filter = "Equals"; Field = "country"; Value = "United States"; Invert = $true} |
+          Select-Object -Property Name, Country
+    starterCode: |
+      # Negation: find contributors NOT from the US
+      Find-Item -Index sitecore_master_index `
+          -Criteria @{Filter = "Equals"; Field = "_templatename"; Value = "Contributor"},
+                   @{Filter = "Equals"; Field = "country"; Value = "United States"} |
+          Select-Object -Property Name, Country
+    validation:
+      type: pipeline
+      stages: ["find-item", "select-object"]
+      outputNotContains: "United States"
+    successMessage: |
+      `Invert = $true` negates any criterion — turning "Equals" into "Not Equals". This works with any filter type: `Contains` becomes "Not Contains", `StartsWith` becomes "Not StartsWith", etc.

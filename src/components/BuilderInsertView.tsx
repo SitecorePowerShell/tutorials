@@ -29,13 +29,17 @@ export function BuilderInsertView({
   const errors = getValidationErrors(stages);
   const canInsert = command && errors.length === 0;
 
+  const usedCmdlets = new Set(stages.map((s) => s.cmdlet));
+
   const addStage = useCallback((cmdletName: string) => {
+    if (stages.some((s) => s.cmdlet === cmdletName)) return;
     const newStage = createStage(cmdletName);
     onStagesChange([...stages, newStage]);
     onSelectedStageIdChange(newStage.id);
   }, [stages, onStagesChange, onSelectedStageIdChange]);
 
   const insertStage = useCallback((cmdletName: string, index: number) => {
+    if (stages.some((s) => s.cmdlet === cmdletName)) return;
     const newStage = createStage(cmdletName);
     const next = [...stages];
     next.splice(index, 0, newStage);
@@ -76,7 +80,7 @@ export function BuilderInsertView({
         minHeight: 0,
       }}
     >
-      <CmdletPalette onAddStage={addStage} isMobile={isMobile} />
+      <CmdletPalette usedCmdlets={usedCmdlets} onAddStage={addStage} isMobile={isMobile} />
 
       <PipelineDropZone
         stages={stages}

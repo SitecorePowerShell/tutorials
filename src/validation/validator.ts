@@ -153,6 +153,7 @@ const ALIASES: Record<string, string[]> = {
   "move-item": ["move-item", "mi", "mv"],
   "copy-item": ["copy-item", "ci", "cp", "cpi"],
   "rename-item": ["rename-item", "ren", "rni"],
+  "find-item": ["find-item", "fi"],
 };
 
 function validatePipeline(

@@ -1,0 +1,70 @@
+id: "find-item-comparison"
+module: "Level 5 – Content Search"
+order: 22
+title: "Find-Item vs Get-ChildItem"
+difficulty: "advanced"
+mode: "ise"
+description: |
+  You now know two ways to discover content:
+
+  | | `Get-ChildItem` | `Find-Item` |
+  |---|---|---|
+  | **How** | Walks the content tree | Queries the search index |
+  | **Speed** | Slow on large trees | Fast at any scale |
+  | **Returns** | Full `Item` objects | `SearchResultItem` (subset) |
+  | **Filtering** | Pipeline (`Where-Object`) | Index criteria |
+  | **Best for** | Small trees, full item access | Large searches, reports |
+
+  **Rule of thumb:** Use `Find-Item` when searching across large areas of the tree. Use `Get-ChildItem` when you need a specific subtree or full item properties.
+
+  > [!TIP]
+  > In real SPE, you can convert search results to full items with [Initialize-Item](https://doc.sitecorepowershell.com/appendix/indexing/initialize-item). Advanced users can also use `-Where` with Dynamic LINQ syntax for complex boolean queries beyond AND. See the [Find-Item documentation](https://doc.sitecorepowershell.com/appendix/indexing/find-item) for the complete reference.
+tasks:
+  - instruction: |
+      Write **both approaches** to find all Articles, then compare the counts.
+
+      1. Use `Get-ChildItem -Recurse | Where-Object` (tree traversal)
+      2. Use `Find-Item -Criteria` (index search)
+      3. Display both counts with `Write-Host`
+    hint: |
+      $treeResults = Get-ChildItem -Path "master:\content\Home" -Recurse | Where-Object { $_.TemplateName -eq "Article" }
+      $searchResults = Find-Item -Index sitecore_master_index -Criteria @{Filter = "Equals"; Field = "_templatename"; Value = "Article"}
+      Write-Host "Tree: $($treeResults.Count), Search: $($searchResults.Count)"
+    starterCode: |
+      # Approach 1: Tree traversal (slow on large sites)
+      $treeResults = Get-ChildItem -Path "master:\content\Home" -Recurse |
+          Where-Object { $_.TemplateName -eq "Article" }
+
+      # Approach 2: Index search (fast, scalable)
+      $searchResults = Find-Item -Index sitecore_master_index `
+          -Criteria @{Filter = "Equals"; Field = "_templatename"; Value = ""}
+
+      # Compare results
+      Write-Host "Tree: $($treeResults.Count), Search: $($searchResults.Count)"
+    validation:
+      type: pipeline
+      stages: ["find-item"]
+      outputContains: "Search: 4"
+    successMessage: |
+      Same 4 Articles found both ways. On our small tutorial tree, both are instant. On a real site with 100,000+ items, `Get-ChildItem -Recurse` could take minutes while `Find-Item` returns in milliseconds.
+  - instruction: |
+      Build a **search-powered content report**: find all Contributors who are MVPs (bio contains "MVP"), sort by Name, and display with `Show-ListView`.
+    hint: |
+      Find-Item -Index sitecore_master_index `
+          -Criteria @{Filter = "Equals"; Field = "_templatename"; Value = "Contributor"},
+                   @{Filter = "Contains"; Field = "_content"; Value = "MVP"} |
+          Sort-Object -Property Name |
+          Show-ListView -Property Name,Country,Company -Title "MVP Contributors"
+    starterCode: |
+      # Content Report: MVP Contributors (search-powered)
+      Find-Item -Index sitecore_master_index `
+          -Criteria @{Filter = "Equals"; Field = "_templatename"; Value = "Contributor"},
+                   @{Filter = ""; Field = "_content"; Value = ""} |
+          Sort-Object -Property Name |
+          Show-ListView -Property Name,Country,Company -Title "MVP Contributors"
+    validation:
+      type: pipeline
+      stages: ["find-item", "sort-object", "show-listview"]
+      outputContains: "MVP Contributors"
+    successMessage: |
+      This is the real-world pattern: `Find-Item` for fast discovery, then pipe through the familiar `Sort-Object | Show-ListView` report pipeline. The best of both worlds — index speed with pipeline flexibility.

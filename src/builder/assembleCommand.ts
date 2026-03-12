@@ -65,6 +65,12 @@ export function assembleCommand(stages: PipelineStage[]): string {
         if (paramDef.type === "expression") {
           // Expression params are positional (no -ParamName prefix)
           tokens.push(value);
+        } else if (paramDef.type === "criteriaList") {
+          // Serialize criteria JSON array to PowerShell hashtable syntax
+          const hashtables = serializeCriteriaList(value);
+          if (hashtables) {
+            tokens.push(`-${paramDef.name}`, hashtables);
+          }
         } else if (paramDef.type === "propertyList") {
           tokens.push(`-${paramDef.name}`, value);
         } else {
@@ -81,4 +87,39 @@ export function assembleCommand(stages: PipelineStage[]): string {
   });
 
   return parts.join(" | ");
+}
+
+interface CriterionEntry {
+  Filter: string;
+  Field?: string;
+  Value: string;
+  Invert?: boolean;
+}
+
+/** Serialize a JSON criteria array to PowerShell @{} hashtable syntax */
+function serializeCriteriaList(jsonStr: string): string | null {
+  try {
+    const criteria: CriterionEntry[] = JSON.parse(jsonStr);
+    if (!Array.isArray(criteria) || criteria.length === 0) return null;
+
+    const hashtables = criteria
+      .filter((c) => c.Filter && (c.Value || c.Filter === "DescendantOf"))
+      .map((c) => {
+        const parts: string[] = [`Filter = "${c.Filter}"`];
+        if (c.Field) {
+          parts.push(`Field = "${c.Field}"`);
+        }
+        if (c.Value) {
+          parts.push(`Value = "${c.Value}"`);
+        }
+        if (c.Invert) {
+          parts.push("Invert = $true");
+        }
+        return `@{${parts.join("; ")}}`;
+      });
+
+    return hashtables.length > 0 ? hashtables.join(", ") : null;
+  } catch {
+    return null;
+  }
 }

@@ -1,0 +1,73 @@
+id: "find-item-filters"
+module: "Level 5 – Content Search"
+order: 20
+title: "Search Criteria & Field Targeting"
+difficulty: "intermediate"
+mode: "ise"
+description: |
+  Now let's write the **hashtable criteria syntax** by hand. Each criterion is a hashtable with these keys:
+
+  - **Filter** — the comparison type: `Equals`, `Contains`, `StartsWith`, `EndsWith`, `DescendantOf`, etc.
+  - **Field** — the search index field name (e.g., `_templatename`, `_name`, `_content`)
+  - **Value** — what to search for
+
+  Multiple criteria are passed as a comma-separated list and combined with **AND** logic:
+
+  ```powershell
+  Find-Item -Index sitecore_master_index `
+      -Criteria @{Filter = "Equals"; Field = "_templatename"; Value = "Article"},
+               @{Filter = "Contains"; Field = "_content"; Value = "cloud"}
+  ```
+
+  > [!TIP]
+  > For complex boolean queries beyond AND, SPE also supports `-Where` with Dynamic LINQ syntax. See the [Find-Item documentation](https://doc.sitecorepowershell.com/appendix/indexing/find-item) for the full list of filter types and examples.
+tasks:
+  - instruction: |
+      Find all **Articles** in the search index by template name. Fill in the blank Value in the starter code.
+    hint: |
+      Find-Item -Index sitecore_master_index `
+          -Criteria @{Filter = "Equals"; Field = "_templatename"; Value = "Article"}
+    starterCode: |
+      # Find all Articles using the search index
+      Find-Item -Index sitecore_master_index `
+          -Criteria @{Filter = "Equals"; Field = "_templatename"; Value = ""}
+    validation:
+      type: pipeline
+      stages: ["find-item"]
+      outputContains: "Article"
+    successMessage: |
+      The `-Criteria` hashtable uses `Filter = "Equals"` for exact matching. The `_templatename` field in the index corresponds to the item's template short name.
+  - instruction: |
+      Find Contributors whose bio mentions "MVP" using the **Contains** filter on the `_content` field.
+
+      The `_content` field is a full-text index of all text fields on an item — it searches across Title, Bio, Text, and everything else at once.
+    hint: |
+      Find-Item -Index sitecore_master_index `
+          -Criteria @{Filter = "Contains"; Field = "_content"; Value = "MVP"}
+    starterCode: |
+      # Full-text search: find items mentioning "MVP"
+      Find-Item -Index sitecore_master_index `
+          -Criteria @{Filter = ""; Field = "_content"; Value = ""}
+    validation:
+      type: pipeline
+      stages: ["find-item"]
+      outputContains: "Michael West"
+    successMessage: |
+      The `Contains` filter does substring matching — perfect for full-text search across all indexed fields. In a real Solr index, this would use tokenized full-text search for even smarter matching.
+  - instruction: |
+      Find all items under the **Products** folder using `DescendantOf`. This is the search-index equivalent of `Get-ChildItem -Path "master:\content\Home\Products" -Recurse`.
+
+      `DescendantOf` doesn't need a Field — just set the Value to the path.
+    hint: |
+      Find-Item -Index sitecore_master_index `
+          -Criteria @{Filter = "DescendantOf"; Value = "master:\content\Home\Products"}
+    starterCode: |
+      # Scoped search: find all descendants of Products
+      Find-Item -Index sitecore_master_index `
+          -Criteria @{Filter = ""; Value = "master:\content\Home\Products"}
+    validation:
+      type: pipeline
+      stages: ["find-item"]
+      outputContains: "XM Cloud"
+    successMessage: |
+      `DescendantOf` scopes your search to a subtree — like combining `-Path` and `-Recurse` on `Get-ChildItem`, but as a search criterion you can combine with other filters. In real SPE, you would pass the item's GUID as the Value.

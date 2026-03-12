@@ -1,6 +1,6 @@
 import { isLightMode } from "../theme";
 
-export type ParamType = "string" | "expression" | "propertyList";
+export type ParamType = "string" | "expression" | "propertyList" | "criteriaList";
 
 export interface CmdletParam {
   name: string;
@@ -120,6 +120,21 @@ export const CMDLET_REGISTRY: Record<string, CmdletDef> = {
     ],
     switches: [],
   },
+  "Find-Item": {
+    name: "Find-Item",
+    shortLabel: "Find-Item",
+    color: "#f06292",
+    lightColor: "#ad1457",
+    icon: "🔎",
+    params: [
+      { name: "Index", type: "string", required: true, defaultValue: "sitecore_master_index", placeholder: "sitecore_master_index" },
+      { name: "Criteria", type: "criteriaList", required: true, placeholder: "Add search criteria..." },
+      { name: "OrderBy", type: "string", placeholder: "_name" },
+      { name: "First", type: "string", placeholder: "10" },
+      { name: "Skip", type: "string", placeholder: "0" },
+    ],
+    switches: [],
+  },
 };
 
 export const ALL_CMDLET_NAMES = Object.keys(CMDLET_REGISTRY);
@@ -150,4 +165,41 @@ export const FILTER_OPERATORS = [
   "-lt",
   "-ge",
   "-le",
+];
+
+/** Available filter types for Find-Item -Criteria */
+export const CRITERIA_FILTER_TYPES = [
+  "Equals",
+  "Contains",
+  "StartsWith",
+  "EndsWith",
+  "DescendantOf",
+  "ContainsAny",
+  "ContainsAll",
+  "Fuzzy",
+  "MatchesWildcard",
+  "MatchesRegex",
+  "LessThan",
+  "GreaterThan",
+  "InclusiveRange",
+  "ExclusiveRange",
+];
+
+/** Common search index field names for Find-Item */
+export const INDEX_FIELDS = [
+  "_name",
+  "_templatename",
+  "_fullpath",
+  "_content",
+  "title",
+  "country",
+  "company",
+  "bio",
+  "category",
+  "author",
+  "tags",
+  "price",
+  "isactive",
+  "mvpcategory",
+  "priority",
 ];

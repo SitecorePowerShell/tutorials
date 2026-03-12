@@ -457,9 +457,10 @@ export default function SPETutorial() {
           </>
         )}
 
-        {/* Active panel content */}
+        {/* Active panel content — use CSS display toggling instead of conditional
+            rendering so components stay mounted and preserve state (e.g. builder stages) */}
         <main id="main-content" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          {mobilePanel === "lesson" && (
+          <div style={{ flex: 1, display: mobilePanel === "lesson" ? "flex" : "none", flexDirection: "column", overflow: "hidden" }}>
             <LessonPanel
               lesson={lesson}
               task={task}
@@ -475,64 +476,62 @@ export default function SPETutorial() {
               lessonsLength={LESSONS.length}
               isMobile={true}
             />
-          )}
-          {mobilePanel === "editor" && (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
-              {isBuilder ? (
-                <BuilderEditor
-                  code={code}
-                  onCodeChange={setCode}
-                  onRun={handleRun}
-                  onClear={() => setConsoleOutput([])}
-                  consoleOutput={consoleOutput}
-                  isMobile={true}
-                  builderConfig={task?.builderConfig}
-                />
-              ) : (
-                <EditorWithBuilderToggle
-                  mode={isISE ? "ise" : "repl"}
-                  builderActive={builderToggleActive}
-                  onToggleBuilder={setBuilderToggleActive}
-                  onInsertCode={handleBuilderInsert}
-                  builderStages={builderStages}
-                  onBuilderStagesChange={setBuilderStages}
-                  builderSelectedStageId={builderSelectedStageId}
-                  onBuilderSelectedStageIdChange={setBuilderSelectedStageId}
-                  isMobile={true}
-                  editorElement={isISE ? (
-                    <IseEditor
-                      code={code}
-                      onCodeChange={setCode}
-                      onRun={handleRun}
-                      onClear={() => setConsoleOutput([])}
-                      onReset={handleReset}
-                      consoleOutput={consoleOutput}
-                      commandHistory={commandHistory}
-                      tree={VIRTUAL_TREE}
-                      isMobile={true}
-                    />
-                  ) : (
-                    <ReplEditor
-                      code={code}
-                      onCodeChange={setCode}
-                      onRun={handleRun}
-                      onClear={() => setConsoleOutput([])}
-                      consoleOutput={consoleOutput}
-                      commandHistory={commandHistory}
-                      historyIndex={historyIndex}
-                      onHistoryIndexChange={setHistoryIndex}
-                      tree={VIRTUAL_TREE}
-                      isMobile={true}
-                      cwd={cwd}
-                    />
-                  )}
-                />
-              )}
-            </div>
-          )}
-          {mobilePanel === "tree" && (
+          </div>
+          <div style={{ flex: 1, display: mobilePanel === "editor" ? "flex" : "none", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
+            {isBuilder ? (
+              <BuilderEditor
+                code={code}
+                onCodeChange={setCode}
+                onRun={handleRun}
+                onClear={() => setConsoleOutput([])}
+                consoleOutput={consoleOutput}
+                isMobile={true}
+                builderConfig={task?.builderConfig}
+              />
+            ) : (
+              <EditorWithBuilderToggle
+                mode={isISE ? "ise" : "repl"}
+                builderActive={builderToggleActive}
+                onToggleBuilder={setBuilderToggleActive}
+                onInsertCode={handleBuilderInsert}
+                builderStages={builderStages}
+                onBuilderStagesChange={setBuilderStages}
+                builderSelectedStageId={builderSelectedStageId}
+                onBuilderSelectedStageIdChange={setBuilderSelectedStageId}
+                isMobile={true}
+                editorElement={isISE ? (
+                  <IseEditor
+                    code={code}
+                    onCodeChange={setCode}
+                    onRun={handleRun}
+                    onClear={() => setConsoleOutput([])}
+                    onReset={handleReset}
+                    consoleOutput={consoleOutput}
+                    commandHistory={commandHistory}
+                    tree={VIRTUAL_TREE}
+                    isMobile={true}
+                  />
+                ) : (
+                  <ReplEditor
+                    code={code}
+                    onCodeChange={setCode}
+                    onRun={handleRun}
+                    onClear={() => setConsoleOutput([])}
+                    consoleOutput={consoleOutput}
+                    commandHistory={commandHistory}
+                    historyIndex={historyIndex}
+                    onHistoryIndexChange={setHistoryIndex}
+                    tree={VIRTUAL_TREE}
+                    isMobile={true}
+                    cwd={cwd}
+                  />
+                )}
+              />
+            )}
+          </div>
+          <div style={{ flex: 1, display: mobilePanel === "tree" ? "flex" : "none", flexDirection: "column", overflow: "hidden" }}>
             <TreePanel tree={VIRTUAL_TREE} isMobile={true} />
-          )}
+          </div>
         </main>
 
         {/* Bottom tab bar */}
