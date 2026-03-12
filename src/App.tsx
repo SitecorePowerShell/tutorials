@@ -17,11 +17,13 @@ import { BuilderEditor } from "./components/BuilderEditor";
 import { EditorWithBuilderToggle } from "./components/EditorWithBuilderToggle";
 import { TreePanel } from "./components/TreePanel";
 import { MobileTabBar, type MobilePanel } from "./components/MobileTabBar";
-import { colors, fonts, fontSizes, fontSizesMobile } from "./theme";
+import { colors, fonts, fontSizes, fontSizesMobile, applyTheme, getInitialThemeMode, type ThemeMode } from "./theme";
 import { GlobalA11yStyles } from "./components/GlobalA11yStyles";
 
 const initialProgress = loadProgress();
 const initialPrefs = loadUIPreferences();
+const initialTheme = getInitialThemeMode();
+applyTheme(initialTheme);
 
 export default function SPETutorial() {
   const [currentLesson, setCurrentLesson] = useState(initialProgress.currentLesson);
@@ -47,6 +49,7 @@ export default function SPETutorial() {
   const [builderStages, setBuilderStages] = useState<PipelineStage[]>([]);
   const [builderSelectedStageId, setBuilderSelectedStageId] = useState<string | null>(null);
   const [a11yAnnouncement, setA11yAnnouncement] = useState("");
+  const [themeMode, setThemeMode] = useState<ThemeMode>(initialTheme);
   const sessionCtxRef = useRef(new ScriptContext());
   const lessonPanelRef = useRef<HTMLDivElement>(null);
   const isDraggingLessonPanel = useRef(false);
@@ -105,6 +108,15 @@ export default function SPETutorial() {
       lessonPanelCollapsed,
     });
   }, [layoutStacked, lessonPanelHeight, activePanel, lessonPanelCollapsed]);
+
+  const handleThemeToggle = useCallback(() => {
+    setThemeMode((prev) => {
+      const next = prev === "dark" ? "light" : "dark";
+      applyTheme(next);
+      try { localStorage.setItem("spe-theme-mode", next); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
 
   const handleResetProgress = useCallback(() => {
     clearProgress();
@@ -436,6 +448,8 @@ export default function SPETutorial() {
                 onToggle={() => setMobileSidebarOpen(false)}
                 onGoToLesson={goToLesson}
                 onResetProgress={handleResetProgress}
+                themeMode={themeMode}
+                onThemeToggle={handleThemeToggle}
                 isMobile={true}
                 onClose={() => setMobileSidebarOpen(false)}
               />
@@ -571,6 +585,8 @@ export default function SPETutorial() {
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
         onGoToLesson={goToLesson}
         onResetProgress={handleResetProgress}
+        themeMode={themeMode}
+        onThemeToggle={handleThemeToggle}
       />
 
       {/* MAIN CONTENT AREA */}

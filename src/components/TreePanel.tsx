@@ -112,9 +112,9 @@ function PropertyDetailView({
                     const resolved = resolveNode(tree, segPath);
                     if (resolved) onNavigate(resolved);
                   }}
-                  style={{ color: colors.accentLink, cursor: "pointer" }}
+                  style={{ color: colors.accentLink, cursor: "pointer", textDecoration: "underline" }}
                   onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
-                  onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
+                  onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "underline")}
                 >
                   {seg}
                 </span>

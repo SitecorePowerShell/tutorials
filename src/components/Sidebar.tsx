@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Lesson } from "../types";
-import { colors, gradients, fontSizes } from "../theme";
+import { colors, gradients, fontSizes, type ThemeMode } from "../theme";
 
 interface SidebarProps {
   lessons: Lesson[];
@@ -12,6 +12,8 @@ interface SidebarProps {
   onToggle: () => void;
   onGoToLesson: (idx: number) => void;
   onResetProgress: () => void;
+  themeMode: ThemeMode;
+  onThemeToggle: () => void;
   isMobile?: boolean;
   onClose?: () => void;
 }
@@ -60,6 +62,8 @@ export function Sidebar({
   onToggle,
   onGoToLesson,
   onResetProgress,
+  themeMode,
+  onThemeToggle,
   isMobile,
   onClose,
 }: SidebarProps) {
@@ -129,25 +133,51 @@ export function Sidebar({
             </div>
           </div>
         )}
-        <button
-          onClick={isMobile ? onClose : onToggle}
-          style={{
-            background: "none",
-            border: "none",
-            color: colors.textMuted,
-            cursor: "pointer",
-            fontSize: isMobile ? 20 : fontSizes.xl,
-            padding: isMobile ? 8 : 4,
-            minWidth: isMobile ? 44 : undefined,
-            minHeight: isMobile ? 44 : undefined,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            lineHeight: 1,
-          }}
-        >
-          {isMobile ? "✕" : collapsed ? "▶" : "◀"}
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: collapsed ? 0 : 4 }}>
+          <button
+            onClick={onThemeToggle}
+            aria-label={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            title={themeMode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            style={{
+              background: "none",
+              border: "none",
+              color: colors.textMuted,
+              cursor: "pointer",
+              fontSize: collapsed ? fontSizes.lg : fontSizes.xl,
+              padding: isMobile ? 8 : 4,
+              minWidth: isMobile ? 44 : undefined,
+              minHeight: isMobile ? 44 : undefined,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              lineHeight: 1,
+              transition: "color 0.15s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = colors.textPrimary)}
+            onMouseLeave={(e) => (e.currentTarget.style.color = colors.textMuted)}
+          >
+            {themeMode === "dark" ? "\u2600" : "\u263E"}
+          </button>
+          <button
+            onClick={isMobile ? onClose : onToggle}
+            style={{
+              background: "none",
+              border: "none",
+              color: colors.textMuted,
+              cursor: "pointer",
+              fontSize: isMobile ? 20 : fontSizes.xl,
+              padding: isMobile ? 8 : 4,
+              minWidth: isMobile ? 44 : undefined,
+              minHeight: isMobile ? 44 : undefined,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              lineHeight: 1,
+            }}
+          >
+            {isMobile ? "\u2715" : collapsed ? "\u25B6" : "\u25C0"}
+          </button>
+        </div>
       </div>
 
       {!collapsed && (
@@ -163,7 +193,7 @@ export function Sidebar({
                 width: "calc(100% - 24px)",
                 margin: "4px 12px 12px",
                 padding: "10px 14px",
-                background: "linear-gradient(135deg, #1a3a1a, #0d2d0d)",
+                background: `linear-gradient(135deg, ${colors.bgCardSuccess}, ${colors.bgDeep})`,
                 border: `1px solid ${colors.statusSuccess}44`,
                 borderRadius: 6,
                 cursor: "pointer",

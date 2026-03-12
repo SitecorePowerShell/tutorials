@@ -1,6 +1,9 @@
-const a11yCSS = `
+import { colors } from "../theme";
+
+export function GlobalA11yStyles() {
+  const css = `
 *:focus-visible {
-  outline: 2px solid #5c6bc0;
+  outline: 2px solid ${colors.accentPrimary};
   outline-offset: 2px;
 }
 *:focus:not(:focus-visible) {
@@ -22,7 +25,7 @@ const a11yCSS = `
   overflow: hidden;
   z-index: 10000;
   padding: 8px 16px;
-  background: #5c6bc0;
+  background: ${colors.accentPrimary};
   color: #fff;
   font-size: 14px;
   text-decoration: none;
@@ -37,11 +40,9 @@ const a11yCSS = `
   overflow: visible;
 }
 .ise-editor-textarea::placeholder {
-  color: #9a9ab8;
+  color: ${colors.textMuted};
   opacity: 1;
 }
 `;
-
-export function GlobalA11yStyles() {
-  return <style>{a11yCSS}</style>;
+  return <style>{css}</style>;
 }
