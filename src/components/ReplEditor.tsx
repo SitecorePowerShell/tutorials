@@ -45,12 +45,28 @@ export function ReplEditor({
   isMobile,
   cwd = "/sitecore/content/Home",
 }: ReplEditorProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const consoleEndRef = useRef<HTMLDivElement>(null);
+  const promptRef = useRef<HTMLSpanElement>(null);
   const [completion, setCompletion] = useState<CompletionState | null>(null);
   const [cursorPos, setCursorPos] = useState(0);
   const [continuationLines, setContinuationLines] = useState<string[]>([]);
+  const [promptWidth, setPromptWidth] = useState(0);
+
+  // Compute prompt text
+  const promptText = continuationLines.length > 0
+    ? ">> "
+    : isMobile
+      ? "PS> "
+      : `PS master:\\${cwd.replace(/^\/sitecore\//, "").replace(/\//g, "\\")}> `;
+
+  // Measure prompt width for text-indent
+  useEffect(() => {
+    if (promptRef.current) {
+      setPromptWidth(promptRef.current.offsetWidth);
+    }
+  }, [promptText, isMobile]);
 
   // Ghost text
   const ghostText = useGhostText(
@@ -99,7 +115,7 @@ export function ReplEditor({
     [code, onCodeChange]
   );
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const input = e.currentTarget;
 
     // Backspace — pop last continuation line back into input when empty
@@ -429,7 +445,7 @@ export function ReplEditor({
       ))}
 
       {/* Inline prompt line */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
         {reverseSearch.state.active ? (
           /* Reverse search mode */
           <>
@@ -490,70 +506,86 @@ export function ReplEditor({
         ) : (
           /* Normal prompt mode */
           <>
-            <span
-              style={{
-                color: colors.accentPrimary,
-                fontFamily: fonts.monoShort,
-                fontSize: isMobile ? 13 : fontSizes.body,
-                fontWeight: 600,
-                whiteSpace: "nowrap",
-              }}
-            >
-              {continuationLines.length > 0 ? ">> " : isMobile ? "PS>" : `PS master:\\${cwd.replace(/^\/sitecore\//, "").replace(/\//g, "\\")}>`}
-            </span>
-            <div style={{ position: "relative", flex: 1 }}>
-              {/* Ghost text underlay */}
-              {showGhost && (
-                <div
-                  aria-hidden="true"
+            <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
+              {/* Prompt — absolutely positioned over the text-indent space */}
+              <span
+                ref={promptRef}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  color: colors.accentPrimary,
+                  fontFamily: fonts.monoShort,
+                  fontSize: isMobile ? 13 : fontSizes.body,
+                  fontWeight: 600,
+                  whiteSpace: "nowrap",
+                  lineHeight: 1.6,
+                  pointerEvents: "none",
+                  zIndex: 1,
+                }}
+              >
+                {promptText}
+              </span>
+              <div style={{ position: "relative" }}>
+                {/* Ghost text underlay */}
+                {showGhost && (
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      pointerEvents: "none",
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-all",
+                      fontFamily: fonts.mono,
+                      fontSize: isMobile ? 15 : fontSizes.body,
+                      lineHeight: 1.6,
+                      textIndent: promptWidth,
+                      width: "100%",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    <span style={{ visibility: "hidden" }}>{code}</span>
+                    <span style={{ color: colors.ghostText }}>{ghostText}</span>
+                  </span>
+                )}
+                <textarea
+                  ref={inputRef}
+                  value={code}
+                  onChange={(e) => {
+                    if (completion) setCompletion(null);
+                    onCodeChange(e.target.value);
+                  }}
+                  onKeyDown={handleKeyDown}
+                  onSelect={handleSelect}
+                  onKeyUp={handleSelect}
+                  placeholder="Type your SPE command here..."
+                  spellCheck={false}
+                  autoComplete="off"
+                  rows={1}
                   style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    pointerEvents: "none",
-                    whiteSpace: "pre",
+                    width: "100%",
+                    background: "transparent",
+                    border: "none",
+                    outline: "none",
+                    color: colors.textPrimary,
                     fontFamily: fonts.mono,
                     fontSize: isMobile ? 15 : fontSizes.body,
-                    lineHeight: "inherit",
-                    padding: isMobile ? "8px 0" : undefined,
-                    display: "flex",
-                    alignItems: "center",
+                    caretColor: colors.accentPrimary,
+                    minHeight: isMobile ? 44 : undefined,
+                    padding: 0,
+                    margin: 0,
+                    resize: "none",
+                    overflow: "hidden",
+                    lineHeight: 1.6,
+                    fieldSizing: "content",
+                    textIndent: promptWidth,
+                    display: "block",
+                    boxSizing: "border-box",
                   }}
-                >
-                  <span style={{ visibility: "hidden" }}>{code}</span>
-                  <span style={{ color: colors.ghostText }}>{ghostText}</span>
-                </div>
-              )}
-              <input
-                ref={inputRef}
-                type="text"
-                value={code}
-                onChange={(e) => {
-                  if (completion) setCompletion(null);
-                  onCodeChange(e.target.value);
-                }}
-                onKeyDown={handleKeyDown}
-                onSelect={handleSelect}
-                onKeyUp={handleSelect}
-                placeholder="Type your SPE command here..."
-                spellCheck={false}
-                autoComplete="off"
-                style={{
-                  width: "100%",
-                  background: "transparent",
-                  border: "none",
-                  outline: "none",
-                  color: colors.textPrimary,
-                  fontFamily: fonts.mono,
-                  fontSize: isMobile ? 15 : fontSizes.body,
-                  caretColor: colors.accentPrimary,
-                  minHeight: isMobile ? 44 : undefined,
-                  padding: isMobile ? "8px 0" : undefined,
-                  position: "relative",
-                }}
-              />
+                />
+              </div>
             </div>
             <span
               style={{
@@ -562,6 +594,8 @@ export function ReplEditor({
                 fontSize: fontSizes.sm,
                 whiteSpace: "nowrap",
                 visibility: completion ? "visible" : "hidden",
+                alignSelf: "flex-start",
+                lineHeight: 1.6,
               }}
             >
               {completion
