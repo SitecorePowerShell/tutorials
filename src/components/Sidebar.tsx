@@ -23,11 +23,18 @@ interface ModuleGroup {
   lessons: { lesson: Lesson; index: number }[];
 }
 
-const difficultyColors: Record<string, string> = {
+const difficultyColorsDark: Record<string, string> = {
   intro: "#4caf50",
   beginner: "#66bb6a",
   intermediate: "#ffab40",
   advanced: "#ef5350",
+};
+
+const difficultyColorsLight: Record<string, string> = {
+  intro: "#2e7d32",
+  beginner: "#388e3c",
+  intermediate: "#e65100",
+  advanced: "#c62828",
 };
 
 const difficultyLabels: Record<string, string> = {
@@ -345,7 +352,7 @@ export function Sidebar({
                             alignItems: "center",
                             justifyContent: "center",
                             fontSize: fontSizes.xs,
-                            color: colors.textWhite,
+                            color: complete ? colors.textWhite : colors.textMuted,
                             flexShrink: 0,
                             marginTop: 1,
                           }}
@@ -382,8 +389,8 @@ export function Sidebar({
                               <span
                                 style={{
                                   fontSize: 10,
-                                  color: difficultyColors[difficulty] ?? colors.textMuted,
-                                  border: `1px solid ${difficultyColors[difficulty] ?? colors.borderDim}44`,
+                                  color: (themeMode === "dark" ? difficultyColorsDark : difficultyColorsLight)[difficulty] ?? colors.textMuted,
+                                  border: `1px solid ${(themeMode === "dark" ? difficultyColorsDark : difficultyColorsLight)[difficulty] ?? colors.borderDim}44`,
                                   borderRadius: 3,
                                   padding: "1px 5px",
                                   lineHeight: 1.4,
