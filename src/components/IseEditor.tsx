@@ -458,9 +458,11 @@ export function IseEditor({
             padding: "8px 16px",
             borderBottom: `1px solid ${colors.borderBase}`,
             display: "flex",
-            alignItems: "center",
+            alignItems: isMobile ? "stretch" : "center",
             justifyContent: "space-between",
             flexShrink: 0,
+            flexWrap: isMobile ? "wrap" : undefined,
+            gap: isMobile ? 8 : 0,
           }}
         >
           <div
@@ -474,7 +476,7 @@ export function IseEditor({
           >
             Script Editor
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, width: isMobile ? "100%" : undefined }}>
             <button
               onClick={onRun}
               style={{
@@ -489,8 +491,10 @@ export function IseEditor({
                 fontFamily: "inherit",
                 display: "flex",
                 alignItems: "center",
+                justifyContent: "center",
                 gap: 6,
                 minHeight: isMobile ? 44 : undefined,
+                flex: isMobile ? 1 : undefined,
               }}
             >
               ▶ Run
@@ -507,9 +511,10 @@ export function IseEditor({
                 fontSize: isMobile ? 14 : fontSizes.base,
                 fontFamily: "inherit",
                 minHeight: isMobile ? 44 : undefined,
+                flex: isMobile ? 1 : undefined,
               }}
             >
-              Clear Output
+              Clear
             </button>
             {onReset && (
               <button
@@ -524,6 +529,7 @@ export function IseEditor({
                   fontSize: isMobile ? 14 : fontSizes.base,
                   fontFamily: "inherit",
                   minHeight: isMobile ? 44 : undefined,
+                  flex: isMobile ? 1 : undefined,
                 }}
               >
                 Reset

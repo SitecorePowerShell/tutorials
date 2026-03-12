@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import type { PipelineStage } from "../../builder/assembleCommand";
-import { CMDLET_REGISTRY, COMMON_PROPERTIES, FILTER_OPERATORS } from "../../builder/cmdletRegistry";
+import { CMDLET_REGISTRY, COMMON_PROPERTIES, FILTER_OPERATORS, getCmdletColor } from "../../builder/cmdletRegistry";
 import { colors, fonts, fontSizes } from "../../theme";
 
 interface ParamPanelProps {
@@ -112,7 +112,7 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile }
         style={{
           fontSize: fontSizes.sm,
           fontFamily: fonts.sans,
-          color: def.color,
+          color: getCmdletColor(def),
           fontWeight: 600,
           display: "flex",
           alignItems: "center",

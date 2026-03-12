@@ -151,6 +151,7 @@ export function BuilderEditor({
         onRun={onRun}
         onClear={onClear}
         validationErrors={validationErrors}
+        isMobile={isMobile}
       />
 
       {/* Output */}

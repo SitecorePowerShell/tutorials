@@ -7,9 +7,10 @@ interface CommandPreviewProps {
   onRun: () => void;
   onClear: () => void;
   validationErrors?: ValidationError[];
+  isMobile?: boolean;
 }
 
-export function CommandPreview({ command, onRun, onClear, validationErrors = [] }: CommandPreviewProps) {
+export function CommandPreview({ command, onRun, onClear, validationErrors = [], isMobile }: CommandPreviewProps) {
   const canRun = command && validationErrors.length === 0;
   return (
     <>
@@ -49,13 +50,14 @@ export function CommandPreview({ command, onRun, onClear, validationErrors = [] 
           borderTop: `1px solid ${colors.borderBase}`,
           background: colors.bgDeep,
           display: "flex",
-          alignItems: "center",
-          gap: 10,
+          flexDirection: isMobile ? "column" : "row",
+          alignItems: isMobile ? "stretch" : "center",
+          gap: isMobile ? 8 : 10,
         }}
       >
         <pre
           style={{
-            flex: 1,
+            flex: isMobile ? undefined : 1,
             margin: 0,
             padding: "6px 10px",
             background: colors.bgBase,
@@ -79,42 +81,52 @@ export function CommandPreview({ command, onRun, onClear, validationErrors = [] 
             </span>
           )}
         </pre>
-        <button
-          onClick={onRun}
-          disabled={!canRun}
-          title={validationErrors.length > 0 ? validationErrors.map((e) => `${e.cmdlet}: ${e.paramName} required`).join(", ") : undefined}
-          style={{
-            background: canRun ? gradients.accent : colors.borderDim,
-            border: "none",
-            borderRadius: 6,
-            color: canRun ? colors.textWhite : colors.textMuted,
-            fontFamily: fonts.sans,
-            fontSize: fontSizes.sm,
-            fontWeight: 600,
-            padding: "8px 18px",
-            cursor: canRun ? "pointer" : "default",
-            whiteSpace: "nowrap",
-            opacity: canRun ? 1 : 0.5,
-          }}
-        >
-          Run
-        </button>
-        <button
-          onClick={onClear}
-          style={{
-            background: "transparent",
-            border: `1px solid ${colors.borderMedium}`,
-            borderRadius: 6,
-            color: colors.textSecondary,
-            fontFamily: fonts.sans,
-            fontSize: fontSizes.sm,
-            padding: "7px 12px",
-            cursor: "pointer",
-            whiteSpace: "nowrap",
-          }}
-        >
-          Clear
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            onClick={onRun}
+            disabled={!canRun}
+            title={validationErrors.length > 0 ? validationErrors.map((e) => `${e.cmdlet}: ${e.paramName} required`).join(", ") : undefined}
+            style={{
+              background: canRun ? gradients.accent : colors.borderDim,
+              border: "none",
+              borderRadius: 4,
+              color: canRun ? colors.textWhite : colors.textMuted,
+              fontFamily: "inherit",
+              fontSize: isMobile ? 14 : fontSizes.base,
+              fontWeight: 600,
+              padding: isMobile ? "10px 20px" : "5px 16px",
+              cursor: canRun ? "pointer" : "default",
+              whiteSpace: "nowrap",
+              opacity: canRun ? 1 : 0.5,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              minHeight: isMobile ? 44 : undefined,
+              flex: isMobile ? 1 : undefined,
+            }}
+          >
+            ▶ Run
+          </button>
+          <button
+            onClick={onClear}
+            style={{
+              background: "transparent",
+              border: `1px solid ${colors.borderMedium}`,
+              borderRadius: 4,
+              color: colors.textClear,
+              fontFamily: "inherit",
+              fontSize: isMobile ? 14 : fontSizes.base,
+              padding: isMobile ? "10px 16px" : "5px 12px",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              minHeight: isMobile ? 44 : undefined,
+              flex: isMobile ? 1 : undefined,
+            }}
+          >
+            Clear
+          </button>
+        </div>
       </div>
     </>
   );

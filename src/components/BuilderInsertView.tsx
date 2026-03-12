@@ -132,13 +132,14 @@ export function BuilderInsertView({
           borderTop: `1px solid ${colors.borderBase}`,
           background: colors.bgDeep,
           display: "flex",
-          alignItems: "center",
-          gap: 10,
+          flexDirection: isMobile ? "column" : "row",
+          alignItems: isMobile ? "stretch" : "center",
+          gap: isMobile ? 8 : 10,
         }}
       >
         <pre
           style={{
-            flex: 1,
+            flex: isMobile ? undefined : 1,
             margin: 0,
             padding: "6px 10px",
             background: colors.bgBase,
@@ -162,48 +163,57 @@ export function BuilderInsertView({
             </span>
           )}
         </pre>
-        <button
-          onClick={() => {
-            onStagesChange([]);
-            onSelectedStageIdChange(null);
-          }}
-          disabled={stages.length === 0}
-          style={{
-            background: "transparent",
-            border: `1px solid ${stages.length ? colors.borderLight : colors.borderDim}`,
-            borderRadius: 6,
-            color: stages.length ? colors.textSecondary : colors.textMuted,
-            fontFamily: fonts.sans,
-            fontSize: fontSizes.sm,
-            fontWeight: 500,
-            padding: "8px 14px",
-            cursor: stages.length ? "pointer" : "default",
-            whiteSpace: "nowrap",
-            opacity: stages.length ? 1 : 0.5,
-          }}
-        >
-          Reset
-        </button>
-        <button
-          onClick={() => onInsert(command)}
-          disabled={!canInsert}
-          title={errors.length > 0 ? errors.map((e) => `${e.cmdlet}: ${e.paramName} required`).join(", ") : undefined}
-          style={{
-            background: canInsert ? gradients.accent : colors.borderDim,
-            border: "none",
-            borderRadius: 6,
-            color: canInsert ? colors.textWhite : colors.textMuted,
-            fontFamily: fonts.sans,
-            fontSize: fontSizes.sm,
-            fontWeight: 600,
-            padding: "8px 18px",
-            cursor: canInsert ? "pointer" : "default",
-            whiteSpace: "nowrap",
-            opacity: canInsert ? 1 : 0.5,
-          }}
-        >
-          {insertLabel}
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            onClick={() => {
+              onStagesChange([]);
+              onSelectedStageIdChange(null);
+            }}
+            disabled={stages.length === 0}
+            style={{
+              background: "transparent",
+              border: `1px solid ${stages.length ? colors.borderMedium : colors.borderDim}`,
+              borderRadius: 4,
+              color: stages.length ? colors.textClear : colors.textMuted,
+              fontFamily: "inherit",
+              fontSize: isMobile ? 14 : fontSizes.base,
+              padding: isMobile ? "10px 16px" : "5px 12px",
+              cursor: stages.length ? "pointer" : "default",
+              whiteSpace: "nowrap",
+              opacity: stages.length ? 1 : 0.5,
+              minHeight: isMobile ? 44 : undefined,
+              flex: isMobile ? 1 : undefined,
+            }}
+          >
+            Reset
+          </button>
+          <button
+            onClick={() => onInsert(command)}
+            disabled={!canInsert}
+            title={errors.length > 0 ? errors.map((e) => `${e.cmdlet}: ${e.paramName} required`).join(", ") : undefined}
+            style={{
+              background: canInsert ? gradients.accent : colors.borderDim,
+              border: "none",
+              borderRadius: 4,
+              color: canInsert ? colors.textWhite : colors.textMuted,
+              fontFamily: "inherit",
+              fontSize: isMobile ? 14 : fontSizes.base,
+              fontWeight: 600,
+              padding: isMobile ? "10px 20px" : "5px 16px",
+              cursor: canInsert ? "pointer" : "default",
+              whiteSpace: "nowrap",
+              opacity: canInsert ? 1 : 0.5,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              minHeight: isMobile ? 44 : undefined,
+              flex: isMobile ? 1 : undefined,
+            }}
+          >
+            {insertLabel}
+          </button>
+        </div>
       </div>
     </div>
   );

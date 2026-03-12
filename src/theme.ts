@@ -132,9 +132,16 @@ const lightGradients: typeof darkGradients = {
 export const colors: typeof darkColors = { ...darkColors };
 export const gradients: typeof darkGradients = { ...darkGradients };
 
+let _currentThemeMode: ThemeMode = "dark";
+
 export function applyTheme(mode: ThemeMode) {
+  _currentThemeMode = mode;
   Object.assign(colors, mode === "dark" ? darkColors : lightColors);
   Object.assign(gradients, mode === "dark" ? darkGradients : lightGradients);
+}
+
+export function isLightMode(): boolean {
+  return _currentThemeMode === "light";
 }
 
 export function getInitialThemeMode(): ThemeMode {

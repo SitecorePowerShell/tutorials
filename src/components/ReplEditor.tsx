@@ -406,8 +406,8 @@ export function ReplEditor({
       }}
       onClick={focusInput}
     >
-      {/* Clear button — floating top-right */}
-      {consoleOutput.length > 0 && (
+      {/* Clear button — floating top-right (desktop only, mobile uses button bar) */}
+      {consoleOutput.length > 0 && !isMobile && (
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -628,28 +628,6 @@ export function ReplEditor({
             >
               Tab →
             </button>
-            {isMobile && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRun();
-                }}
-                style={{
-                  background: code.trim() ? gradients.accent : colors.borderBase,
-                  border: "none",
-                  color: code.trim() ? colors.textWhite : colors.textMuted,
-                  padding: "6px 12px",
-                  borderRadius: 4,
-                  cursor: code.trim() ? "pointer" : "default",
-                  fontSize: 14,
-                  fontWeight: 600,
-                  fontFamily: "inherit",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                Run ⏎
-              </button>
-            )}
           </>
         )}
       </div>
@@ -657,6 +635,58 @@ export function ReplEditor({
       {/* Scroll anchor */}
       <div ref={consoleEndRef} />
     </div>
+    {isMobile && (
+      <div
+        style={{
+          display: "flex",
+          gap: 8,
+          padding: "8px 16px",
+          borderTop: `1px solid ${colors.borderBase}`,
+          background: colors.bgSurface,
+          flexShrink: 0,
+        }}
+      >
+        <button
+          onClick={() => onRun()}
+          style={{
+            background: gradients.accent,
+            border: "none",
+            color: colors.textWhite,
+            padding: "10px 20px",
+            borderRadius: 4,
+            cursor: "pointer",
+            fontSize: 14,
+            fontWeight: 600,
+            fontFamily: "inherit",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            minHeight: 44,
+            flex: 1,
+          }}
+        >
+          ▶ Run
+        </button>
+        <button
+          onClick={onClear}
+          style={{
+            background: "transparent",
+            border: `1px solid ${colors.borderMedium}`,
+            color: colors.textClear,
+            padding: "10px 16px",
+            borderRadius: 4,
+            cursor: "pointer",
+            fontSize: 14,
+            fontFamily: "inherit",
+            minHeight: 44,
+            flex: 1,
+          }}
+        >
+          Clear
+        </button>
+      </div>
+    )}
     {isMobile && (
       <MobileAccessoryRow
         onInsert={handleAccessoryInsert}

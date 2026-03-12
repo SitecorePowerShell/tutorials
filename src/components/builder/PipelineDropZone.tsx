@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { PipelineStage } from "../../builder/assembleCommand";
-import { CMDLET_REGISTRY } from "../../builder/cmdletRegistry";
+import { CMDLET_REGISTRY, getCmdletColor } from "../../builder/cmdletRegistry";
 import { colors, fonts, fontSizes } from "../../theme";
 
 interface PipelineDropZoneProps {
@@ -112,7 +112,7 @@ export function PipelineDropZone({
     >
       {stages.map((stage, idx) => {
         const def = CMDLET_REGISTRY[stage.cmdlet];
-        const stageColor = def?.color ?? colors.accentPrimary;
+        const stageColor = def ? getCmdletColor(def) : colors.accentPrimary;
         const isSelected = stage.id === selectedStageId;
 
         return (
@@ -221,7 +221,7 @@ export function PipelineDropZone({
 
               {/* Mobile reorder buttons */}
               {isMobile && !stage.locked && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 1, marginLeft: 4 }}>
+                <div style={{ display: "flex", gap: 4, marginLeft: "auto", paddingLeft: 8 }}>
                   <button
                     disabled={idx === 0}
                     onClick={(e) => {
@@ -229,13 +229,19 @@ export function PipelineDropZone({
                       onReorderStage(idx, idx - 1);
                     }}
                     style={{
-                      background: "none",
-                      border: "none",
-                      color: idx === 0 ? colors.textDimmed : colors.textMuted,
+                      background: idx === 0 ? "transparent" : `${stageColor}22`,
+                      border: `1px solid ${idx === 0 ? `${stageColor}22` : `${stageColor}55`}`,
+                      borderRadius: 4,
+                      color: idx === 0 ? colors.textDimmed : stageColor,
                       cursor: idx === 0 ? "default" : "pointer",
-                      fontSize: 10,
+                      fontSize: 14,
+                      minWidth: 36,
+                      minHeight: 36,
                       padding: 0,
-                      lineHeight: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      touchAction: "manipulation",
                     }}
                   >
                     ▲
@@ -244,16 +250,22 @@ export function PipelineDropZone({
                     disabled={idx === stages.length - 1}
                     onClick={(e) => {
                       e.stopPropagation();
-                      onReorderStage(idx, idx + 1);
+                      onReorderStage(idx, idx + 2);
                     }}
                     style={{
-                      background: "none",
-                      border: "none",
-                      color: idx === stages.length - 1 ? colors.textDimmed : colors.textMuted,
+                      background: idx === stages.length - 1 ? "transparent" : `${stageColor}22`,
+                      border: `1px solid ${idx === stages.length - 1 ? `${stageColor}22` : `${stageColor}55`}`,
+                      borderRadius: 4,
+                      color: idx === stages.length - 1 ? colors.textDimmed : stageColor,
                       cursor: idx === stages.length - 1 ? "default" : "pointer",
-                      fontSize: 10,
+                      fontSize: 14,
+                      minWidth: 36,
+                      minHeight: 36,
                       padding: 0,
-                      lineHeight: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      touchAction: "manipulation",
                     }}
                   >
                     ▼

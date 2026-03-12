@@ -1,4 +1,4 @@
-import { CMDLET_REGISTRY, ALL_CMDLET_NAMES } from "../../builder/cmdletRegistry";
+import { CMDLET_REGISTRY, ALL_CMDLET_NAMES, getCmdletColor } from "../../builder/cmdletRegistry";
 import { colors, fonts, fontSizes } from "../../theme";
 
 interface CmdletPaletteProps {
@@ -37,6 +37,7 @@ export function CmdletPalette({ availableCmdlets, onAddStage, isMobile }: Cmdlet
       </span>
       {cmdlets.map((name) => {
         const def = CMDLET_REGISTRY[name];
+        const clr = getCmdletColor(def);
         return (
           <button
             key={name}
@@ -51,10 +52,10 @@ export function CmdletPalette({ availableCmdlets, onAddStage, isMobile }: Cmdlet
               alignItems: "center",
               gap: 4,
               padding: "4px 10px",
-              background: `${def.color}22`,
-              border: `1px solid ${def.color}55`,
+              background: `${clr}22`,
+              border: `1px solid ${clr}55`,
               borderRadius: 16,
-              color: def.color,
+              color: clr,
               fontSize: isMobile ? fontSizes.sm : fontSizes.xs,
               fontFamily: fonts.mono,
               fontWeight: 500,
