@@ -5,17 +5,20 @@ import { colors, fontSizes } from "../theme";
 interface OutputPaneProps {
   entries: ConsoleEntry[];
   isISE: boolean;
+  isBuilder?: boolean;
   endRef?: React.RefObject<HTMLDivElement | null>;
 }
 
-export function OutputPane({ entries, isISE, endRef }: OutputPaneProps) {
+export function OutputPane({ entries, isISE, isBuilder, endRef }: OutputPaneProps) {
   return (
     <>
       {entries.length === 0 && (
         <div style={{ color: colors.textDimmed, fontStyle: "italic", fontSize: fontSizes.base }}>
-          {isISE
-            ? "Output will appear here after you run your script..."
-            : "PS master:\\content\\Home> Type your command below and press Enter..."
+          {isBuilder
+            ? "Build a pipeline above and click Run to see the output..."
+            : isISE
+              ? "Output will appear here after you run your script..."
+              : "PS master:\\content\\Home> Type your command below and press Enter..."
           }
         </div>
       )}

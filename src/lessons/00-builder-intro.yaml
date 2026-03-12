@@ -1,0 +1,53 @@
+id: "pipeline-builder-intro"
+module: "Level 0 – Visual Builder"
+order: 0
+title: "Building Your First Pipeline"
+difficulty: "beginner"
+mode: "builder"
+description: |
+  Before we type commands, let's **build** a pipeline visually.
+  Drag cmdlet blocks into the pipeline, configure their parameters,
+  and watch the command assemble itself.
+tasks:
+  - instruction: |
+      Drag **Get-ChildItem** into the pipeline and set its Path to
+      `"master:\content\Home"`. Click **Run** to see the children.
+    hint: Drag Get-ChildItem, click it, type the path in the Path field.
+    builderConfig:
+      availableCmdlets: ["Get-ChildItem"]
+    validation:
+      type: structural
+      cmdlet: get-childitem
+      requirePath: ["master:/sitecore/content/Home"]
+  - instruction: |
+      Now add **Measure-Object** after Get-ChildItem to count the results.
+    hint: Drag Measure-Object to the right of Get-ChildItem.
+    builderConfig:
+      availableCmdlets: ["Get-ChildItem", "Measure-Object", "Where-Object"]
+      prefilled:
+        - cmdlet: "Get-ChildItem"
+          params:
+            Path: '"master:\content\Home"'
+          locked: true
+    validation:
+      type: pipeline
+      stages: ["get-childitem", "measure-object"]
+  - instruction: |
+      Replace Measure-Object with **Where-Object** to filter for items
+      where `$_.TemplateName -eq "Sample Item"`.
+    hint: |
+      Remove Measure-Object (click X), drag Where-Object in, click it,
+      and type: { $_.TemplateName -eq "Sample Item" }
+    builderConfig:
+      availableCmdlets: ["Where-Object", "Measure-Object", "Select-Object"]
+      prefilled:
+        - cmdlet: "Get-ChildItem"
+          params:
+            Path: '"master:\content\Home"'
+          switches: ["Recurse"]
+          locked: true
+    validation:
+      type: pipeline
+      stages: ["get-childitem", "where-object"]
+      outputContains: "Sample Item"
+      outputNotContains: "Folder"

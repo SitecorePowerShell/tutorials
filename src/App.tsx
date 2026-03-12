@@ -12,6 +12,7 @@ import { Sidebar } from "./components/Sidebar";
 import { LessonPanel } from "./components/LessonPanel";
 import { ReplEditor } from "./components/ReplEditor";
 import { IseEditor } from "./components/IseEditor";
+import { BuilderEditor } from "./components/BuilderEditor";
 import { TreePanel } from "./components/TreePanel";
 import { MobileTabBar, type MobilePanel } from "./components/MobileTabBar";
 import { colors, fonts, fontSizes, fontSizesMobile } from "./theme";
@@ -52,6 +53,7 @@ export default function SPETutorial() {
   const lesson = LESSONS[currentLesson];
   const task = lesson?.tasks?.[currentTask];
   const isISE = lesson?.mode === "ise";
+  const isBuilder = lesson?.mode === "builder";
   const totalTasks = LESSONS.reduce((sum, l) => sum + l.tasks.length, 0);
   const completedCount = Object.keys(completedTasks).length;
 
@@ -113,7 +115,9 @@ export default function SPETutorial() {
     // Reset session context (cwd, variables) on lesson/task change
     sessionCtxRef.current = new ScriptContext();
     setCwd("/sitecore/content/Home");
-    if (isISE && task?.starterCode) {
+    if (isBuilder) {
+      setCode(""); // Builder drives code via onCodeChange
+    } else if (isISE && task?.starterCode) {
       setCode(task.starterCode);
     } else if (isISE) {
       setCode("# Write your script here\n");
@@ -140,7 +144,7 @@ export default function SPETutorial() {
 
     const currentCwd = sessionCtxRef.current.cwd;
     const cwdDisplay = `master:\\${currentCwd.replace(/^\/sitecore\//, "").replace(/\//g, "\\")}`;
-    const newOutput: ConsoleEntry[] = isISE
+    const newOutput: ConsoleEntry[] = (isISE || isBuilder)
       ? [...consoleOutput]
       : [...consoleOutput, { type: "command", text: effective.trim(), cwd: cwdDisplay }];
 
@@ -207,13 +211,13 @@ export default function SPETutorial() {
     }
 
     setConsoleOutput(newOutput);
-    if (!isISE) {
+    if (!isISE && !isBuilder) {
       const historyEntry = effective.trim().split("\n").map((l) => l.trim()).filter(Boolean).join(" ");
       setCommandHistory((prev) => [...prev, historyEntry]);
       setHistoryIndex(-1);
       setCode("");
     }
-  }, [code, consoleOutput, currentLesson, currentTask, task, isISE]);
+  }, [code, consoleOutput, currentLesson, currentTask, task, isISE, isBuilder]);
 
   const advanceTask = () => {
     if (currentTask < lesson.tasks.length - 1) {
@@ -356,14 +360,14 @@ export default function SPETutorial() {
           <div
             style={{
               fontSize: fs.xs,
-              color: isISE ? colors.accentSecondary : colors.accentPrimary,
+              color: isBuilder ? colors.syntaxBrace : isISE ? colors.accentSecondary : colors.accentPrimary,
               padding: "4px 10px",
               background: colors.bgOverlay,
               borderRadius: 4,
-              border: `1px solid ${isISE ? colors.borderAccentIse : colors.borderBase}`,
+              border: `1px solid ${isBuilder ? colors.syntaxBrace + "44" : isISE ? colors.borderAccentIse : colors.borderBase}`,
             }}
           >
-            {isISE ? "ISE" : "Console"}
+            {isBuilder ? "Builder" : isISE ? "ISE" : "Console"}
           </div>
         </div>
 
@@ -418,7 +422,17 @@ export default function SPETutorial() {
           )}
           {mobilePanel === "editor" && (
             <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
-              {isISE ? (
+              {isBuilder ? (
+                <BuilderEditor
+                  code={code}
+                  onCodeChange={setCode}
+                  onRun={handleRun}
+                  onClear={() => setConsoleOutput([])}
+                  consoleOutput={consoleOutput}
+                  isMobile={true}
+                  builderConfig={task?.builderConfig}
+                />
+              ) : isISE ? (
                 <IseEditor
                   code={code}
                   onCodeChange={setCode}
@@ -541,14 +555,14 @@ export default function SPETutorial() {
           <div
             style={{
               fontSize: fontSizes.sm,
-              color: isISE ? colors.accentSecondary : colors.accentPrimary,
+              color: isBuilder ? colors.syntaxBrace : isISE ? colors.accentSecondary : colors.accentPrimary,
               padding: "4px 10px",
               background: colors.bgOverlay,
               borderRadius: 4,
-              border: `1px solid ${isISE ? colors.borderAccentIse : colors.borderBase}`,
+              border: `1px solid ${isBuilder ? colors.syntaxBrace + "44" : isISE ? colors.borderAccentIse : colors.borderBase}`,
             }}
           >
-            {isISE ? "ISE" : "Console"}
+            {isBuilder ? "Builder" : isISE ? "ISE" : "Console"}
           </div>
           <div
             style={{
@@ -664,7 +678,16 @@ export default function SPETutorial() {
 
             {/* BOTTOM — Editor + Console */}
             <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
-              {isISE ? (
+              {isBuilder ? (
+                <BuilderEditor
+                  code={code}
+                  onCodeChange={setCode}
+                  onRun={handleRun}
+                  onClear={() => setConsoleOutput([])}
+                  consoleOutput={consoleOutput}
+                  builderConfig={task?.builderConfig}
+                />
+              ) : isISE ? (
                 <IseEditor
                   code={code}
                   onCodeChange={setCode}
@@ -805,7 +828,16 @@ export default function SPETutorial() {
                 minWidth: 0,
               }}
             >
-              {isISE ? (
+              {isBuilder ? (
+                <BuilderEditor
+                  code={code}
+                  onCodeChange={setCode}
+                  onRun={handleRun}
+                  onClear={() => setConsoleOutput([])}
+                  consoleOutput={consoleOutput}
+                  builderConfig={task?.builderConfig}
+                />
+              ) : isISE ? (
                 <IseEditor
                   code={code}
                   onCodeChange={setCode}

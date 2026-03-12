@@ -102,6 +102,18 @@ export interface ValidationResult {
 // Lesson types
 // ============================================================================
 
+export interface PrefilledStage {
+  cmdlet: string;
+  params?: Record<string, string>;
+  switches?: string[];
+  locked?: boolean;
+}
+
+export interface BuilderConfig {
+  availableCmdlets?: string[];
+  prefilled?: PrefilledStage[];
+}
+
 export interface Task {
   instruction: string;
   nudge?: string;
@@ -109,6 +121,7 @@ export interface Task {
   starterCode?: string;
   validation: TaskValidation;
   successMessage?: string;
+  builderConfig?: BuilderConfig;
 }
 
 export interface Lesson {
@@ -117,7 +130,7 @@ export interface Lesson {
   order: number;
   title: string;
   difficulty: string;
-  mode?: "repl" | "ise";
+  mode?: "repl" | "ise" | "builder";
   description: string;
   tasks: Task[];
 }

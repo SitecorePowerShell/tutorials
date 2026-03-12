@@ -2,6 +2,7 @@ import yaml from "js-yaml";
 import type { Lesson } from "../types";
 
 // Import raw YAML files
+import lesson00 from "./00-builder-intro.yaml?raw";
 import lesson01 from "./01-welcome.yaml?raw";
 import lesson02 from "./02-navigating.yaml?raw";
 import lesson03 from "./03-pipeline.yaml?raw";
@@ -22,7 +23,7 @@ import lesson17 from "./17-conditionals.yaml?raw";
 import lesson18 from "./18-bulk-updates.yaml?raw";
 
 const rawLessons = [
-  lesson01, lesson02, lesson03, lesson04, lesson05,
+  lesson00, lesson01, lesson02, lesson03, lesson04, lesson05,
   lesson06, lesson07, lesson08, lesson09, lesson10, lesson11,
   lesson12, lesson13, lesson14, lesson15, lesson16, lesson17, lesson18,
 ];
