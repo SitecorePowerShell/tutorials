@@ -114,9 +114,13 @@ export default function SPETutorial() {
   }, []);
 
   const handleBuilderInsert = useCallback((command: string) => {
-    setCode(command);
+    if (isISE) {
+      setCode((prev) => prev ? prev + "\n" + command + "\n" : command + "\n");
+    } else {
+      setCode(command);
+    }
     setBuilderToggleActive(false);
-  }, []);
+  }, [isISE]);
 
   const handleReset = useCallback(() => {
     setConsoleOutput([]);
