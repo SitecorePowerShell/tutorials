@@ -26,7 +26,8 @@ export function PipelineDropZone({
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = "copy";
+    const isReorder = e.dataTransfer.types.includes("application/x-builder-reorder");
+    e.dataTransfer.dropEffect = isReorder ? "move" : "copy";
 
     // Calculate insertion index from mouse position
     const rect = e.currentTarget.getBoundingClientRect();
@@ -101,12 +102,12 @@ export function PipelineDropZone({
       style={{
         display: "flex",
         flexDirection: isMobile ? "column" : "row",
+        flexWrap: isMobile ? "nowrap" : "wrap",
         alignItems: isMobile ? "stretch" : "center",
-        gap: 0,
+        gap: isMobile ? 0 : 4,
         padding: "10px 12px",
         minHeight: isMobile ? 60 : 64,
-        overflowX: isMobile ? "visible" : "auto",
-        overflowY: isMobile ? "auto" : "visible",
+        overflowY: "auto",
       }}
     >
       {stages.map((stage, idx) => {
