@@ -152,6 +152,7 @@ function PropertyDetailView({
               onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               <span
+                title={propName}
                 style={{
                   color: colors.textMuted,
                   width: "40%",
@@ -189,6 +190,8 @@ function TreeNode({
   isMobile,
   parentPath,
   onSelect,
+  expandedPaths,
+  onToggleExpand,
 }: {
   name: string;
   node: SitecoreNode;
@@ -196,11 +199,13 @@ function TreeNode({
   isMobile?: boolean;
   parentPath: string;
   onSelect: (item: { name: string; node: SitecoreNode; path: string }) => void;
+  expandedPaths: Set<string>;
+  onToggleExpand: (path: string) => void;
 }) {
-  const [expanded, setExpanded] = useState(depth < 2);
   const children = Object.entries(node._children || {});
   const hasChildren = children.length > 0;
   const currentPath = parentPath ? `${parentPath}/${name}` : `/${name}`;
+  const expanded = expandedPaths.has(currentPath);
 
   return (
     <div>
@@ -230,7 +235,7 @@ function TreeNode({
         <span
           onClick={(e) => {
             e.stopPropagation();
-            if (hasChildren) setExpanded(!expanded);
+            if (hasChildren) onToggleExpand(currentPath);
           }}
           style={{
             width: 14,
@@ -274,6 +279,8 @@ function TreeNode({
             isMobile={isMobile}
             parentPath={currentPath}
             onSelect={onSelect}
+            expandedPaths={expandedPaths}
+            onToggleExpand={onToggleExpand}
           />
         ))}
     </div>
@@ -286,12 +293,39 @@ interface TreePanelProps {
   embedded?: boolean;
 }
 
+/** Build initial expanded paths for nodes at depth < 2 */
+function getDefaultExpandedPaths(tree: { sitecore: SitecoreNode }): Set<string> {
+  const paths = new Set<string>();
+  // depth 0: /sitecore
+  paths.add("/sitecore");
+  // depth 1: /sitecore/content, etc.
+  for (const childName of Object.keys(tree.sitecore._children || {})) {
+    paths.add(`/sitecore/${childName}`);
+  }
+  return paths;
+}
+
 export function TreePanel({ tree, isMobile, embedded }: TreePanelProps) {
   const [selectedItem, setSelectedItem] = useState<{
     name: string;
     node: SitecoreNode;
     path: string;
   } | null>(null);
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(
+    () => getDefaultExpandedPaths(tree)
+  );
+
+  const handleToggleExpand = (path: string) => {
+    setExpandedPaths((prev) => {
+      const next = new Set(prev);
+      if (next.has(path)) {
+        next.delete(path);
+      } else {
+        next.add(path);
+      }
+      return next;
+    });
+  };
 
   return (
     <div
@@ -335,6 +369,8 @@ export function TreePanel({ tree, isMobile, embedded }: TreePanelProps) {
               isMobile={isMobile}
               parentPath=""
               onSelect={setSelectedItem}
+              expandedPaths={expandedPaths}
+              onToggleExpand={handleToggleExpand}
             />
           </div>
         </>
