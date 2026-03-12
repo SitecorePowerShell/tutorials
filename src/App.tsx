@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { ConsoleEntry } from "./types";
+import type { PipelineStage } from "./builder/assembleCommand";
 import { LESSONS } from "./lessons/loader";
 import { VIRTUAL_TREE } from "./engine/virtualTree";
 import { executeScript, executeCommand } from "./engine/executor";
@@ -13,6 +14,7 @@ import { LessonPanel } from "./components/LessonPanel";
 import { ReplEditor } from "./components/ReplEditor";
 import { IseEditor } from "./components/IseEditor";
 import { BuilderEditor } from "./components/BuilderEditor";
+import { EditorWithBuilderToggle } from "./components/EditorWithBuilderToggle";
 import { TreePanel } from "./components/TreePanel";
 import { MobileTabBar, type MobilePanel } from "./components/MobileTabBar";
 import { colors, fonts, fontSizes, fontSizesMobile } from "./theme";
@@ -40,6 +42,9 @@ export default function SPETutorial() {
   const [lessonPanelCollapsed, setLessonPanelCollapsed] = useState(initialPrefs.lessonPanelCollapsed);
   const [layoutStacked, setLayoutStacked] = useState(initialPrefs.layoutStacked);
   const [cwd, setCwd] = useState("/sitecore/content/Home");
+  const [builderToggleActive, setBuilderToggleActive] = useState(false);
+  const [builderStages, setBuilderStages] = useState<PipelineStage[]>([]);
+  const [builderSelectedStageId, setBuilderSelectedStageId] = useState<string | null>(null);
   const sessionCtxRef = useRef(new ScriptContext());
   const lessonPanelRef = useRef<HTMLDivElement>(null);
   const isDraggingLessonPanel = useRef(false);
@@ -108,10 +113,26 @@ export default function SPETutorial() {
     setSidebarCollapsed(false);
   }, []);
 
+  const handleBuilderInsert = useCallback((command: string) => {
+    setCode(command);
+    setBuilderToggleActive(false);
+  }, []);
+
+  const handleReset = useCallback(() => {
+    setConsoleOutput([]);
+    sessionCtxRef.current = new ScriptContext();
+    setCwd("/sitecore/content/Home");
+    const t = LESSONS[currentLesson]?.tasks?.[currentTask];
+    setCode(t?.starterCode || "# Write your script here\n");
+  }, [currentLesson, currentTask]);
+
   // Reset editor, output, and cwd when switching lessons or tasks
   useEffect(() => {
     setConsoleOutput([]);
     setRevealedHintLevel(0);
+    setBuilderToggleActive(false);
+    setBuilderStages([]);
+    setBuilderSelectedStageId(null);
     // Reset session context (cwd, variables) on lesson/task change
     sessionCtxRef.current = new ScriptContext();
     setCwd("/sitecore/content/Home");
@@ -432,30 +453,44 @@ export default function SPETutorial() {
                   isMobile={true}
                   builderConfig={task?.builderConfig}
                 />
-              ) : isISE ? (
-                <IseEditor
-                  code={code}
-                  onCodeChange={setCode}
-                  onRun={handleRun}
-                  onClear={() => setConsoleOutput([])}
-                  consoleOutput={consoleOutput}
-                  commandHistory={commandHistory}
-                  tree={VIRTUAL_TREE}
-                  isMobile={true}
-                />
               ) : (
-                <ReplEditor
-                  code={code}
-                  onCodeChange={setCode}
-                  onRun={handleRun}
-                  onClear={() => setConsoleOutput([])}
-                  consoleOutput={consoleOutput}
-                  commandHistory={commandHistory}
-                  historyIndex={historyIndex}
-                  onHistoryIndexChange={setHistoryIndex}
-                  tree={VIRTUAL_TREE}
+                <EditorWithBuilderToggle
+                  mode={isISE ? "ise" : "repl"}
+                  builderActive={builderToggleActive}
+                  onToggleBuilder={setBuilderToggleActive}
+                  onInsertCode={handleBuilderInsert}
+                  builderStages={builderStages}
+                  onBuilderStagesChange={setBuilderStages}
+                  builderSelectedStageId={builderSelectedStageId}
+                  onBuilderSelectedStageIdChange={setBuilderSelectedStageId}
                   isMobile={true}
-                  cwd={cwd}
+                  editorElement={isISE ? (
+                    <IseEditor
+                      code={code}
+                      onCodeChange={setCode}
+                      onRun={handleRun}
+                      onClear={() => setConsoleOutput([])}
+                      onReset={handleReset}
+                      consoleOutput={consoleOutput}
+                      commandHistory={commandHistory}
+                      tree={VIRTUAL_TREE}
+                      isMobile={true}
+                    />
+                  ) : (
+                    <ReplEditor
+                      code={code}
+                      onCodeChange={setCode}
+                      onRun={handleRun}
+                      onClear={() => setConsoleOutput([])}
+                      consoleOutput={consoleOutput}
+                      commandHistory={commandHistory}
+                      historyIndex={historyIndex}
+                      onHistoryIndexChange={setHistoryIndex}
+                      tree={VIRTUAL_TREE}
+                      isMobile={true}
+                      cwd={cwd}
+                    />
+                  )}
                 />
               )}
             </div>
@@ -687,41 +722,54 @@ export default function SPETutorial() {
                   consoleOutput={consoleOutput}
                   builderConfig={task?.builderConfig}
                 />
-              ) : isISE ? (
-                <IseEditor
-                  code={code}
-                  onCodeChange={setCode}
-                  onRun={handleRun}
-                  onClear={() => setConsoleOutput([])}
-                  consoleOutput={consoleOutput}
-                  commandHistory={commandHistory}
-                  tree={VIRTUAL_TREE}
-                  initialEditorHeight={initialPrefs.editorHeight}
-                  onEditorHeightChange={(h) => {
-                    editorHeightRef.current = h;
-                    saveUIPreferences({
-                      layoutStacked,
-                      lessonPanelHeightPercent: Math.round(
-                        ((lessonPanelHeight / (lessonPanelRef.current?.parentElement?.getBoundingClientRect().height || 1)) * 100)
-                      ),
-                      editorHeight: h,
-                      activePanel,
-                      lessonPanelCollapsed,
-                    });
-                  }}
-                />
               ) : (
-                <ReplEditor
-                  code={code}
-                  onCodeChange={setCode}
-                  onRun={handleRun}
-                  onClear={() => setConsoleOutput([])}
-                  consoleOutput={consoleOutput}
-                  commandHistory={commandHistory}
-                  historyIndex={historyIndex}
-                  onHistoryIndexChange={setHistoryIndex}
-                  tree={VIRTUAL_TREE}
-                  cwd={cwd}
+                <EditorWithBuilderToggle
+                  mode={isISE ? "ise" : "repl"}
+                  builderActive={builderToggleActive}
+                  onToggleBuilder={setBuilderToggleActive}
+                  onInsertCode={handleBuilderInsert}
+                  builderStages={builderStages}
+                  onBuilderStagesChange={setBuilderStages}
+                  builderSelectedStageId={builderSelectedStageId}
+                  onBuilderSelectedStageIdChange={setBuilderSelectedStageId}
+                  editorElement={isISE ? (
+                    <IseEditor
+                      code={code}
+                      onCodeChange={setCode}
+                      onRun={handleRun}
+                      onClear={() => setConsoleOutput([])}
+                      onReset={handleReset}
+                      consoleOutput={consoleOutput}
+                      commandHistory={commandHistory}
+                      tree={VIRTUAL_TREE}
+                      initialEditorHeight={initialPrefs.editorHeight}
+                      onEditorHeightChange={(h) => {
+                        editorHeightRef.current = h;
+                        saveUIPreferences({
+                          layoutStacked,
+                          lessonPanelHeightPercent: Math.round(
+                            ((lessonPanelHeight / (lessonPanelRef.current?.parentElement?.getBoundingClientRect().height || 1)) * 100)
+                          ),
+                          editorHeight: h,
+                          activePanel,
+                          lessonPanelCollapsed,
+                        });
+                      }}
+                    />
+                  ) : (
+                    <ReplEditor
+                      code={code}
+                      onCodeChange={setCode}
+                      onRun={handleRun}
+                      onClear={() => setConsoleOutput([])}
+                      consoleOutput={consoleOutput}
+                      commandHistory={commandHistory}
+                      historyIndex={historyIndex}
+                      onHistoryIndexChange={setHistoryIndex}
+                      tree={VIRTUAL_TREE}
+                      cwd={cwd}
+                    />
+                  )}
                 />
               )}
             </div>
@@ -837,40 +885,53 @@ export default function SPETutorial() {
                   consoleOutput={consoleOutput}
                   builderConfig={task?.builderConfig}
                 />
-              ) : isISE ? (
-                <IseEditor
-                  code={code}
-                  onCodeChange={setCode}
-                  onRun={handleRun}
-                  onClear={() => setConsoleOutput([])}
-                  consoleOutput={consoleOutput}
-                  tree={VIRTUAL_TREE}
-                  initialEditorHeight={initialPrefs.editorHeight}
-                  onEditorHeightChange={(h) => {
-                    editorHeightRef.current = h;
-                    saveUIPreferences({
-                      layoutStacked,
-                      lessonPanelHeightPercent: Math.round(
-                        ((lessonPanelHeight / (lessonPanelRef.current?.parentElement?.getBoundingClientRect().height || 1)) * 100)
-                      ),
-                      editorHeight: h,
-                      activePanel,
-                      lessonPanelCollapsed,
-                    });
-                  }}
-                />
               ) : (
-                <ReplEditor
-                  code={code}
-                  onCodeChange={setCode}
-                  onRun={handleRun}
-                  onClear={() => setConsoleOutput([])}
-                  consoleOutput={consoleOutput}
-                  commandHistory={commandHistory}
-                  historyIndex={historyIndex}
-                  onHistoryIndexChange={setHistoryIndex}
-                  tree={VIRTUAL_TREE}
-                  cwd={cwd}
+                <EditorWithBuilderToggle
+                  mode={isISE ? "ise" : "repl"}
+                  builderActive={builderToggleActive}
+                  onToggleBuilder={setBuilderToggleActive}
+                  onInsertCode={handleBuilderInsert}
+                  builderStages={builderStages}
+                  onBuilderStagesChange={setBuilderStages}
+                  builderSelectedStageId={builderSelectedStageId}
+                  onBuilderSelectedStageIdChange={setBuilderSelectedStageId}
+                  editorElement={isISE ? (
+                    <IseEditor
+                      code={code}
+                      onCodeChange={setCode}
+                      onRun={handleRun}
+                      onClear={() => setConsoleOutput([])}
+                      onReset={handleReset}
+                      consoleOutput={consoleOutput}
+                      tree={VIRTUAL_TREE}
+                      initialEditorHeight={initialPrefs.editorHeight}
+                      onEditorHeightChange={(h) => {
+                        editorHeightRef.current = h;
+                        saveUIPreferences({
+                          layoutStacked,
+                          lessonPanelHeightPercent: Math.round(
+                            ((lessonPanelHeight / (lessonPanelRef.current?.parentElement?.getBoundingClientRect().height || 1)) * 100)
+                          ),
+                          editorHeight: h,
+                          activePanel,
+                          lessonPanelCollapsed,
+                        });
+                      }}
+                    />
+                  ) : (
+                    <ReplEditor
+                      code={code}
+                      onCodeChange={setCode}
+                      onRun={handleRun}
+                      onClear={() => setConsoleOutput([])}
+                      consoleOutput={consoleOutput}
+                      commandHistory={commandHistory}
+                      historyIndex={historyIndex}
+                      onHistoryIndexChange={setHistoryIndex}
+                      tree={VIRTUAL_TREE}
+                      cwd={cwd}
+                    />
+                  )}
                 />
               )}
             </div>

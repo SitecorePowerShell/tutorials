@@ -21,6 +21,7 @@ interface IseEditorProps {
   onCodeChange: (code: string) => void;
   onRun: () => void;
   onClear: () => void;
+  onReset?: () => void;
   consoleOutput: ConsoleEntry[];
   commandHistory?: string[];
   tree?: { sitecore: SitecoreNode };
@@ -35,6 +36,7 @@ export function IseEditor({
   onCodeChange,
   onRun,
   onClear,
+  onReset,
   consoleOutput,
   commandHistory = [],
   tree,
@@ -510,6 +512,24 @@ export function IseEditor({
             >
               Clear Output
             </button>
+            {onReset && (
+              <button
+                onClick={onReset}
+                style={{
+                  background: "transparent",
+                  border: `1px solid ${colors.borderMedium}`,
+                  color: colors.textClear,
+                  padding: isMobile ? "10px 16px" : "5px 12px",
+                  borderRadius: 4,
+                  cursor: "pointer",
+                  fontSize: isMobile ? 14 : fontSizes.base,
+                  fontFamily: "inherit",
+                  minHeight: isMobile ? 44 : undefined,
+                }}
+              >
+                Reset
+              </button>
+            )}
           </div>
         </div>
         <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
