@@ -461,6 +461,7 @@ export function ReplEditor({
             </span>
             <input
               ref={searchInputRef}
+              aria-label="Reverse history search"
               type="text"
               value={reverseSearch.state.query}
               onChange={(e) => reverseSearch.updateQuery(e.target.value)}
@@ -552,6 +553,7 @@ export function ReplEditor({
                 )}
                 <textarea
                   ref={inputRef}
+                  aria-label="PowerShell command input"
                   value={code}
                   onChange={(e) => {
                     if (completion) setCompletion(null);

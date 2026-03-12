@@ -11,7 +11,7 @@ interface OutputPaneProps {
 
 export function OutputPane({ entries, isISE, isBuilder, endRef }: OutputPaneProps) {
   return (
-    <>
+    <div role="log" aria-live="polite" aria-label="Command output">
       {entries.length === 0 && (
         <div style={{ color: colors.textDimmed, fontStyle: "italic", fontSize: fontSizes.base }}>
           {isBuilder
@@ -59,7 +59,7 @@ export function OutputPane({ entries, isISE, isBuilder, endRef }: OutputPaneProp
             </pre>
           )}
           {entry.type === "error" && (
-            <div style={{ color: colors.statusError, margin: "4px 0" }}>
+            <div role="alert" style={{ color: colors.statusError, margin: "4px 0" }}>
               {entry.text}
             </div>
           )}
@@ -89,7 +89,7 @@ export function OutputPane({ entries, isISE, isBuilder, endRef }: OutputPaneProp
                 fontSize: fontSizes.base,
               }}
             >
-              💡 {entry.text}
+              <span aria-hidden="true">💡</span> {entry.text}
             </div>
           )}
           {entry.type === "partial" && (
@@ -100,6 +100,6 @@ export function OutputPane({ entries, isISE, isBuilder, endRef }: OutputPaneProp
         </div>
       ))}
       {endRef && <div ref={endRef} />}
-    </>
+    </div>
   );
 }

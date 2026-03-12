@@ -19,10 +19,10 @@ export const colors = {
   borderAccentIse: "#3a2a6a",
 
   textPrimary: "#d4d4e8",
-  textSecondary: "#9898b8",
-  textMuted: "#7a7a98",
-  textDimmed: "#606080",
-  textClear: "#8585a0",
+  textSecondary: "#a8a8c8",
+  textMuted: "#9a9ab8",
+  textDimmed: "#9090b0",
+  textClear: "#a0a0c0",
   textSubtle: "#b0b0ca",
   textOutput: "#c0c0d8",
   textCode: "#c5c8d4",
@@ -46,12 +46,12 @@ export const colors = {
   syntaxPipe: "#ffcc80",
   syntaxVariable: "#ef9a9a",
   syntaxBrace: "#fff59d",
-  syntaxComment: "#6a9955",
+  syntaxComment: "#8abf75",
   syntaxOperator: "#80deea",
   syntaxType: "#4dd0e1",
   syntaxNumber: "#ffb74d",
 
-  ghostText: "#4a4a68",
+  ghostText: "#8080a0",
   bracketMatch: "#2a2a5a",
   bracketUnmatched: "#5a2020",
 };
@@ -69,12 +69,12 @@ export const fonts = {
 };
 
 export const fontSizes = {
-  xs: 11,
-  sm: 12,
-  base: 12.5,
-  md: 12.5,
-  body: 13,
-  lg: 14,
+  xs: 12,
+  sm: 13,
+  base: 14,
+  md: 14,
+  body: 14,
+  lg: 15,
   xl: 16,
 };
 

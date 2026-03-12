@@ -19,6 +19,8 @@ export function MobileTabBar({ activeTab, onTabChange, showTreeTab }: MobileTabB
 
   return (
     <div
+      role="tablist"
+      aria-label="Mobile navigation"
       style={{
         display: "flex",
         background: colors.bgPanel,
@@ -32,6 +34,8 @@ export function MobileTabBar({ activeTab, onTabChange, showTreeTab }: MobileTabB
         return (
           <button
             key={tab.id}
+            role="tab"
+            aria-selected={active}
             onClick={() => onTabChange(tab.id)}
             style={{
               flex: 1,
@@ -52,7 +56,7 @@ export function MobileTabBar({ activeTab, onTabChange, showTreeTab }: MobileTabB
               fontWeight: active ? 600 : 400,
             }}
           >
-            <span style={{ fontSize: 18 }}>{tab.icon}</span>
+            <span style={{ fontSize: 18 }} aria-hidden="true">{tab.icon}</span>
             <span>{tab.label}</span>
           </button>
         );

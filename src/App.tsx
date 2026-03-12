@@ -18,6 +18,7 @@ import { EditorWithBuilderToggle } from "./components/EditorWithBuilderToggle";
 import { TreePanel } from "./components/TreePanel";
 import { MobileTabBar, type MobilePanel } from "./components/MobileTabBar";
 import { colors, fonts, fontSizes, fontSizesMobile } from "./theme";
+import { GlobalA11yStyles } from "./components/GlobalA11yStyles";
 
 const initialProgress = loadProgress();
 const initialPrefs = loadUIPreferences();
@@ -45,6 +46,7 @@ export default function SPETutorial() {
   const [builderToggleActive, setBuilderToggleActive] = useState(false);
   const [builderStages, setBuilderStages] = useState<PipelineStage[]>([]);
   const [builderSelectedStageId, setBuilderSelectedStageId] = useState<string | null>(null);
+  const [a11yAnnouncement, setA11yAnnouncement] = useState("");
   const sessionCtxRef = useRef(new ScriptContext());
   const lessonPanelRef = useRef<HTMLDivElement>(null);
   const isDraggingLessonPanel = useRef(false);
@@ -217,6 +219,8 @@ export default function SPETutorial() {
           text: `✓ ${task.successMessage || "Correct!"}`,
         });
         setCompletedTasks((prev) => ({ ...prev, [taskKey]: true }));
+        setA11yAnnouncement(`Task completed: ${task.successMessage || "Correct!"}`);
+        setTimeout(() => setA11yAnnouncement(""), 3000);
       } else {
         setTaskAttempts((prev) => ({
           ...prev,
@@ -313,6 +317,16 @@ export default function SPETutorial() {
     };
   }, []);
 
+  // Close mobile sidebar on Escape
+  useEffect(() => {
+    if (!mobileSidebarOpen) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileSidebarOpen(false);
+    };
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
+  }, [mobileSidebarOpen]);
+
   // --- MOBILE LAYOUT ---
   if (isMobile) {
     return (
@@ -329,13 +343,15 @@ export default function SPETutorial() {
           minWidth: 320,
         }}
       >
+        <GlobalA11yStyles />
+        <a href="#main-content" className="skip-link">Skip to editor</a>
         <link
           href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap"
           rel="stylesheet"
         />
 
         {/* Mobile top bar */}
-        <div
+        <header
           style={{
             height: 52,
             background: colors.bgPanel,
@@ -349,6 +365,7 @@ export default function SPETutorial() {
         >
           <button
             onClick={() => setMobileSidebarOpen(true)}
+            aria-label="Open navigation"
             style={{
               background: "none",
               border: "none",
@@ -394,7 +411,7 @@ export default function SPETutorial() {
           >
             {isBuilder ? "Builder" : isISE ? "ISE" : "Console"}
           </div>
-        </div>
+        </header>
 
         {/* Mobile sidebar overlay */}
         {mobileSidebarOpen && (
@@ -427,7 +444,7 @@ export default function SPETutorial() {
         )}
 
         {/* Active panel content */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <main id="main-content" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
           {mobilePanel === "lesson" && (
             <LessonPanel
               lesson={lesson}
@@ -502,7 +519,7 @@ export default function SPETutorial() {
           {mobilePanel === "tree" && (
             <TreePanel tree={VIRTUAL_TREE} isMobile={true} />
           )}
-        </div>
+        </main>
 
         {/* Bottom tab bar */}
         <MobileTabBar
@@ -510,6 +527,15 @@ export default function SPETutorial() {
           onTabChange={setMobilePanel}
           showTreeTab={true}
         />
+
+        {/* Screen reader announcements */}
+        <div
+          aria-live="assertive"
+          role="status"
+          style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap" }}
+        >
+          {a11yAnnouncement}
+        </div>
       </div>
     );
   }
@@ -527,6 +553,8 @@ export default function SPETutorial() {
         overflow: "hidden",
       }}
     >
+      <GlobalA11yStyles />
+      <a href="#main-content" className="skip-link">Skip to editor</a>
       <link
         href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap"
         rel="stylesheet"
@@ -555,7 +583,7 @@ export default function SPETutorial() {
         }}
       >
         {/* Top bar */}
-        <div
+        <header
           style={{
             height: 48,
             background: colors.bgPanel,
@@ -577,6 +605,7 @@ export default function SPETutorial() {
           <div style={{ flex: 1 }} />
           <button
             onClick={() => setLayoutStacked(!layoutStacked)}
+            aria-label={layoutStacked ? "Switch to side-by-side layout" : "Switch to stacked layout"}
             title={layoutStacked ? "Switch to side-by-side layout" : "Switch to stacked layout"}
             style={{
               background: "transparent",
@@ -614,7 +643,7 @@ export default function SPETutorial() {
           >
             Task {currentTask + 1} of {lesson.tasks.length}
           </div>
-        </div>
+        </header>
 
         {/* Split pane — stacked or side-by-side */}
         {layoutStacked ? (
@@ -624,6 +653,8 @@ export default function SPETutorial() {
               {/* Tab bar */}
               {!lessonPanelCollapsed && (
                 <div
+                  role="tablist"
+                  aria-label="Content panels"
                   style={{
                     height: 36,
                     display: "flex",
@@ -635,6 +666,10 @@ export default function SPETutorial() {
                   {(["lesson", "tree"] as const).map((tab) => (
                     <button
                       key={tab}
+                      role="tab"
+                      aria-selected={activePanel === tab}
+                      aria-controls={`tabpanel-${tab}`}
+                      id={`tab-${tab}`}
                       onClick={() => setActivePanel(tab)}
                       style={{
                         flex: 1,
@@ -652,7 +687,8 @@ export default function SPETutorial() {
                         transition: "color 0.15s, border-color 0.15s",
                       }}
                     >
-                      {tab === "lesson" ? "📖 Lesson" : "🌲 Content Tree"}
+                      <span aria-hidden="true">{tab === "lesson" ? "📖 " : "🌲 "}</span>
+                      {tab === "lesson" ? "Lesson" : "Content Tree"}
                     </button>
                   ))}
                 </div>
@@ -660,25 +696,27 @@ export default function SPETutorial() {
 
               {/* Panel content */}
               {activePanel === "lesson" ? (
-                <LessonPanel
-                  lesson={lesson}
-                  task={task}
-                  currentTask={currentTask}
-                  currentLesson={currentLesson}
-                  currentTaskComplete={currentTaskComplete}
-                  attempts={currentAttempts}
-                  revealedHintLevel={revealedHintLevel}
-                  onRevealHint={(level) => setRevealedHintLevel(level)}
-                  onAdvanceTask={advanceTask}
-                  onGoToTask={goToTask}
-                  isTaskComplete={isTaskComplete}
-                  lessonsLength={LESSONS.length}
-                  collapsed={lessonPanelCollapsed}
-                  onToggleCollapse={() => setLessonPanelCollapsed(!lessonPanelCollapsed)}
-                  height={lessonPanelCollapsed ? undefined : lessonPanelHeight}
-                />
+                <div role="tabpanel" id="tabpanel-lesson" aria-labelledby="tab-lesson">
+                  <LessonPanel
+                    lesson={lesson}
+                    task={task}
+                    currentTask={currentTask}
+                    currentLesson={currentLesson}
+                    currentTaskComplete={currentTaskComplete}
+                    attempts={currentAttempts}
+                    revealedHintLevel={revealedHintLevel}
+                    onRevealHint={(level) => setRevealedHintLevel(level)}
+                    onAdvanceTask={advanceTask}
+                    onGoToTask={goToTask}
+                    isTaskComplete={isTaskComplete}
+                    lessonsLength={LESSONS.length}
+                    collapsed={lessonPanelCollapsed}
+                    onToggleCollapse={() => setLessonPanelCollapsed(!lessonPanelCollapsed)}
+                    height={lessonPanelCollapsed ? undefined : lessonPanelHeight}
+                  />
+                </div>
               ) : (
-                <div style={{ height: lessonPanelCollapsed ? undefined : lessonPanelHeight, overflow: "auto" }}>
+                <div role="tabpanel" id="tabpanel-tree" aria-labelledby="tab-tree" style={{ height: lessonPanelCollapsed ? undefined : lessonPanelHeight, overflow: "auto" }}>
                   <TreePanel tree={VIRTUAL_TREE} embedded />
                 </div>
               )}
@@ -687,6 +725,14 @@ export default function SPETutorial() {
             {/* Resize handle (hidden when collapsed) */}
             {!lessonPanelCollapsed && (
               <div
+                role="separator"
+                aria-label="Resize lesson panel"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  const step = e.shiftKey ? 50 : 10;
+                  if (e.key === "ArrowUp") { e.preventDefault(); setLessonPanelHeight((h) => Math.max(80, h - step)); }
+                  if (e.key === "ArrowDown") { e.preventDefault(); setLessonPanelHeight((h) => { const container = lessonPanelRef.current?.parentElement; const max = container ? container.getBoundingClientRect().height * 0.5 : 500; return Math.min(max, h + step); }); }
+                }}
                 onMouseDown={handleLessonDragStart}
                 style={{
                   height: 6,
@@ -716,7 +762,7 @@ export default function SPETutorial() {
             )}
 
             {/* BOTTOM — Editor + Console */}
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
+            <main id="main-content" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
               {isBuilder ? (
                 <BuilderEditor
                   code={code}
@@ -776,7 +822,7 @@ export default function SPETutorial() {
                   )}
                 />
               )}
-            </div>
+            </main>
           </div>
         ) : (
           <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
@@ -794,6 +840,8 @@ export default function SPETutorial() {
               >
                 {/* Tab bar */}
                 <div
+                  role="tablist"
+                  aria-label="Content panels"
                   style={{
                     height: 36,
                     display: "flex",
@@ -805,6 +853,10 @@ export default function SPETutorial() {
                   {(["lesson", "tree"] as const).map((tab) => (
                     <button
                       key={tab}
+                      role="tab"
+                      aria-selected={activePanel === tab}
+                      aria-controls={`tabpanel-sbs-${tab}`}
+                      id={`tab-sbs-${tab}`}
                       onClick={() => setActivePanel(tab)}
                       style={{
                         flex: 1,
@@ -822,7 +874,8 @@ export default function SPETutorial() {
                         transition: "color 0.15s, border-color 0.15s",
                       }}
                     >
-                      {tab === "lesson" ? "📖 Lesson" : "🌲 Content Tree"}
+                      <span aria-hidden="true">{tab === "lesson" ? "📖 " : "🌲 "}</span>
+                      {tab === "lesson" ? "Lesson" : "Content Tree"}
                     </button>
                   ))}
                 </div>
@@ -830,24 +883,28 @@ export default function SPETutorial() {
                 {/* Panel content */}
                 <div style={{ flex: 1, overflow: "auto" }}>
                   {activePanel === "lesson" ? (
-                    <LessonPanel
-                      lesson={lesson}
-                      task={task}
-                      currentTask={currentTask}
-                      currentLesson={currentLesson}
-                      currentTaskComplete={currentTaskComplete}
-                      attempts={currentAttempts}
-                      revealedHintLevel={revealedHintLevel}
-                      onRevealHint={(level) => setRevealedHintLevel(level)}
-                      onAdvanceTask={advanceTask}
-                      onGoToTask={goToTask}
-                      isTaskComplete={isTaskComplete}
-                      lessonsLength={LESSONS.length}
-                      collapsed={lessonPanelCollapsed}
-                      onToggleCollapse={() => setLessonPanelCollapsed(!lessonPanelCollapsed)}
-                    />
+                    <div role="tabpanel" id="tabpanel-sbs-lesson" aria-labelledby="tab-sbs-lesson" style={{ height: "100%" }}>
+                      <LessonPanel
+                        lesson={lesson}
+                        task={task}
+                        currentTask={currentTask}
+                        currentLesson={currentLesson}
+                        currentTaskComplete={currentTaskComplete}
+                        attempts={currentAttempts}
+                        revealedHintLevel={revealedHintLevel}
+                        onRevealHint={(level) => setRevealedHintLevel(level)}
+                        onAdvanceTask={advanceTask}
+                        onGoToTask={goToTask}
+                        isTaskComplete={isTaskComplete}
+                        lessonsLength={LESSONS.length}
+                        collapsed={lessonPanelCollapsed}
+                        onToggleCollapse={() => setLessonPanelCollapsed(!lessonPanelCollapsed)}
+                      />
+                    </div>
                   ) : (
-                    <TreePanel tree={VIRTUAL_TREE} embedded />
+                    <div role="tabpanel" id="tabpanel-sbs-tree" aria-labelledby="tab-sbs-tree" style={{ height: "100%" }}>
+                      <TreePanel tree={VIRTUAL_TREE} embedded />
+                    </div>
                   )}
                 </div>
               </div>
@@ -872,7 +929,8 @@ export default function SPETutorial() {
             )}
 
             {/* RIGHT — Editor + Console */}
-            <div
+            <main
+              id="main-content"
               style={{
                 flex: 1,
                 display: "flex",
@@ -938,9 +996,18 @@ export default function SPETutorial() {
                   )}
                 />
               )}
-            </div>
+            </main>
           </div>
         )}
+      </div>
+
+      {/* Screen reader announcements */}
+      <div
+        aria-live="assertive"
+        role="status"
+        style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap" }}
+      >
+        {a11yAnnouncement}
       </div>
     </div>
   );

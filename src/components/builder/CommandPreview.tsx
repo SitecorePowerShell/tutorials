@@ -15,6 +15,8 @@ export function CommandPreview({ command, onRun, onClear, validationErrors = [] 
     <>
       {validationErrors.length > 0 && (
         <div
+          role="alert"
+          aria-live="assertive"
           style={{
             padding: "6px 12px",
             borderTop: `1px solid ${colors.borderBase}`,

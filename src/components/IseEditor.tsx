@@ -441,7 +441,6 @@ export function IseEditor({
 
   return (
     <>
-      <style>{`.ise-editor-textarea::placeholder { color: #7a7a98; opacity: 1; }`}</style>
       {/* Script editor pane */}
       <div
         ref={editorPaneRef}
@@ -591,6 +590,7 @@ export function IseEditor({
               <textarea
                 ref={inputRef}
                 className="ise-editor-textarea"
+                aria-label="Script editor"
                 value={code}
                 onChange={(e) => onCodeChange(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -685,6 +685,14 @@ export function IseEditor({
 
       {/* Resize handle */}
       <div
+        role="separator"
+        aria-label="Resize editor"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          const step = e.shiftKey ? 50 : 10;
+          if (e.key === "ArrowUp") { e.preventDefault(); setEditorHeight((h) => Math.max(100, h - step)); }
+          if (e.key === "ArrowDown") { e.preventDefault(); setEditorHeight((h) => { const container = editorPaneRef.current?.parentElement; const max = container ? container.getBoundingClientRect().height - 100 : 600; return Math.min(max, h + step); }); }
+        }}
         onMouseDown={handleDragStart}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}

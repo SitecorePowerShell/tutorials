@@ -147,6 +147,7 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile }
                 }}
               >
                 <select
+                  aria-label="Filter property"
                   value={filterProperty}
                   onChange={(e) => handleStructuredFilterChange(e.target.value, filterOperator, filterValue)}
                   disabled={stage.locked}
@@ -158,6 +159,7 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile }
                   ))}
                 </select>
                 <select
+                  aria-label="Filter operator"
                   value={filterOperator}
                   onChange={(e) => handleStructuredFilterChange(filterProperty, e.target.value, filterValue)}
                   disabled={stage.locked}
@@ -169,6 +171,7 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile }
                 </select>
                 <input
                   type="text"
+                  aria-label="Filter value"
                   value={filterValue}
                   onChange={(e) => handleStructuredFilterChange(filterProperty, filterOperator, e.target.value)}
                   disabled={stage.locked}
@@ -204,6 +207,7 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile }
             </label>
             <input
               type="text"
+              aria-label={paramDef.name}
               value={stage.params[paramDef.name] ?? ""}
               onChange={(e) => handleParamChange(paramDef.name, e.target.value)}
               disabled={stage.locked}
