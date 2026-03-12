@@ -66,7 +66,7 @@ export function LessonPanel({
         >
           <button
             onClick={onToggleCollapse}
-            title="Show Tasks"
+            title="Show panel"
             style={{
               background: "transparent",
               border: `1px solid ${colors.borderDim}`,
@@ -78,7 +78,7 @@ export function LessonPanel({
               fontFamily: "inherit",
             }}
           >
-            ▶
+            »
           </button>
           <span
             style={{
@@ -173,7 +173,7 @@ export function LessonPanel({
             gap: 4,
           }}
         >
-          ▼ Show Tasks
+          ▼ Show Panel
         </button>
       </div>
     );
@@ -213,9 +213,9 @@ export function LessonPanel({
               fontFamily: "inherit",
               zIndex: 1,
             }}
-            title="Collapse task panel"
+            title="Collapse panel"
           >
-            {sideBySide ? "◀" : "▲"}
+            {sideBySide ? "«" : "▲"}
           </button>
         )}
         {/* Lesson description */}
