@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { ConsoleEntry, BuilderConfig } from "../types";
-import { assembleCommand, type PipelineStage } from "../builder/assembleCommand";
+import { assembleCommand, createStage, getValidationErrors, type PipelineStage } from "../builder/assembleCommand";
 import { CmdletPalette } from "./builder/CmdletPalette";
 import { PipelineDropZone } from "./builder/PipelineDropZone";
 import { ParamPanel } from "./builder/ParamPanel";
@@ -64,23 +64,13 @@ export function BuilderEditor({
   }, [consoleOutput]);
 
   const addStage = useCallback((cmdletName: string) => {
-    const newStage: PipelineStage = {
-      id: crypto.randomUUID(),
-      cmdlet: cmdletName,
-      params: {},
-      switches: [],
-    };
+    const newStage = createStage(cmdletName);
     setStages((prev) => [...prev, newStage]);
     setSelectedStageId(newStage.id);
   }, []);
 
   const insertStage = useCallback((cmdletName: string, index: number) => {
-    const newStage: PipelineStage = {
-      id: crypto.randomUUID(),
-      cmdlet: cmdletName,
-      params: {},
-      switches: [],
-    };
+    const newStage = createStage(cmdletName);
     setStages((prev) => {
       const next = [...prev];
       next.splice(index, 0, newStage);
@@ -117,6 +107,7 @@ export function BuilderEditor({
   }, []);
 
   const selectedStage = stages.find((s) => s.id === selectedStageId) ?? null;
+  const validationErrors = getValidationErrors(stages);
 
   return (
     <div
@@ -159,6 +150,7 @@ export function BuilderEditor({
         command={code}
         onRun={onRun}
         onClear={onClear}
+        validationErrors={validationErrors}
       />
 
       {/* Output */}

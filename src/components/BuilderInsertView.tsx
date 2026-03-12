@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { assembleCommand, createStage, type PipelineStage } from "../builder/assembleCommand";
+import { assembleCommand, createStage, getValidationErrors, type PipelineStage } from "../builder/assembleCommand";
 import { CmdletPalette } from "./builder/CmdletPalette";
 import { PipelineDropZone } from "./builder/PipelineDropZone";
 import { ParamPanel } from "./builder/ParamPanel";
@@ -26,6 +26,8 @@ export function BuilderInsertView({
   insertLabel,
 }: BuilderInsertViewProps) {
   const command = assembleCommand(stages);
+  const errors = getValidationErrors(stages);
+  const canInsert = command && errors.length === 0;
 
   const addStage = useCallback((cmdletName: string) => {
     const newStage = createStage(cmdletName);
@@ -93,6 +95,36 @@ export function BuilderInsertView({
         isMobile={isMobile}
       />
 
+      {/* Validation errors */}
+      {errors.length > 0 && (
+        <div
+          style={{
+            padding: "6px 12px",
+            borderTop: `1px solid ${colors.borderBase}`,
+            background: colors.bgDeep,
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 6,
+          }}
+        >
+          {errors.map((err, i) => (
+            <span
+              key={i}
+              style={{
+                fontSize: fontSizes.xs,
+                fontFamily: fonts.sans,
+                color: colors.statusError,
+                background: "rgba(239,83,80,0.1)",
+                borderRadius: 4,
+                padding: "2px 8px",
+              }}
+            >
+              {err.cmdlet}: {err.paramName} required
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* Command preview + insert button */}
       <div
         style={{
@@ -154,19 +186,20 @@ export function BuilderInsertView({
         </button>
         <button
           onClick={() => onInsert(command)}
-          disabled={!command}
+          disabled={!canInsert}
+          title={errors.length > 0 ? errors.map((e) => `${e.cmdlet}: ${e.paramName} required`).join(", ") : undefined}
           style={{
-            background: command ? gradients.accent : colors.borderDim,
+            background: canInsert ? gradients.accent : colors.borderDim,
             border: "none",
             borderRadius: 6,
-            color: command ? colors.textWhite : colors.textMuted,
+            color: canInsert ? colors.textWhite : colors.textMuted,
             fontFamily: fonts.sans,
             fontSize: fontSizes.sm,
             fontWeight: 600,
             padding: "8px 18px",
-            cursor: command ? "pointer" : "default",
+            cursor: canInsert ? "pointer" : "default",
             whiteSpace: "nowrap",
-            opacity: command ? 1 : 0.5,
+            opacity: canInsert ? 1 : 0.5,
           }}
         >
           {insertLabel}
