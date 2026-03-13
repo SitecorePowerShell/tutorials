@@ -105,7 +105,7 @@ export function Sidebar({
     <div
       style={{
         width: isMobile ? "100%" : collapsed ? 48 : 280,
-        height: isMobile ? "100%" : undefined,
+        height: "100%",
         background: colors.bgPanel,
         borderRight: isMobile ? "none" : `1px solid ${colors.borderBase}`,
         display: "flex",

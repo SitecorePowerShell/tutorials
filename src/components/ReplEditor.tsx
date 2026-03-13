@@ -82,13 +82,13 @@ export function ReplEditor({
   const reverseSearch = useReverseSearch(commandHistory);
 
   useEffect(() => {
-    if (consoleEndRef.current) {
-      consoleEndRef.current.scrollIntoView({ behavior: "smooth" });
+    if (consoleOutput.length > 0 && consoleEndRef.current) {
+      consoleEndRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   }, [consoleOutput]);
 
   useEffect(() => {
-    inputRef.current?.focus();
+    inputRef.current?.focus({ preventScroll: true });
   }, []);
 
   // Focus search input when search activates

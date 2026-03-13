@@ -60,7 +60,9 @@ export function BuilderEditor({
 
   // Auto-scroll console
   useEffect(() => {
-    consoleEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (consoleOutput.length > 0) {
+      consoleEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
   }, [consoleOutput]);
 
   const addStage = useCallback((cmdletName: string) => {

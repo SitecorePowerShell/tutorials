@@ -958,7 +958,7 @@ export default function SPETutorial() {
                 {/* Panel content */}
                 <div style={{ flex: 1, overflow: "auto" }}>
                   {activePanel === "lesson" ? (
-                    <div role="tabpanel" id="tabpanel-sbs-lesson" aria-labelledby="tab-sbs-lesson" style={{ height: "100%" }}>
+                    <div role="tabpanel" id="tabpanel-sbs-lesson" aria-labelledby="tab-sbs-lesson">
                       <LessonPanel
                         lesson={lesson}
                         task={task}

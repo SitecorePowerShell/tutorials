@@ -69,13 +69,13 @@ export function IseEditor({
   const showGhost = ghostText && !completion && cursorPos === code.length;
 
   useEffect(() => {
-    if (consoleEndRef.current) {
-      consoleEndRef.current.scrollIntoView({ behavior: "smooth" });
+    if (consoleOutput.length > 0 && consoleEndRef.current) {
+      consoleEndRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   }, [consoleOutput]);
 
   useEffect(() => {
-    inputRef.current?.focus();
+    inputRef.current?.focus({ preventScroll: true });
   }, []);
 
   const handleDragStart = useCallback((e: React.MouseEvent) => {
