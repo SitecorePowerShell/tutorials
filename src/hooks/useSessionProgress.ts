@@ -12,7 +12,7 @@ export interface SessionProgress {
 
 const DEFAULTS: SessionProgress = {
   version: CURRENT_VERSION,
-  currentLesson: 0,
+  currentLesson: -1,
   currentTask: 0,
   completedTasks: {},
   taskAttempts: {},
