@@ -20,6 +20,8 @@ import { MobileTabBar, type MobilePanel } from "./components/MobileTabBar";
 import { colors, fonts, fontSizes, fontSizesMobile, applyTheme, getInitialThemeMode, type ThemeMode } from "./theme";
 import { GlobalA11yStyles } from "./components/GlobalA11yStyles";
 import { LandingPage } from "./components/LandingPage";
+import { VirtualTour, DESKTOP_STEPS, MOBILE_STEPS } from "./components/VirtualTour";
+import { useTourState } from "./hooks/useTourState";
 
 const initialProgress = loadProgress();
 const initialPrefs = loadUIPreferences();
@@ -51,6 +53,7 @@ export default function SPETutorial() {
   const [builderSelectedStageId, setBuilderSelectedStageId] = useState<string | null>(null);
   const [a11yAnnouncement, setA11yAnnouncement] = useState("");
   const [themeMode, setThemeMode] = useState<ThemeMode>(initialTheme);
+  const tour = useTourState();
   const sessionCtxRef = useRef(new ScriptContext());
   const lessonPanelRef = useRef<HTMLDivElement>(null);
   const isDraggingLessonPanel = useRef(false);
@@ -123,6 +126,8 @@ export default function SPETutorial() {
   const handleGetStarted = useCallback(() => {
     setCurrentLesson(0);
     setCurrentTask(0);
+    // Prompt "Would you like a tour?" for first-time visitors
+    setTimeout(() => tour.promptTour(), 400);
   }, []);
 
   const handleResetProgress = useCallback(() => {
@@ -411,6 +416,7 @@ export default function SPETutorial() {
           }}
         >
           <button
+            data-tour="mobile-menu"
             onClick={() => setMobileSidebarOpen(true)}
             aria-label="Open navigation"
             style={{
@@ -512,7 +518,7 @@ export default function SPETutorial() {
               isMobile={true}
             />
           </div>
-          <div style={{ flex: 1, display: mobilePanel === "editor" ? "flex" : "none", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
+          <div data-tour="editor" style={{ flex: 1, display: mobilePanel === "editor" ? "flex" : "none", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
             {isBuilder ? (
               <BuilderEditor
                 code={code}
@@ -570,10 +576,23 @@ export default function SPETutorial() {
         </main>
 
         {/* Bottom tab bar */}
-        <MobileTabBar
-          activeTab={mobilePanel}
-          onTabChange={setMobilePanel}
-          showTreeTab={true}
+        <div data-tour="mobile-tabs">
+          <MobileTabBar
+            activeTab={mobilePanel}
+            onTabChange={setMobilePanel}
+            showTreeTab={true}
+          />
+        </div>
+
+        {/* Virtual tour */}
+        <VirtualTour
+          phase={tour.phase}
+          currentStep={tour.currentStep}
+          isMobile={true}
+          onAccept={tour.acceptTour}
+          onDismiss={tour.dismissTour}
+          onNext={() => tour.nextStep(MOBILE_STEPS.length)}
+          onPrev={tour.prevStep}
         />
 
         {/* Screen reader announcements */}
@@ -609,19 +628,22 @@ export default function SPETutorial() {
       />
 
       {/* SIDEBAR */}
-      <Sidebar
-        lessons={LESSONS}
-        currentLesson={currentLesson}
-        completedTasks={completedTasks}
-        totalTasks={totalTasks}
-        completedCount={completedCount}
-        collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-        onGoToLesson={goToLesson}
-        onResetProgress={handleResetProgress}
-        themeMode={themeMode}
-        onThemeToggle={handleThemeToggle}
-      />
+      <div data-tour="sidebar">
+        <Sidebar
+          lessons={LESSONS}
+          currentLesson={currentLesson}
+          completedTasks={completedTasks}
+          totalTasks={totalTasks}
+          completedCount={completedCount}
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+          onGoToLesson={goToLesson}
+          onResetProgress={handleResetProgress}
+          themeMode={themeMode}
+          onThemeToggle={handleThemeToggle}
+          onStartTour={tour.startTour}
+        />
+      </div>
 
       {/* MAIN CONTENT AREA */}
       <div
@@ -699,7 +721,7 @@ export default function SPETutorial() {
         {layoutStacked ? (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
             {/* TOP — Tabbed panel (Lesson / Content Tree) */}
-            <div ref={lessonPanelRef}>
+            <div ref={lessonPanelRef} data-tour="lesson-panel">
               {/* Tab bar */}
               {!lessonPanelCollapsed && (
                 <div
@@ -720,6 +742,7 @@ export default function SPETutorial() {
                       aria-selected={activePanel === tab}
                       aria-controls={`tabpanel-${tab}`}
                       id={`tab-${tab}`}
+                      data-tour={tab === "tree" ? "tree-tab" : undefined}
                       onClick={() => setActivePanel(tab)}
                       style={{
                         flex: 1,
@@ -812,7 +835,7 @@ export default function SPETutorial() {
             )}
 
             {/* BOTTOM — Editor + Console */}
-            <main id="main-content" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
+            <main id="main-content" data-tour="editor" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
               {isBuilder ? (
                 <BuilderEditor
                   code={code}
@@ -879,6 +902,7 @@ export default function SPETutorial() {
             {/* LEFT — Tabbed panel (Lesson / Content Tree) */}
             {!lessonPanelCollapsed ? (
               <div
+                data-tour="lesson-panel"
                 style={{
                   width: "40%",
                   display: "flex",
@@ -907,6 +931,7 @@ export default function SPETutorial() {
                       aria-selected={activePanel === tab}
                       aria-controls={`tabpanel-sbs-${tab}`}
                       id={`tab-sbs-${tab}`}
+                      data-tour={tab === "tree" ? "tree-tab" : undefined}
                       onClick={() => setActivePanel(tab)}
                       style={{
                         flex: 1,
@@ -981,6 +1006,7 @@ export default function SPETutorial() {
             {/* RIGHT — Editor + Console */}
             <main
               id="main-content"
+              data-tour="editor"
               style={{
                 flex: 1,
                 display: "flex",
@@ -1050,6 +1076,17 @@ export default function SPETutorial() {
           </div>
         )}
       </div>
+
+      {/* Virtual tour */}
+      <VirtualTour
+        phase={tour.phase}
+        currentStep={tour.currentStep}
+        isMobile={false}
+        onAccept={tour.acceptTour}
+        onDismiss={tour.dismissTour}
+        onNext={() => tour.nextStep(DESKTOP_STEPS.length)}
+        onPrev={tour.prevStep}
+      />
 
       {/* Screen reader announcements */}
       <div
