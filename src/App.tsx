@@ -19,6 +19,7 @@ import { TreePanel } from "./components/TreePanel";
 import { MobileTabBar, type MobilePanel } from "./components/MobileTabBar";
 import { colors, fonts, fontSizes, fontSizesMobile, applyTheme, getInitialThemeMode, type ThemeMode } from "./theme";
 import { GlobalA11yStyles } from "./components/GlobalA11yStyles";
+import { LandingPage } from "./components/LandingPage";
 
 const initialProgress = loadProgress();
 const initialPrefs = loadUIPreferences();
@@ -66,6 +67,7 @@ export default function SPETutorial() {
   const isBuilder = lesson?.mode === "builder";
   const totalTasks = LESSONS.reduce((sum, l) => sum + l.tasks.length, 0);
   const completedCount = Object.keys(completedTasks).length;
+  const showLanding = currentLesson === -1;
 
   // Persist progress to localStorage
   useEffect(() => {
@@ -118,9 +120,14 @@ export default function SPETutorial() {
     });
   }, []);
 
+  const handleGetStarted = useCallback(() => {
+    setCurrentLesson(0);
+    setCurrentTask(0);
+  }, []);
+
   const handleResetProgress = useCallback(() => {
     clearProgress();
-    setCurrentLesson(0);
+    setCurrentLesson(-1);
     setCurrentTask(0);
     setCompletedTasks({});
     setTaskAttempts({});
@@ -338,6 +345,34 @@ export default function SPETutorial() {
     document.addEventListener("keydown", handleEsc);
     return () => document.removeEventListener("keydown", handleEsc);
   }, [mobileSidebarOpen]);
+
+  // --- LANDING PAGE ---
+  if (showLanding) {
+    return (
+      <div
+        style={{
+          height: isMobile ? "100dvh" : "100vh",
+          width: "100vw",
+          fontFamily: fonts.sans,
+          background: colors.bgBase,
+          color: colors.textPrimary,
+          overflow: "hidden",
+        }}
+      >
+        <GlobalA11yStyles />
+        <link
+          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap"
+          rel="stylesheet"
+        />
+        <LandingPage
+          onGetStarted={handleGetStarted}
+          isMobile={isMobile}
+          themeMode={themeMode}
+          onThemeToggle={handleThemeToggle}
+        />
+      </div>
+    );
+  }
 
   // --- MOBILE LAYOUT ---
   if (isMobile) {
