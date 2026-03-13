@@ -16,6 +16,7 @@ interface SidebarProps {
   onThemeToggle: () => void;
   isMobile?: boolean;
   onClose?: () => void;
+  onStartTour?: () => void;
 }
 
 interface ModuleGroup {
@@ -73,6 +74,7 @@ export function Sidebar({
   onThemeToggle,
   isMobile,
   onClose,
+  onStartTour,
 }: SidebarProps) {
   const [confirmReset, setConfirmReset] = useState(false);
   const [collapsedModules, setCollapsedModules] = useState<Record<string, boolean>>({});
@@ -191,29 +193,47 @@ export function Sidebar({
         <div style={{ flex: 1, overflow: "auto", padding: "8px 0" }}>
           {/* Start Here banner for new users */}
           {completedCount === 0 && (
-            <button
-              onClick={() => onGoToLesson(0)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                width: "calc(100% - 24px)",
-                margin: "4px 12px 12px",
-                padding: "10px 14px",
-                background: `linear-gradient(135deg, ${colors.bgCardSuccess}, ${colors.bgDeep})`,
-                border: `1px solid ${colors.statusSuccess}44`,
-                borderRadius: 6,
-                cursor: "pointer",
-                color: colors.statusSuccessLight,
-                fontSize: fontSizes.body,
-                fontWeight: 600,
-                fontFamily: "inherit",
-                textAlign: "left",
-              }}
-            >
-              <span style={{ fontSize: 16 }}>&#9654;</span>
-              Start Here
-            </button>
+            <div style={{ margin: "4px 12px 12px" }}>
+              <button
+                onClick={() => onGoToLesson(0)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  width: "100%",
+                  padding: "10px 14px",
+                  background: `linear-gradient(135deg, ${colors.bgCardSuccess}, ${colors.bgDeep})`,
+                  border: `1px solid ${colors.statusSuccess}44`,
+                  borderRadius: 6,
+                  cursor: "pointer",
+                  color: colors.statusSuccessLight,
+                  fontSize: fontSizes.body,
+                  fontWeight: 600,
+                  fontFamily: "inherit",
+                  textAlign: "left",
+                }}
+              >
+                <span style={{ fontSize: 16 }}>&#9654;</span>
+                Start Here
+              </button>
+              {onStartTour && (
+                <button
+                  onClick={onStartTour}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: colors.accentLink,
+                    fontSize: fontSizes.sm,
+                    fontFamily: "inherit",
+                    cursor: "pointer",
+                    padding: "6px 14px 2px",
+                    textAlign: "left",
+                  }}
+                >
+                  Take the tour
+                </button>
+              )}
+            </div>
           )}
 
           {moduleGroups.map((group) => {
