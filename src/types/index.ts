@@ -165,6 +165,43 @@ export interface Lesson {
 }
 
 // ============================================================================
+// Quiz types
+// ============================================================================
+
+export interface MultipleChoiceQuestion {
+  type: "multiple-choice";
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation?: string;
+}
+
+export interface CodeChallengeQuestion {
+  type: "code-challenge";
+  question: string;
+  hint?: string;
+  starterCode?: string;
+  validation: TaskValidation;
+  explanation?: string;
+}
+
+export type QuizQuestion = MultipleChoiceQuestion | CodeChallengeQuestion;
+
+export interface Quiz {
+  id: string;
+  module: string;
+  title: string;
+  questions: QuizQuestion[];
+}
+
+export interface QuizResult {
+  completed: boolean;
+  score: number;
+  total: number;
+  answers: Record<number, number | string>;
+}
+
+// ============================================================================
 // UI types
 // ============================================================================
 

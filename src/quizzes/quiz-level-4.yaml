@@ -1,0 +1,64 @@
+id: "quiz-level-4"
+module: "Level 4 – Advanced Techniques"
+title: "Advanced Techniques Quiz"
+questions:
+  - type: "multiple-choice"
+    question: "How do you combine multiple conditions in a `Where-Object` filter?"
+    options:
+      - "Using && and ||"
+      - "Using -and and -or operators"
+      - "Using multiple Where-Object stages"
+      - "Using commas between conditions"
+    correctIndex: 1
+    explanation: "PowerShell uses -and and -or operators to combine conditions within a single Where-Object script block."
+
+  - type: "multiple-choice"
+    question: "What does `Sort-Object -Descending` do?"
+    options:
+      - "Reverses the pipeline"
+      - "Sorts items from Z to A (or highest to lowest)"
+      - "Removes duplicate items"
+      - "Groups items by their sort key"
+    correctIndex: 1
+    explanation: "Sort-Object orders items by a property. Adding -Descending reverses the order from highest to lowest."
+
+  - type: "code-challenge"
+    question: "Get all children of `master:\\content\\Home` recursively, filter to items with `TemplateName` equal to `Sample Item`, and sort by `Name`."
+    hint: 'Get-ChildItem "master:\content\Home" -Recurse | Where-Object { $_.TemplateName -eq "Sample Item" } | Sort-Object -Property Name'
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "where-object"
+        - "sort-object"
+    explanation: "Combining Get-ChildItem -Recurse, Where-Object, and Sort-Object is a common pattern for querying and organizing content."
+
+  - type: "multiple-choice"
+    question: "Which operator performs pattern matching with wildcards in PowerShell?"
+    options:
+      - "-eq"
+      - "-match"
+      - "-like"
+      - "-contains"
+    correctIndex: 2
+    explanation: "The -like operator uses wildcard patterns (* for any characters, ? for single character). The -match operator uses regular expressions instead."
+
+  - type: "multiple-choice"
+    question: "What does the `-f` format operator do in PowerShell?"
+    options:
+      - "Filters items in a pipeline"
+      - "Formats a string using placeholders like {0}, {1}"
+      - "Forces a command to execute"
+      - "Finds text in a string"
+    correctIndex: 1
+    explanation: 'The -f operator formats strings using .NET-style placeholders: "{0} has {1} children" -f $name, $count.'
+
+  - type: "code-challenge"
+    question: "Get the children of `master:\\content\\Home` and select the `First` 2 items using `Select-Object`."
+    hint: 'Get-ChildItem "master:\content\Home" | Select-Object -First 2'
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "select-object"
+    explanation: "Select-Object -First N limits the output to the first N items from the pipeline."

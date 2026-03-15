@@ -21,6 +21,7 @@ interface LessonPanelProps {
   onToggleCollapse?: () => void;
   height?: number;
   sideBySide?: boolean;
+  nextLabel?: string;
 }
 
 export function LessonPanel({
@@ -41,6 +42,7 @@ export function LessonPanel({
   onToggleCollapse,
   height,
   sideBySide,
+  nextLabel,
 }: LessonPanelProps) {
   // Determine which hint tiers are unlocked
   const hasNudge = !!task?.nudge;
@@ -397,9 +399,11 @@ export function LessonPanel({
               >
                 {currentTask < lesson.tasks.length - 1
                   ? "Next Task →"
-                  : currentLesson < lessonsLength - 1
-                    ? "Next Lesson →"
-                    : "🎉 Tutorial Complete!"}
+                  : nextLabel
+                    ? nextLabel
+                    : currentLesson < lessonsLength - 1
+                      ? "Next Lesson →"
+                      : "🎉 Tutorial Complete!"}
               </button>
             )}
           </div>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Lesson } from "../types";
+import type { Lesson, Quiz, QuizResult } from "../types";
 import { colors, gradients, fontSizes, type ThemeMode } from "../theme";
 
 interface SidebarProps {
@@ -17,6 +17,10 @@ interface SidebarProps {
   isMobile?: boolean;
   onClose?: () => void;
   onStartTour?: () => void;
+  quizzes?: Quiz[];
+  quizResults?: Record<string, QuizResult>;
+  onGoToQuiz?: (quizId: string) => void;
+  activeQuiz?: string | null;
 }
 
 interface ModuleGroup {
@@ -75,6 +79,10 @@ export function Sidebar({
   isMobile,
   onClose,
   onStartTour,
+  quizzes,
+  quizResults,
+  onGoToQuiz,
+  activeQuiz,
 }: SidebarProps) {
   const [confirmReset, setConfirmReset] = useState(false);
   const [collapsedModules, setCollapsedModules] = useState<Record<string, boolean>>({});
@@ -332,7 +340,7 @@ export function Sidebar({
                 {!isCollapsed &&
                   group.lessons.map(({ lesson: l, index: li }) => {
                     const complete = isLessonComplete(li);
-                    const active = li === currentLesson;
+                    const active = li === currentLesson && !activeQuiz;
                     const difficulty = l.difficulty;
                     return (
                       <button
@@ -417,6 +425,106 @@ export function Sidebar({
                                 }}
                               >
                                 {difficultyLabels[difficulty]}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+
+                {/* Quiz entry for this module */}
+                {!isCollapsed && quizzes && onGoToQuiz && quizzes
+                  .filter((q) => q.module === group.module)
+                  .map((quiz) => {
+                    const result = quizResults?.[quiz.id];
+                    const quizComplete = result?.completed ?? false;
+                    const isActive = activeQuiz === quiz.id;
+
+                    return (
+                      <button
+                        key={`quiz-${quiz.id}`}
+                        onClick={() => onGoToQuiz(quiz.id)}
+                        style={{
+                          display: "flex",
+                          alignItems: "flex-start",
+                          gap: 10,
+                          width: "100%",
+                          padding: isMobile ? "12px 20px 12px 36px" : "8px 16px 8px 36px",
+                          minHeight: isMobile ? 48 : undefined,
+                          background: isActive ? colors.bgActive : "transparent",
+                          border: "none",
+                          borderLeft: isActive
+                            ? `3px solid ${colors.statusHint}`
+                            : "3px solid transparent",
+                          cursor: "pointer",
+                          textAlign: "left",
+                          color: isActive ? colors.textPrimary : colors.textSecondary,
+                          transition: "all 0.15s",
+                          fontFamily: "inherit",
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: 20,
+                            height: 20,
+                            borderRadius: 4,
+                            border: quizComplete
+                              ? `2px solid ${colors.statusSuccess}`
+                              : isActive
+                                ? `2px solid ${colors.statusHint}`
+                                : `2px solid ${colors.borderDim}`,
+                            background: quizComplete ? colors.statusSuccess : "transparent",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: 10,
+                            fontWeight: 700,
+                            color: quizComplete ? colors.textWhite : colors.textMuted,
+                            flexShrink: 0,
+                            marginTop: 1,
+                          }}
+                        >
+                          {quizComplete ? "✓" : "Q"}
+                        </span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            style={{
+                              fontSize: fontSizes.body,
+                              fontWeight: isActive ? 600 : 400,
+                              lineHeight: 1.3,
+                            }}
+                          >
+                            Quiz
+                          </div>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                              marginTop: 3,
+                            }}
+                          >
+                            <span
+                              style={{
+                                fontSize: fontSizes.xs,
+                                color: colors.textMuted,
+                              }}
+                            >
+                              {quiz.questions.length} questions
+                            </span>
+                            {quizComplete && result && (
+                              <span
+                                style={{
+                                  fontSize: 10,
+                                  color: colors.statusSuccess,
+                                  border: `1px solid ${colors.statusSuccess}44`,
+                                  borderRadius: 3,
+                                  padding: "1px 5px",
+                                  lineHeight: 1.4,
+                                }}
+                              >
+                                {result.score}/{result.total}
                               </span>
                             )}
                           </div>

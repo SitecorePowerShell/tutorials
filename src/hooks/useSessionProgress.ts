@@ -1,5 +1,7 @@
+import type { QuizResult } from "../types";
+
 const STORAGE_KEY = "spe-tutorial-progress";
-const CURRENT_VERSION = 2;
+const CURRENT_VERSION = 3;
 
 export interface SessionProgress {
   version: number;
@@ -8,6 +10,7 @@ export interface SessionProgress {
   completedTasks: Record<string, boolean>;
   taskAttempts: Record<string, number>;
   sidebarCollapsed: boolean;
+  quizResults: Record<string, QuizResult>;
 }
 
 const DEFAULTS: SessionProgress = {
@@ -17,6 +20,7 @@ const DEFAULTS: SessionProgress = {
   completedTasks: {},
   taskAttempts: {},
   sidebarCollapsed: false,
+  quizResults: {},
 };
 
 export function loadProgress(): SessionProgress {
@@ -41,6 +45,27 @@ export function loadProgress(): SessionProgress {
             : {},
         taskAttempts: {},
         sidebarCollapsed: !!parsed.sidebarCollapsed,
+        quizResults: {},
+      };
+    }
+    // Migrate from version 2: add quizResults
+    if (parsed.version === 2) {
+      return {
+        version: CURRENT_VERSION,
+        currentLesson:
+          typeof parsed.currentLesson === "number" ? parsed.currentLesson : 0,
+        currentTask:
+          typeof parsed.currentTask === "number" ? parsed.currentTask : 0,
+        completedTasks:
+          typeof parsed.completedTasks === "object" && parsed.completedTasks
+            ? parsed.completedTasks
+            : {},
+        taskAttempts:
+          typeof parsed.taskAttempts === "object" && parsed.taskAttempts
+            ? parsed.taskAttempts
+            : {},
+        sidebarCollapsed: !!parsed.sidebarCollapsed,
+        quizResults: {},
       };
     }
     if (parsed.version !== CURRENT_VERSION) {
@@ -61,6 +86,10 @@ export function loadProgress(): SessionProgress {
           ? parsed.taskAttempts
           : {},
       sidebarCollapsed: !!parsed.sidebarCollapsed,
+      quizResults:
+        typeof parsed.quizResults === "object" && parsed.quizResults
+          ? parsed.quizResults
+          : {},
     };
   } catch {
     return { ...DEFAULTS };
