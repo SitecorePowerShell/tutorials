@@ -42,14 +42,72 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile }
 
   // Reset all structured state when selected stage changes
   useEffect(() => {
-    setWhereRows([{ property: "", operator: "-eq", value: "" }]);
-    setWhereJoinOperator("-and");
     setUseStructured(true);
     setForeachOpType("property");
     setForeachProperty("");
     setForeachTemplate("");
     setForeachOperator("-replace");
     setForeachOperatorArgs("");
+
+    // Parse existing FilterScript back into whereRows
+    const filterScript = stage?.params.FilterScript;
+    if (filterScript) {
+      const inner = filterScript.replace(/^\{\s*/, "").replace(/\s*\}$/, "");
+      if (inner) {
+        // Detect join operator
+        const hasOr = / -or /i.test(inner);
+        const joinOp: "-and" | "-or" = hasOr ? "-or" : "-and";
+        setWhereJoinOperator(joinOp);
+        const parts = inner.split(new RegExp(`\\s+${joinOp}\\s+`, "i"));
+        const parsed = parts.map((part) => {
+          const m = part.match(/\$_\.(\S+)\s+(-\w+)\s+"([^"]*)"/);
+          if (m) return { property: m[1], operator: m[2], value: m[3] };
+          const m2 = part.match(/\$_\.(\S+)\s+(-\w+)\s+(\S+)/);
+          if (m2) return { property: m2[1], operator: m2[2], value: m2[3] };
+          return { property: "", operator: "-eq", value: "" };
+        });
+        if (parsed.some((r) => r.property)) {
+          setWhereRows(parsed);
+        } else {
+          setWhereRows([{ property: "", operator: "-eq", value: "" }]);
+        }
+      } else {
+        setWhereRows([{ property: "", operator: "-eq", value: "" }]);
+      }
+    } else {
+      setWhereRows([{ property: "", operator: "-eq", value: "" }]);
+      setWhereJoinOperator("-and");
+    }
+
+    // Parse existing Process back into forEach state
+    const process = stage?.params.Process;
+    if (process) {
+      const inner = process.replace(/^\{\s*/, "").replace(/\s*\}$/, "");
+      if (inner.startsWith("Write-Host")) {
+        const pm = inner.match(/Write-Host\s+\$_\.(\S+)/);
+        setForeachOpType("writehost");
+        setForeachProperty(pm ? pm[1] : "");
+      } else if (inner.startsWith('"') && inner.includes("$(")) {
+        setForeachOpType("interpolation");
+        const pm = inner.match(/\$\(\$_\.(\S+)\)/);
+        setForeachProperty(pm ? pm[1] : "");
+        const tm = inner.match(/^"([^$]*)\$\(/);
+        setForeachTemplate(tm ? tm[1] : "");
+      } else if (/ -\w+/.test(inner)) {
+        setForeachOpType("operator");
+        const pm = inner.match(/\$_\.(\S+)\s+(-\w+)\s*(.*)/);
+        if (pm) {
+          setForeachProperty(pm[1]);
+          setForeachOperator(pm[2]);
+          setForeachOperatorArgs(pm[3] || "");
+        }
+      } else {
+        setForeachOpType("property");
+        const pm = inner.match(/\$_\.(\S+)/);
+        setForeachProperty(pm ? pm[1] : "");
+      }
+    }
+
     // Parse existing criteria from stage params if present
     if (stage?.params.Criteria) {
       try {

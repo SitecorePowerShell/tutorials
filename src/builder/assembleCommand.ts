@@ -20,7 +20,9 @@ export function createStage(cmdletName: string): PipelineStage {
     }
   }
   return {
-    id: crypto.randomUUID(),
+    id: typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     cmdlet: cmdletName,
     params,
     switches: [],

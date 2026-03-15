@@ -61,10 +61,24 @@ export function ReplEditor({
       ? "PS> "
       : `PS master:\\${cwd.replace(/^\/sitecore\//, "").replace(/\//g, "\\")}> `;
 
-  // Measure prompt width for text-indent
-  useEffect(() => {
-    if (promptRef.current) {
-      setPromptWidth(promptRef.current.offsetWidth);
+  // Measure prompt width for text-indent, including when container becomes visible
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const promptCallbackRef = useCallback((node: HTMLSpanElement | null) => {
+    // Clean up previous observer
+    if (resizeObserverRef.current) {
+      resizeObserverRef.current.disconnect();
+      resizeObserverRef.current = null;
+    }
+    (promptRef as React.MutableRefObject<HTMLSpanElement | null>).current = node;
+    if (node) {
+      const w = node.offsetWidth;
+      if (w > 0) setPromptWidth(w);
+      // Watch for resize (e.g. container going from display:none to visible)
+      resizeObserverRef.current = new ResizeObserver(() => {
+        const newW = node.offsetWidth;
+        if (newW > 0) setPromptWidth(newW);
+      });
+      resizeObserverRef.current.observe(node);
     }
   }, [promptText, isMobile]);
 
@@ -76,7 +90,7 @@ export function ReplEditor({
     tree,
     userVariables
   );
-  const showGhost = ghostText && !completion && cursorPos === code.length;
+  const showGhost = ghostText && !completion && cursorPos === code.length && promptWidth > 0;
 
   // Reverse search
   const reverseSearch = useReverseSearch(commandHistory);
@@ -517,7 +531,7 @@ export function ReplEditor({
             <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
               {/* Prompt — absolutely positioned over the text-indent space */}
               <span
-                ref={promptRef}
+                ref={promptCallbackRef}
                 style={{
                   position: "absolute",
                   top: 0,
@@ -535,6 +549,29 @@ export function ReplEditor({
                 {promptText}
               </span>
               <div style={{ position: "relative" }}>
+                {/* Placeholder overlay — only show after prompt width is measured */}
+                {!code && !showGhost && promptWidth > 0 && (
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      pointerEvents: "none",
+                      whiteSpace: "pre",
+                      fontFamily: fonts.mono,
+                      fontSize: isMobile ? 15 : fontSizes.body,
+                      lineHeight: 1.6,
+                      textIndent: promptWidth,
+                      color: colors.textMuted,
+                      width: "100%",
+                      boxSizing: "border-box",
+                      zIndex: 1,
+                    }}
+                  >
+                    Type a command...
+                  </span>
+                )}
                 {/* Ghost text underlay */}
                 {showGhost && (
                   <span
@@ -569,7 +606,6 @@ export function ReplEditor({
                   onKeyDown={handleKeyDown}
                   onSelect={handleSelect}
                   onKeyUp={handleSelect}
-                  placeholder="Type your SPE command here..."
                   spellCheck={false}
                   autoComplete="off"
                   rows={1}

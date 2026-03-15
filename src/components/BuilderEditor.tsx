@@ -39,7 +39,9 @@ export function BuilderEditor({
 
     if (builderConfig?.prefilled) {
       const prefilled: PipelineStage[] = builderConfig.prefilled.map((s) => ({
-        id: crypto.randomUUID(),
+        id: typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
         cmdlet: s.cmdlet,
         params: s.params ? { ...s.params } : {},
         switches: s.switches ? [...s.switches] : [],
