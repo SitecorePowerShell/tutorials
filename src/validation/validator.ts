@@ -3,10 +3,12 @@ import type {
   ValidationResult,
   StructuralValidation,
   PipelineValidation,
+  OutputValidation,
 } from "../types";
 import { resolvePath } from "../engine/pathResolver";
 import { parseCommand } from "../engine/parser";
 import { executeScript } from "../engine/executor";
+import { validateStageParams } from "./cmdletParams";
 
 export function validateTask(input: string, task: Task): ValidationResult {
   const v = task.validation;
@@ -73,6 +75,11 @@ export function validateTask(input: string, task: Task): ValidationResult {
     return validatePipeline(v, allStages, input);
   }
 
+  // Output-only validation — execute and check output strings, no structural checks
+  if (v.type === "output") {
+    return validateOutput(v, input);
+  }
+
   return { passed: true };
 }
 
@@ -121,18 +128,53 @@ function validateStructural(
       };
     }
   }
-  if (v.requireSwitch) {
-    const hasSwitch = mainStage.switches.some(
-      (s) => s.toLowerCase() === v.requireSwitch!.toLowerCase()
-    );
-    if (!hasSwitch) {
-      return {
-        passed: false,
-        feedback: `Don't forget the \`-${v.requireSwitch.charAt(0).toUpperCase() + v.requireSwitch.slice(1)}\` switch.`,
-        partial: ["Correct cmdlet", "Correct path"],
-      };
+  if (v.requireSwitches) {
+    for (const sw of v.requireSwitches) {
+      const hasSwitch = mainStage.switches.some(
+        (s) => s.toLowerCase() === sw.toLowerCase()
+      );
+      if (!hasSwitch) {
+        return {
+          passed: false,
+          feedback: `Don't forget the \`-${sw.charAt(0).toUpperCase() + sw.slice(1)}\` switch.`,
+          partial: ["Correct cmdlet", "Correct path"],
+        };
+      }
     }
   }
+  if (v.requireParams) {
+    for (const [key, expectedValue] of Object.entries(v.requireParams)) {
+      const actualValue = findParam(mainStage.params, key);
+      if (actualValue === undefined) {
+        return {
+          passed: false,
+          feedback: `Don't forget the \`-${key}\` parameter.`,
+          partial: ["Correct cmdlet", "Correct path"],
+        };
+      }
+      if (actualValue !== expectedValue) {
+        return {
+          passed: false,
+          feedback: `The \`-${key}\` parameter value doesn't match what's expected.`,
+          partial: ["Correct cmdlet", "Correct path"],
+        };
+      }
+    }
+  }
+
+  // Registry-based parameter type validation
+  const registryError = validateStageParams(mainStage, v.cmdlet, {
+    parameterSet: v.parameterSet,
+    allowSpeParams: v.allowSpeParams,
+  });
+  if (registryError) {
+    return {
+      passed: false,
+      feedback: registryError,
+      partial: ["Correct cmdlet", "Correct path"],
+    };
+  }
+
   return { passed: true };
 }
 
@@ -155,6 +197,15 @@ const ALIASES: Record<string, string[]> = {
   "rename-item": ["rename-item", "ren", "rni"],
   "find-item": ["find-item", "fi"],
 };
+
+/** Resolve a user-typed cmdlet name to its canonical lowercase form */
+function resolveAlias(cmdlet: string): string {
+  const lower = cmdlet.toLowerCase();
+  for (const [canonical, aliases] of Object.entries(ALIASES)) {
+    if (aliases.includes(lower)) return canonical;
+  }
+  return lower;
+}
 
 function validatePipeline(
   v: PipelineValidation,
@@ -185,6 +236,41 @@ function validatePipeline(
     }
   }
 
+  // Check required params across all matched stages
+  if (v.requireParams) {
+    for (const [key, expectedValue] of Object.entries(v.requireParams)) {
+      const found = allStages.some((stage) => {
+        const val = findParam(stage.params, key);
+        return val !== undefined && val === expectedValue;
+      });
+      if (!found) {
+        return {
+          passed: false,
+          feedback: `Your script should include \`-${key} ${/\s/.test(expectedValue) ? `"${expectedValue}"` : expectedValue}\`.`,
+          partial: ["Correct pipeline structure"],
+        };
+      }
+    }
+  }
+
+  // Registry-based parameter type validation (opt-in for pipeline)
+  if (v.parameterSet !== undefined || v.allowSpeParams !== undefined) {
+    for (const stage of allStages) {
+      const canonical = resolveAlias(stage.cmdlet);
+      const registryError = validateStageParams(stage, canonical, {
+        parameterSet: v.parameterSet,
+        allowSpeParams: v.allowSpeParams,
+      });
+      if (registryError) {
+        return {
+          passed: false,
+          feedback: registryError,
+          partial: ["Correct pipeline structure"],
+        };
+      }
+    }
+  }
+
   // Check output constraints — run full script
   if (v.outputContains || v.outputNotContains) {
     const result = executeScript(input);
@@ -207,6 +293,40 @@ function validatePipeline(
   }
 
   return { passed: true };
+}
+
+function validateOutput(v: OutputValidation, input: string): ValidationResult {
+  const result = executeScript(input);
+  if (v.outputContains && !result.output.includes(v.outputContains)) {
+    return {
+      passed: false,
+      feedback:
+        "Your script runs, but the output doesn't match what's expected. Check your code.",
+      partial: ["Script executed"],
+    };
+  }
+  if (v.outputNotContains && result.output.includes(v.outputNotContains)) {
+    return {
+      passed: false,
+      feedback:
+        "Your output contains something unexpected. Check your code.",
+      partial: ["Script executed"],
+    };
+  }
+  return { passed: true };
+}
+
+/** Case-insensitive parameter lookup on parsed params */
+function findParam(
+  params: Record<string, string> & { _positional?: string[] },
+  key: string
+): string | undefined {
+  const lower = key.toLowerCase();
+  for (const [k, v] of Object.entries(params)) {
+    if (k === "_positional") continue;
+    if (k.toLowerCase() === lower) return v as string;
+  }
+  return undefined;
 }
 
 function formatCmdletName(name: string): string {

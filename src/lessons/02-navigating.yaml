@@ -28,7 +28,8 @@ tasks:
     validation:
       type: "structural"
       cmdlet: "get-childitem"
-      requireSwitch: "recurse"
+      requireSwitches:
+        - "recurse"
     successMessage: |
       With `-Recurse`, you get the entire subtree.
 

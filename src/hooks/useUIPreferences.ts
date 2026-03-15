@@ -1,5 +1,5 @@
 const UI_PREFS_KEY = "spe-tutorial-ui-prefs";
-const CURRENT_VERSION = 2;
+const CURRENT_VERSION = 3;
 
 export type ActivePanel = "lesson" | "tree";
 
@@ -14,7 +14,7 @@ export interface UIPreferences {
 
 const DEFAULTS: UIPreferences = {
   version: CURRENT_VERSION,
-  layoutStacked: true,
+  layoutStacked: false,
   lessonPanelHeightPercent: 50,
   editorHeight: 250,
   activePanel: "lesson",

@@ -94,17 +94,32 @@ export interface StructuralValidation {
   type: "structural";
   cmdlet: string;
   requirePath?: string[];
-  requireSwitch?: string;
+  requireSwitches?: string[];
+  requireParams?: Record<string, string>;
+  parameterSet?: string;
+  allowSpeParams?: boolean;
 }
 
 export interface PipelineValidation {
   type: "pipeline";
   stages: string[];
+  requireParams?: Record<string, string>;
+  parameterSet?: string;
+  allowSpeParams?: boolean;
   outputContains?: string;
   outputNotContains?: string;
 }
 
-export type TaskValidation = StructuralValidation | PipelineValidation;
+export interface OutputValidation {
+  type: "output";
+  outputContains?: string;
+  outputNotContains?: string;
+}
+
+export type TaskValidation =
+  | StructuralValidation
+  | PipelineValidation
+  | OutputValidation;
 
 export interface ValidationResult {
   passed: boolean;

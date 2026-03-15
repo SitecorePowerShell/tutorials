@@ -42,11 +42,11 @@ The codebase has two independent layers: a **pure TypeScript simulation engine**
 
 ### Validation (`src/validation/`)
 
-**validator.ts** — Two modes: **structural** (checks cmdlet presence, parameters, switches without executing) and **pipeline** (executes command, checks output contains/excludes strings). Validates resolved paths, not raw strings, so aliases and path variations work correctly.
+**validator.ts** — Three modes: **structural** (checks cmdlet presence, parameters, switches without executing), **pipeline** (checks stage presence + optionally executes for output), and **output** (executes script and checks output strings only). Validates resolved paths, not raw strings, so aliases and path variations work correctly.
 
 ### Lessons (`src/lessons/`)
 
-18 YAML files loaded via `loader.ts` using js-yaml with Vite `?raw` imports. Each lesson has `id`, `module`, `title`, `difficulty`, `mode` (repl/ise), `description` (markdown), and `tasks[]` with instruction, hint, starterCode, and validation spec.
+23 YAML files loaded via `loader.ts` using js-yaml with Vite `?raw` imports. Each lesson has `id`, `module`, `title`, `difficulty`, `mode` (repl/ise), `description` (markdown), and `tasks[]` with instruction, hint, starterCode, and validation spec.
 
 ### UI (`src/components/`)
 
