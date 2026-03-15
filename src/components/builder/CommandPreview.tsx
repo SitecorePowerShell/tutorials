@@ -66,11 +66,11 @@ export function CommandPreview({ command, onRun, onClear, validationErrors = [],
             fontFamily: fonts.monoFull,
             fontSize: fontSizes.sm,
             color: colors.textPrimary,
-            overflow: "hidden",
+            overflowY: "auto",
             whiteSpace: "pre-wrap",
             wordBreak: "break-all",
             minHeight: 28,
-            maxHeight: isMobile ? 48 : undefined,
+            maxHeight: isMobile ? 80 : undefined,
             lineHeight: 1.5,
           }}
         >

@@ -187,7 +187,7 @@ export function PipelineDropZone({
               {stage.locked && (
                 <span style={{ fontSize: 10 }} title="Locked">🔒</span>
               )}
-              <span style={{ fontSize: isMobile ? 16 : 14 }}>{def?.icon}</span>
+              {!isMobile && <span style={{ fontSize: 14 }}>{def?.icon}</span>}
               <span
                 style={{
                   color: stageColor,

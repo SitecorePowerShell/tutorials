@@ -10,7 +10,7 @@ interface CmdletPaletteProps {
 
 export function CmdletPalette({ availableCmdlets, usedCmdlets, onAddStage, isMobile }: CmdletPaletteProps) {
   const cmdlets = (availableCmdlets ?? ALL_CMDLET_NAMES)
-    .filter((name) => CMDLET_REGISTRY[name]);
+    .filter((name) => CMDLET_REGISTRY[name] && !(usedCmdlets?.has(name)));
 
   return (
     <div
@@ -47,38 +47,34 @@ export function CmdletPalette({ availableCmdlets, usedCmdlets, onAddStage, isMob
       {cmdlets.map((name) => {
         const def = CMDLET_REGISTRY[name];
         const clr = getCmdletColor(def);
-        const isUsed = usedCmdlets?.has(name) ?? false;
         return (
           <button
             key={name}
-            draggable={!isMobile && !isUsed}
+            draggable={!isMobile}
             onDragStart={(e) => {
-              if (isUsed) { e.preventDefault(); return; }
               e.dataTransfer.setData("application/x-builder-cmdlet", name);
               e.dataTransfer.effectAllowed = "copy";
             }}
-            onClick={() => { if (!isUsed) onAddStage(name); }}
-            disabled={isUsed}
+            onClick={() => onAddStage(name)}
             style={{
               display: "inline-flex",
               alignItems: "center",
               gap: 4,
               padding: isMobile ? "3px 8px" : "4px 10px",
-              background: isUsed ? `${clr}0a` : `${clr}22`,
-              border: `1px solid ${isUsed ? `${clr}22` : `${clr}55`}`,
+              background: `${clr}22`,
+              border: `1px solid ${clr}55`,
               borderRadius: 16,
-              color: isUsed ? `${clr}66` : clr,
+              color: clr,
               fontSize: isMobile ? fontSizes.sm : fontSizes.xs,
               fontFamily: fonts.mono,
               fontWeight: 500,
-              cursor: isUsed ? "default" : isMobile ? "pointer" : "grab",
+              cursor: isMobile ? "pointer" : "grab",
               whiteSpace: "nowrap",
               userSelect: "none",
-              opacity: isUsed ? 0.5 : 1,
             }}
-            title={isUsed ? `${name} already in pipeline` : isMobile ? `Tap to add ${name}` : `Drag to add ${name}`}
+            title={isMobile ? `Tap to add ${name}` : `Drag to add ${name}`}
           >
-            <span>{def.icon}</span>
+            {!isMobile && <span>{def.icon}</span>}
             <span>{def.shortLabel}</span>
           </button>
         );
