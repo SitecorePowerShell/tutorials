@@ -69,6 +69,7 @@ export function BuilderInsertView({
   }, [stages, onStagesChange]);
 
   const selectedStage = stages.find((s) => s.id === selectedStageId) ?? null;
+  const selectedStageIndex = selectedStage ? stages.findIndex((s) => s.id === selectedStage.id) : undefined;
 
   return (
     <div
@@ -80,143 +81,154 @@ export function BuilderInsertView({
         minHeight: 0,
       }}
     >
-      <CmdletPalette usedCmdlets={usedCmdlets} onAddStage={addStage} isMobile={isMobile} />
+      {/* Scrollable content area */}
+      <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
+        <CmdletPalette usedCmdlets={usedCmdlets} onAddStage={addStage} isMobile={isMobile} />
 
-      <PipelineDropZone
-        stages={stages}
-        selectedStageId={selectedStageId}
-        onSelectStage={onSelectedStageIdChange}
-        onInsertStage={insertStage}
-        onRemoveStage={removeStage}
-        onReorderStage={reorderStage}
-        isMobile={isMobile}
-      />
+        <PipelineDropZone
+          stages={stages}
+          selectedStageId={selectedStageId}
+          onSelectStage={onSelectedStageIdChange}
+          onInsertStage={insertStage}
+          onRemoveStage={removeStage}
+          onReorderStage={reorderStage}
+          isMobile={isMobile}
+        />
 
-      <ParamPanel
-        stage={selectedStage}
-        onUpdateParams={updateParams}
-        onUpdateSwitches={updateSwitches}
-        isMobile={isMobile}
-      />
+        <ParamPanel
+          stage={selectedStage}
+          onUpdateParams={updateParams}
+          onUpdateSwitches={updateSwitches}
+          isMobile={isMobile}
+          collapsible={isMobile}
+          stageIndex={selectedStageIndex}
+          stageCount={stages.length}
+          onReorderStage={isMobile ? reorderStage : undefined}
+        />
+      </div>
 
-      {/* Validation errors */}
-      {errors.length > 0 && (
+      {/* Sticky bottom: errors + preview + buttons */}
+      <div style={{ flexShrink: 0 }}>
+        {/* Validation errors */}
+        {errors.length > 0 && (
+          <div
+            style={{
+              padding: "6px 12px",
+              borderTop: `1px solid ${colors.borderBase}`,
+              background: colors.bgDeep,
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 6,
+            }}
+          >
+            {errors.map((err, i) => (
+              <span
+                key={i}
+                style={{
+                  fontSize: fontSizes.xs,
+                  fontFamily: fonts.sans,
+                  color: colors.statusError,
+                  background: "rgba(239,83,80,0.1)",
+                  borderRadius: 4,
+                  padding: "2px 8px",
+                }}
+              >
+                {err.cmdlet}: {err.paramName} required
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Command preview + insert button */}
         <div
           style={{
-            padding: "6px 12px",
+            padding: isMobile ? "6px 10px" : "8px 12px",
             borderTop: `1px solid ${colors.borderBase}`,
             background: colors.bgDeep,
             display: "flex",
-            flexWrap: "wrap",
-            gap: 6,
+            flexDirection: isMobile ? "column" : "row",
+            alignItems: isMobile ? "stretch" : "center",
+            gap: isMobile ? 8 : 10,
           }}
         >
-          {errors.map((err, i) => (
-            <span
-              key={i}
+          <pre
+            style={{
+              flex: isMobile ? undefined : 1,
+              margin: 0,
+              padding: "6px 10px",
+              background: colors.bgBase,
+              border: `1px solid ${colors.borderBase}`,
+              borderRadius: 4,
+              fontFamily: fonts.monoFull,
+              fontSize: fontSizes.sm,
+              color: colors.textPrimary,
+              overflow: "hidden",
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-all",
+              minHeight: 28,
+              maxHeight: isMobile ? 48 : undefined,
+              lineHeight: 1.5,
+            }}
+          >
+            {command ? (
+              <HighlightedCode code={command} />
+            ) : (
+              <span style={{ color: colors.textDimmed, fontStyle: "italic" }}>
+                Build a pipeline to see the command here...
+              </span>
+            )}
+          </pre>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={() => {
+                onStagesChange([]);
+                onSelectedStageIdChange(null);
+              }}
+              disabled={stages.length === 0}
               style={{
-                fontSize: fontSizes.xs,
-                fontFamily: fonts.sans,
-                color: colors.statusError,
-                background: "rgba(239,83,80,0.1)",
+                background: "transparent",
+                border: `1px solid ${stages.length ? colors.borderMedium : colors.borderDim}`,
                 borderRadius: 4,
-                padding: "2px 8px",
+                color: stages.length ? colors.textClear : colors.textMuted,
+                fontFamily: "inherit",
+                fontSize: isMobile ? 14 : fontSizes.base,
+                padding: isMobile ? "8px 14px" : "5px 12px",
+                cursor: stages.length ? "pointer" : "default",
+                whiteSpace: "nowrap",
+                opacity: stages.length ? 1 : 0.5,
+                minHeight: isMobile ? 44 : undefined,
+                flex: isMobile ? 1 : undefined,
               }}
             >
-              {err.cmdlet}: {err.paramName} required
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Command preview + insert button */}
-      <div
-        style={{
-          padding: "8px 12px",
-          borderTop: `1px solid ${colors.borderBase}`,
-          background: colors.bgDeep,
-          display: "flex",
-          flexDirection: isMobile ? "column" : "row",
-          alignItems: isMobile ? "stretch" : "center",
-          gap: isMobile ? 8 : 10,
-        }}
-      >
-        <pre
-          style={{
-            flex: isMobile ? undefined : 1,
-            margin: 0,
-            padding: "6px 10px",
-            background: colors.bgBase,
-            border: `1px solid ${colors.borderBase}`,
-            borderRadius: 4,
-            fontFamily: fonts.monoFull,
-            fontSize: fontSizes.sm,
-            color: colors.textPrimary,
-            overflow: "auto",
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-all",
-            minHeight: 28,
-            lineHeight: 1.5,
-          }}
-        >
-          {command ? (
-            <HighlightedCode code={command} />
-          ) : (
-            <span style={{ color: colors.textDimmed, fontStyle: "italic" }}>
-              Build a pipeline to see the command here...
-            </span>
-          )}
-        </pre>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button
-            onClick={() => {
-              onStagesChange([]);
-              onSelectedStageIdChange(null);
-            }}
-            disabled={stages.length === 0}
-            style={{
-              background: "transparent",
-              border: `1px solid ${stages.length ? colors.borderMedium : colors.borderDim}`,
-              borderRadius: 4,
-              color: stages.length ? colors.textClear : colors.textMuted,
-              fontFamily: "inherit",
-              fontSize: isMobile ? 14 : fontSizes.base,
-              padding: isMobile ? "10px 16px" : "5px 12px",
-              cursor: stages.length ? "pointer" : "default",
-              whiteSpace: "nowrap",
-              opacity: stages.length ? 1 : 0.5,
-              minHeight: isMobile ? 44 : undefined,
-              flex: isMobile ? 1 : undefined,
-            }}
-          >
-            Reset
-          </button>
-          <button
-            onClick={() => onInsert(command)}
-            disabled={!canInsert}
-            title={errors.length > 0 ? errors.map((e) => `${e.cmdlet}: ${e.paramName} required`).join(", ") : undefined}
-            style={{
-              background: canInsert ? gradients.accent : colors.borderDim,
-              border: "none",
-              borderRadius: 4,
-              color: canInsert ? colors.textWhite : colors.textMuted,
-              fontFamily: "inherit",
-              fontSize: isMobile ? 14 : fontSizes.base,
-              fontWeight: 600,
-              padding: isMobile ? "10px 20px" : "5px 16px",
-              cursor: canInsert ? "pointer" : "default",
-              whiteSpace: "nowrap",
-              opacity: canInsert ? 1 : 0.5,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-              minHeight: isMobile ? 44 : undefined,
-              flex: isMobile ? 1 : undefined,
-            }}
-          >
-            {insertLabel}
-          </button>
+              Reset
+            </button>
+            <button
+              onClick={() => onInsert(command)}
+              disabled={!canInsert}
+              title={errors.length > 0 ? errors.map((e) => `${e.cmdlet}: ${e.paramName} required`).join(", ") : undefined}
+              style={{
+                background: canInsert ? gradients.accent : colors.borderDim,
+                border: "none",
+                borderRadius: 4,
+                color: canInsert ? colors.textWhite : colors.textMuted,
+                fontFamily: "inherit",
+                fontSize: isMobile ? 14 : fontSizes.base,
+                fontWeight: 600,
+                padding: isMobile ? "8px 14px" : "5px 16px",
+                cursor: canInsert ? "pointer" : "default",
+                whiteSpace: "nowrap",
+                opacity: canInsert ? 1 : 0.5,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                minHeight: isMobile ? 44 : undefined,
+                flex: isMobile ? 1 : undefined,
+              }}
+            >
+              {insertLabel}
+            </button>
+          </div>
         </div>
       </div>
     </div>

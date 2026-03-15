@@ -77,7 +77,7 @@ export function PipelineDropZone({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          minHeight: isMobile ? 60 : 64,
+          minHeight: isMobile ? 48 : 64,
           margin: "0 12px",
           border: `2px dashed ${dragOverIndex !== null ? colors.accentPrimary : colors.borderDim}`,
           borderRadius: 8,
@@ -101,12 +101,12 @@ export function PipelineDropZone({
       onDragLeave={handleDragLeave}
       style={{
         display: "flex",
-        flexDirection: isMobile ? "column" : "row",
-        flexWrap: isMobile ? "nowrap" : "wrap",
-        alignItems: isMobile ? "stretch" : "center",
-        gap: isMobile ? 0 : 4,
-        padding: "10px 12px",
-        minHeight: isMobile ? 60 : 64,
+        flexDirection: "row",
+        flexWrap: "wrap",
+        alignItems: "center",
+        gap: 4,
+        padding: isMobile ? "8px 8px" : "10px 12px",
+        minHeight: isMobile ? 48 : 64,
         overflowY: "auto",
       }}
     >
@@ -122,15 +122,15 @@ export function PipelineDropZone({
               display: "flex",
               alignItems: "center",
               gap: 0,
-              flexDirection: isMobile ? "column" : "row",
+              flexDirection: "row",
             }}
           >
             {/* Insertion indicator */}
             {dragOverIndex === idx && (
               <div
                 style={{
-                  width: isMobile ? "100%" : 3,
-                  height: isMobile ? 3 : 40,
+                  width: 3,
+                  height: 40,
                   background: colors.accentPrimary,
                   borderRadius: 2,
                   boxShadow: `0 0 8px ${colors.accentPrimary}`,
@@ -147,7 +147,7 @@ export function PipelineDropZone({
                   fontWeight: 700,
                   fontSize: fontSizes.lg,
                   fontFamily: fonts.mono,
-                  padding: isMobile ? "2px 0" : "0 6px",
+                  padding: "0 6px",
                   userSelect: "none",
                 }}
               >
@@ -172,7 +172,7 @@ export function PipelineDropZone({
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
-                padding: "6px 10px",
+                padding: isMobile ? "4px 8px" : "6px 10px",
                 background: isSelected ? `${stageColor}33` : `${stageColor}18`,
                 border: `1.5px solid ${isSelected ? stageColor : `${stageColor}44`}`,
                 borderRadius: 8,
@@ -219,59 +219,6 @@ export function PipelineDropZone({
                 </button>
               )}
 
-              {/* Mobile reorder buttons */}
-              {isMobile && !stage.locked && (
-                <div style={{ display: "flex", gap: 4, marginLeft: "auto", paddingLeft: 8 }}>
-                  <button
-                    disabled={idx === 0}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onReorderStage(idx, idx - 1);
-                    }}
-                    style={{
-                      background: idx === 0 ? "transparent" : `${stageColor}22`,
-                      border: `1px solid ${idx === 0 ? `${stageColor}22` : `${stageColor}55`}`,
-                      borderRadius: 4,
-                      color: idx === 0 ? colors.textDimmed : stageColor,
-                      cursor: idx === 0 ? "default" : "pointer",
-                      fontSize: 14,
-                      minWidth: 36,
-                      minHeight: 36,
-                      padding: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      touchAction: "manipulation",
-                    }}
-                  >
-                    ▲
-                  </button>
-                  <button
-                    disabled={idx === stages.length - 1}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onReorderStage(idx, idx + 2);
-                    }}
-                    style={{
-                      background: idx === stages.length - 1 ? "transparent" : `${stageColor}22`,
-                      border: `1px solid ${idx === stages.length - 1 ? `${stageColor}22` : `${stageColor}55`}`,
-                      borderRadius: 4,
-                      color: idx === stages.length - 1 ? colors.textDimmed : stageColor,
-                      cursor: idx === stages.length - 1 ? "default" : "pointer",
-                      fontSize: 14,
-                      minWidth: 36,
-                      minHeight: 36,
-                      padding: 0,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      touchAction: "manipulation",
-                    }}
-                  >
-                    ▼
-                  </button>
-                </div>
-              )}
             </div>
           </div>
         );
@@ -281,13 +228,13 @@ export function PipelineDropZone({
       {dragOverIndex !== null && dragOverIndex >= stages.length && (
         <div
           style={{
-            width: isMobile ? "100%" : 3,
-            height: isMobile ? 3 : 40,
+            width: 3,
+            height: 40,
             background: colors.accentPrimary,
             borderRadius: 2,
             boxShadow: `0 0 8px ${colors.accentPrimary}`,
             flexShrink: 0,
-            marginLeft: isMobile ? 0 : 6,
+            marginLeft: 6,
           }}
         />
       )}

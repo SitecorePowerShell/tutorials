@@ -118,6 +118,8 @@ export function BuilderEditor({
   const selectedStage = stages.find((s) => s.id === selectedStageId) ?? null;
   const validationErrors = getValidationErrors(stages);
 
+  const selectedStageIndex = selectedStage ? stages.findIndex((s) => s.id === selectedStage.id) : undefined;
+
   return (
     <div
       style={{
@@ -128,58 +130,73 @@ export function BuilderEditor({
         minHeight: 0,
       }}
     >
-      {/* Cmdlet palette */}
-      <CmdletPalette
-        availableCmdlets={builderConfig?.availableCmdlets}
-        usedCmdlets={usedCmdlets}
-        onAddStage={addStage}
-        isMobile={isMobile}
-      />
-
-      {/* Pipeline drop zone */}
-      <PipelineDropZone
-        stages={stages}
-        selectedStageId={selectedStageId}
-        onSelectStage={setSelectedStageId}
-        onInsertStage={insertStage}
-        onRemoveStage={removeStage}
-        onReorderStage={reorderStage}
-        isMobile={isMobile}
-      />
-
-      {/* Parameter panel */}
-      <ParamPanel
-        stage={selectedStage}
-        onUpdateParams={updateParams}
-        onUpdateSwitches={updateSwitches}
-        isMobile={isMobile}
-      />
-
-      {/* Command preview + run */}
-      <CommandPreview
-        command={code}
-        onRun={onRun}
-        onClear={onClear}
-        validationErrors={validationErrors}
-        isMobile={isMobile}
-      />
-
-      {/* Output */}
+      {/* Scrollable content area */}
       <div
         style={{
           flex: 1,
           overflow: "auto",
-          padding: "16px 20px",
-          background: colors.bgDeep,
-          borderTop: `1px solid ${colors.borderBase}`,
-          fontFamily: fonts.mono,
-          fontSize: fontSizes.body,
-          lineHeight: 1.6,
-          minHeight: 60,
+          minHeight: 0,
         }}
       >
-        <OutputPane entries={consoleOutput} isISE={false} isBuilder={true} endRef={consoleEndRef} />
-        <div ref={consoleEndRef} />
+        {/* Cmdlet palette */}
+        <CmdletPalette
+          availableCmdlets={builderConfig?.availableCmdlets}
+          usedCmdlets={usedCmdlets}
+          onAddStage={addStage}
+          isMobile={isMobile}
+        />
+
+        {/* Pipeline drop zone */}
+        <PipelineDropZone
+          stages={stages}
+          selectedStageId={selectedStageId}
+          onSelectStage={setSelectedStageId}
+          onInsertStage={insertStage}
+          onRemoveStage={removeStage}
+          onReorderStage={reorderStage}
+          isMobile={isMobile}
+        />
+
+        {/* Parameter panel */}
+        <ParamPanel
+          stage={selectedStage}
+          onUpdateParams={updateParams}
+          onUpdateSwitches={updateSwitches}
+          isMobile={isMobile}
+          collapsible={isMobile}
+          stageIndex={selectedStageIndex}
+          stageCount={stages.length}
+          onReorderStage={isMobile ? reorderStage : undefined}
+        />
+
+        {/* Output */}
+        <div
+          style={{
+            flex: 1,
+            overflow: "auto",
+            padding: isMobile ? "10px 12px" : "16px 20px",
+            background: colors.bgDeep,
+            borderTop: `1px solid ${colors.borderBase}`,
+            fontFamily: fonts.mono,
+            fontSize: fontSizes.body,
+            lineHeight: 1.6,
+            minHeight: 60,
+          }}
+        >
+          <OutputPane entries={consoleOutput} isISE={false} isBuilder={true} endRef={consoleEndRef} />
+          <div ref={consoleEndRef} />
+        </div>
+      </div>
+
+      {/* Command preview + run (sticky at bottom) */}
+      <div style={{ flexShrink: 0 }}>
+        <CommandPreview
+          command={code}
+          onRun={onRun}
+          onClear={onClear}
+          validationErrors={validationErrors}
+          isMobile={isMobile}
+        />
       </div>
     </div>
   );

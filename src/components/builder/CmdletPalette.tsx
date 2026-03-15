@@ -16,26 +16,34 @@ export function CmdletPalette({ availableCmdlets, usedCmdlets, onAddStage, isMob
     <div
       style={{
         display: "flex",
-        flexWrap: "wrap",
-        gap: 8,
-        padding: "10px 12px",
+        flexWrap: isMobile ? "nowrap" : "wrap",
+        gap: isMobile ? 6 : 8,
+        padding: isMobile ? "8px 10px" : "10px 12px",
         background: colors.bgPanel,
         borderBottom: `1px solid ${colors.borderBase}`,
-        minHeight: 44,
+        minHeight: isMobile ? 38 : 44,
         alignItems: "center",
+        ...(isMobile ? {
+          overflowX: "auto" as const,
+          WebkitOverflowScrolling: "touch" as const,
+          scrollbarWidth: "none" as const,
+          msOverflowStyle: "none" as const,
+        } : {}),
       }}
     >
-      <span
-        style={{
-          fontSize: fontSizes.xs,
-          color: colors.textMuted,
-          fontFamily: fonts.sans,
-          marginRight: 4,
-          whiteSpace: "nowrap",
-        }}
-      >
-        Cmdlets:
-      </span>
+      {!isMobile && (
+        <span
+          style={{
+            fontSize: fontSizes.xs,
+            color: colors.textMuted,
+            fontFamily: fonts.sans,
+            marginRight: 4,
+            whiteSpace: "nowrap",
+          }}
+        >
+          Cmdlets:
+        </span>
+      )}
       {cmdlets.map((name) => {
         const def = CMDLET_REGISTRY[name];
         const clr = getCmdletColor(def);
@@ -55,7 +63,7 @@ export function CmdletPalette({ availableCmdlets, usedCmdlets, onAddStage, isMob
               display: "inline-flex",
               alignItems: "center",
               gap: 4,
-              padding: "4px 10px",
+              padding: isMobile ? "3px 8px" : "4px 10px",
               background: isUsed ? `${clr}0a` : `${clr}22`,
               border: `1px solid ${isUsed ? `${clr}22` : `${clr}55`}`,
               borderRadius: 16,
