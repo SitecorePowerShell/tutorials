@@ -307,20 +307,29 @@ export function executeCommandWithContext(
     }
   );
 
-  // Expand $() subexpressions in double-quoted strings
+  // Expand $() subexpressions in double-quoted strings, but skip those
+  // containing $_ references (they must be resolved later inside pipeline blocks)
   expanded = expanded.replace(/"([^"]*\$\([^)]+\)[^"]*)"/g, (match) => {
+    if (/\$_/.test(match)) return match;
     const inner = match.slice(1, -1);
-    const interpolated = inner.replace(/\$\(([^)]+)\)/g, (_, subExpr) => {
-      const subResult = executeCommandWithContext(subExpr, ctx, tree);
-      if (subResult.pipelineData) {
-        if (Array.isArray(subResult.pipelineData)) {
-          return String(
-            (subResult.pipelineData as SitecoreItem[]).length
-          );
+    const interpolated = inner.replace(/\$\(([^)]+)\)/g, (_, subExpr: string) => {
+      const trimSub = subExpr.trim();
+      // If it looks like a command (contains Verb-Noun or alias), execute as pipeline
+      if (looksLikeCommand(trimSub)) {
+        const subResult = executeCommandWithContext(subExpr, ctx, tree);
+        if (subResult.pipelineData) {
+          if (Array.isArray(subResult.pipelineData)) {
+            return String(
+              (subResult.pipelineData as SitecoreItem[]).length
+            );
+          }
+          return String(subResult.pipelineData);
         }
-        return String(subResult.pipelineData);
+        return subResult.output || "";
       }
-      return subResult.output || "";
+      // Otherwise evaluate as expression (variable access, literals, operators)
+      const val = evaluateExpression(trimSub, ctx);
+      return val !== undefined && val !== null ? String(val) : "";
     });
     return `"${interpolated}"`;
   });

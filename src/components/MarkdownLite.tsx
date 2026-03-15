@@ -1,3 +1,4 @@
+import type React from "react";
 import type { ReactElement } from "react";
 import { colors, fonts, fontSizes } from "../theme";
 
@@ -60,19 +61,92 @@ function renderCallout(lines: string[], key: number): ReactElement {
   );
 }
 
-/** Very simple markdown: **bold**, `code`, ```blocks```, bullet lists, > callouts */
+function parseTableRow(line: string): string[] {
+  return line.split("|").slice(1, -1).map((c) => c.trim());
+}
+
+function isSeparatorRow(line: string): boolean {
+  return /^\|[\s:*-]+(\|[\s:*-]+)+\|?\s*$/.test(line);
+}
+
+function renderTable(rows: string[], keyBase: number): ReactElement {
+  const headerCells = parseTableRow(rows[0]);
+  const hasSeparator = rows.length > 1 && isSeparatorRow(rows[1]);
+  const bodyStart = hasSeparator ? 2 : 1;
+
+  const cellStyle: React.CSSProperties = {
+    padding: "4px 10px",
+    borderBottom: `1px solid ${colors.borderLight}`,
+    fontSize: fontSizes.sm,
+    lineHeight: 1.5,
+  };
+
+  return (
+    <div key={keyBase} style={{ overflowX: "auto", margin: "8px 0" }}>
+      <table
+        style={{
+          borderCollapse: "collapse",
+          width: "100%",
+          fontFamily: fonts.sans,
+          fontSize: fontSizes.sm,
+        }}
+      >
+        <thead>
+          <tr>
+            {headerCells.map((cell, i) => (
+              <th
+                key={i}
+                style={{
+                  ...cellStyle,
+                  fontWeight: 600,
+                  textAlign: "left",
+                  color: colors.textSecondary,
+                  borderBottom: `2px solid ${colors.borderMedium}`,
+                }}
+                dangerouslySetInnerHTML={{ __html: processInline(cell) }}
+              />
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.slice(bodyStart).map((row, ri) => (
+            <tr key={ri}>
+              {parseTableRow(row).map((cell, ci) => (
+                <td
+                  key={ci}
+                  style={cellStyle}
+                  dangerouslySetInnerHTML={{ __html: processInline(cell) }}
+                />
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** Very simple markdown: **bold**, `code`, ```blocks```, bullet lists, > callouts, tables */
 export function MarkdownLite({ text }: { text: string }) {
   const lines = text.split("\n");
   const elements: ReactElement[] = [];
   let inCodeBlock = false;
   let codeBuffer: string[] = [];
   let quoteBuffer: string[] = [];
+  let tableBuffer: string[] = [];
   let key = 0;
 
   const flushQuote = () => {
     if (quoteBuffer.length > 0) {
       elements.push(renderCallout(quoteBuffer, key++));
       quoteBuffer = [];
+    }
+  };
+
+  const flushTable = () => {
+    if (tableBuffer.length > 0) {
+      elements.push(renderTable(tableBuffer, key++));
+      tableBuffer = [];
     }
   };
 
@@ -125,6 +199,13 @@ export function MarkdownLite({ text }: { text: string }) {
     // Non-quote line — flush any accumulated quote
     flushQuote();
 
+    // Table lines (start with |)
+    if (line.trimStart().startsWith("|")) {
+      tableBuffer.push(line.trim());
+      continue;
+    }
+    flushTable();
+
     if (line.trim() === "") {
       elements.push(<div key={key++} style={{ height: 8 }} />);
       continue;
@@ -162,8 +243,9 @@ export function MarkdownLite({ text }: { text: string }) {
     }
   }
 
-  // Flush trailing quote block
+  // Flush trailing blocks
   flushQuote();
+  flushTable();
 
   return <div>{elements}</div>;
 }

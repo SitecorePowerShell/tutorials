@@ -1,5 +1,6 @@
 import type { ConsoleEntry } from "../types";
 import { HighlightedCode } from "./HighlightedCode";
+import { MarkdownLite } from "./MarkdownLite";
 import { colors, fontSizes } from "../theme";
 
 interface OutputPaneProps {
@@ -80,7 +81,7 @@ export function OutputPane({ entries, isISE, isBuilder, endRef }: OutputPaneProp
                 borderLeft: `3px solid ${colors.statusSuccess}`,
               }}
             >
-              {entry.text}
+              <MarkdownLite text={entry.text} />
             </div>
           )}
           {entry.type === "hint" && (

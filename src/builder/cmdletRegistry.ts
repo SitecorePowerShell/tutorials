@@ -155,6 +155,14 @@ export const COMMON_PROPERTIES = [
   "Version",
 ];
 
+export const FOREACH_OPERATORS = [
+  "-replace",
+  "-split",
+  "-join",
+  "-match",
+  "-like",
+];
+
 export const FILTER_OPERATORS = [
   "-eq",
   "-ne",

@@ -1,17 +1,30 @@
 import type React from "react";
 import { colors, fonts, fontSizes } from "../theme";
+import { ALL_CMDLET_NAMES } from "../builder/cmdletRegistry";
 
 export interface Token {
   type: string;
   text: string;
 }
 
+/** All cmdlets recognized for syntax highlighting — registry + executor-only commands */
+const EXTRA_CMDLETS = [
+  "Set-Location", "Get-Location", "Show-Alert", "Read-Variable", "Close-Window",
+  "Write-Host", "Write-Output", "Set-ItemProperty", "Format-Table", "ConvertTo-Json",
+  "Get-Alias", "Get-Help", "Get-Command", "Export-Csv", "ConvertFrom-Json",
+  "Out-String", "Test-Path", "Import-Csv", "Add-Member", "New-Object", "Set-Item",
+];
+const allCmdlets = [...new Set([...ALL_CMDLET_NAMES, ...EXTRA_CMDLETS])];
+const cmdletPattern = allCmdlets.map((c) => c.replace("-", "\\-")).join("|");
+
 /** Tokenize PowerShell code into typed spans for syntax highlighting */
 export function tokenize(code: string): Token[] {
   const tokens: Token[] = [];
   // Order matters: comments first (greedy line), then strings, then other patterns
-  const pattern =
-    /(#[^\n]*)|(["'][^"']*["'])|(\b(?:Get-Item|Get-ChildItem|Where-Object|Select-Object|Sort-Object|Measure-Object|Get-Member|ForEach-Object|New-Item|Remove-Item|Move-Item|Copy-Item|Set-Item|Get-Help|Get-Command|Set-Location|Write-Host|Write-Output|Export-Csv|ConvertTo-Json|ConvertFrom-Json|Out-String|Group-Object|Rename-Item|Test-Path|Import-Csv|Add-Member|New-Object)\b)|(\$[\w]+(?:\.[\w]+)*)|(\s-(?:eq|ne|lt|le|gt|ge|like|notlike|match|notmatch|contains|notcontains|in|notin|replace|split|join|and|or|not|band|bor|bnot|is|isnot|as|f)\b)|(\s-\w+)|(\[(?:DateTime|Math|guid|Guid|string|String|int|Int32|double|Double|bool|Boolean|array|Array|timespan|TimeSpan|regex|Regex|xml|convert|Convert|Environment|IO\.Path|System\.\w+)\])|(\b\d+\.?\d*\b)|(\|)|([{}])/gi;
+  const pattern = new RegExp(
+    `(#[^\\n]*)|(["'][^"']*["'])|(\\b(?:${cmdletPattern})\\b)|(\\$[\\w]+(?:\\.[\\w]+)*)|(\\s-(?:eq|ne|lt|le|gt|ge|like|notlike|match|notmatch|contains|notcontains|in|notin|replace|split|join|and|or|not|band|bor|bnot|is|isnot|as|f)\\b)|(\\s-\\w+)|(\\[(?:DateTime|Math|guid|Guid|string|String|int|Int32|double|Double|bool|Boolean|array|Array|timespan|TimeSpan|regex|Regex|xml|convert|Convert|Environment|IO\\.Path|System\\.\\w+)\\])|(\\b\\d+\\.?\\d*\\b)|(\\|)|([{}])`,
+    "gi"
+  );
 
   let lastIndex = 0;
   let match;

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import type { PipelineStage } from "../../builder/assembleCommand";
-import { CMDLET_REGISTRY, COMMON_PROPERTIES, FILTER_OPERATORS, CRITERIA_FILTER_TYPES, INDEX_FIELDS, getCmdletColor } from "../../builder/cmdletRegistry";
+import { CMDLET_REGISTRY, COMMON_PROPERTIES, FILTER_OPERATORS, FOREACH_OPERATORS, CRITERIA_FILTER_TYPES, INDEX_FIELDS, getCmdletColor } from "../../builder/cmdletRegistry";
 import { colors, fonts, fontSizes } from "../../theme";
 
 interface ParamPanelProps {
@@ -10,11 +10,26 @@ interface ParamPanelProps {
   isMobile?: boolean;
 }
 
+interface WhereConditionRow {
+  property: string;
+  operator: string;
+  value: string;
+}
+
+type ForEachOpType = "property" | "interpolation" | "operator" | "writehost";
+
 export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile }: ParamPanelProps) {
-  const [filterProperty, setFilterProperty] = useState("");
-  const [filterOperator, setFilterOperator] = useState("-eq");
-  const [filterValue, setFilterValue] = useState("");
+  // Where-Object multi-row state
+  const [whereRows, setWhereRows] = useState<WhereConditionRow[]>([{ property: "", operator: "-eq", value: "" }]);
+  const [whereJoinOperator, setWhereJoinOperator] = useState<"-and" | "-or">("-and");
   const [useStructured, setUseStructured] = useState(true);
+
+  // ForEach-Object structured state
+  const [foreachOpType, setForeachOpType] = useState<ForEachOpType>("property");
+  const [foreachProperty, setForeachProperty] = useState("");
+  const [foreachTemplate, setForeachTemplate] = useState("");
+  const [foreachOperator, setForeachOperator] = useState("-replace");
+  const [foreachOperatorArgs, setForeachOperatorArgs] = useState("");
 
   // Criteria builder state for Find-Item
   interface CriterionRow {
@@ -25,12 +40,16 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile }
   }
   const [criteriaRows, setCriteriaRows] = useState<CriterionRow[]>([{ Filter: "Equals", Field: "_templatename", Value: "", Invert: false }]);
 
-  // Reset structured filter state when selected stage changes
+  // Reset all structured state when selected stage changes
   useEffect(() => {
-    setFilterProperty("");
-    setFilterOperator("-eq");
-    setFilterValue("");
+    setWhereRows([{ property: "", operator: "-eq", value: "" }]);
+    setWhereJoinOperator("-and");
     setUseStructured(true);
+    setForeachOpType("property");
+    setForeachProperty("");
+    setForeachTemplate("");
+    setForeachOperator("-replace");
+    setForeachOperatorArgs("");
     // Parse existing criteria from stage params if present
     if (stage?.params.Criteria) {
       try {
@@ -98,23 +117,107 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile }
     display: "block",
   };
 
+  const switchToFreeTextButton = (
+    <button
+      onClick={() => setUseStructured(false)}
+      style={{
+        background: "none",
+        border: "none",
+        color: colors.accentLink,
+        fontSize: fontSizes.xs,
+        cursor: "pointer",
+        padding: "4px 0 0 0",
+        fontFamily: fonts.sans,
+      }}
+    >
+      Switch to free-text
+    </button>
+  );
+
+  const switchToStructuredButton = (paramName: string) => (
+    <button
+      onClick={() => setUseStructured(true)}
+      style={{
+        background: "none",
+        border: "none",
+        color: colors.accentLink,
+        fontSize: fontSizes.xs,
+        cursor: "pointer",
+        padding: "4px 0 0 0",
+        fontFamily: fonts.sans,
+      }}
+    >
+      Switch to structured
+    </button>
+  );
+
   const handleParamChange = (paramName: string, value: string) => {
     onUpdateParams(stage.id, { ...stage.params, [paramName]: value });
   };
 
-  const handleStructuredFilterChange = (prop: string, op: string, val: string) => {
-    setFilterProperty(prop);
-    setFilterOperator(op);
-    setFilterValue(val);
-    if (prop && val) {
-      const assembled = `{ $_.${prop} ${op} "${val}" }`;
-      onUpdateParams(stage.id, { ...stage.params, FilterScript: assembled });
-    } else if (prop) {
-      const assembled = `{ $_.${prop} ${op} "${val}" }`;
+  // --- Where-Object multi-row helpers ---
+
+  const assembleWhereFilter = (rows: WhereConditionRow[], joinOp: string) => {
+    const conditions = rows
+      .filter((r) => r.property)
+      .map((r) => `$_.${r.property} ${r.operator} "${r.value}"`);
+    if (conditions.length === 0) return "";
+    return `{ ${conditions.join(` ${joinOp} `)} }`;
+  };
+
+  const updateWhereRows = (newRows: WhereConditionRow[], joinOp?: string) => {
+    setWhereRows(newRows);
+    const op = joinOp ?? whereJoinOperator;
+    const assembled = assembleWhereFilter(newRows, op);
+    if (assembled) {
       onUpdateParams(stage.id, { ...stage.params, FilterScript: assembled });
     }
   };
 
+  const handleWhereRowChange = (index: number, field: keyof WhereConditionRow, value: string) => {
+    const newRows = whereRows.map((row, i) => i === index ? { ...row, [field]: value } : row);
+    updateWhereRows(newRows);
+  };
+
+  const addWhereRow = () => {
+    updateWhereRows([...whereRows, { property: "", operator: "-eq", value: "" }]);
+  };
+
+  const removeWhereRow = (index: number) => {
+    if (whereRows.length <= 1) return;
+    const newRows = whereRows.filter((_, i) => i !== index);
+    updateWhereRows(newRows);
+  };
+
+  const handleJoinOperatorChange = (joinOp: "-and" | "-or") => {
+    setWhereJoinOperator(joinOp);
+    updateWhereRows(whereRows, joinOp);
+  };
+
+  // --- ForEach-Object structured helpers ---
+
+  const assembleForEachExpression = (opType: ForEachOpType, prop: string, template: string, op: string, args: string) => {
+    if (!prop) return "";
+    switch (opType) {
+      case "property":
+        return `{ $_.${prop} }`;
+      case "interpolation":
+        return `{ "${template}$($_.${prop})" }`;
+      case "operator":
+        return args ? `{ $_.${prop} ${op} ${args} }` : `{ $_.${prop} ${op} }`;
+      case "writehost":
+        return `{ Write-Host $_.${prop} }`;
+    }
+  };
+
+  const updateForEachParam = (opType: ForEachOpType, prop: string, template: string, op: string, args: string) => {
+    const assembled = assembleForEachExpression(opType, prop, template, op, args);
+    if (assembled) {
+      onUpdateParams(stage.id, { ...stage.params, Process: assembled });
+    }
+  };
+
+  // Criteria builder helpers
   const updateCriteriaParam = (rows: CriterionRow[]) => {
     setCriteriaRows(rows);
     const json = JSON.stringify(rows.map((r) => ({
@@ -146,6 +249,255 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile }
       ? stage.switches.filter((s) => s !== sw)
       : [...stage.switches, sw];
     onUpdateSwitches(stage.id, newSwitches);
+  };
+
+  // --- Render helpers ---
+
+  const renderWhereStructured = (paramDef: { name: string; required?: boolean }) => (
+    <div key={paramDef.name}>
+      <label style={labelStyle}>
+        {paramDef.name} {paramDef.required && <span style={{ color: colors.statusError }}>*</span>}
+      </label>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {whereRows.map((row, idx) => (
+          <div key={idx}>
+            <div
+              style={{
+                display: "flex",
+                gap: 6,
+                flexWrap: isMobile ? "wrap" : "nowrap",
+                alignItems: "center",
+              }}
+            >
+              <select
+                aria-label="Filter property"
+                value={row.property}
+                onChange={(e) => handleWhereRowChange(idx, "property", e.target.value)}
+                disabled={stage.locked}
+                style={selectStyle}
+              >
+                <option value="">Property...</option>
+                {COMMON_PROPERTIES.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+              <select
+                aria-label="Filter operator"
+                value={row.operator}
+                onChange={(e) => handleWhereRowChange(idx, "operator", e.target.value)}
+                disabled={stage.locked}
+                style={selectStyle}
+              >
+                {FILTER_OPERATORS.map((op) => (
+                  <option key={op} value={op}>{op}</option>
+                ))}
+              </select>
+              <input
+                type="text"
+                aria-label="Filter value"
+                value={row.value}
+                onChange={(e) => handleWhereRowChange(idx, "value", e.target.value)}
+                disabled={stage.locked}
+                placeholder="Value"
+                style={{ ...inputStyle, flex: 1, minWidth: 80 }}
+              />
+              {whereRows.length > 1 && !stage.locked && (
+                <button
+                  onClick={() => removeWhereRow(idx)}
+                  aria-label="Remove condition"
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: colors.statusError,
+                    fontSize: fontSizes.sm,
+                    cursor: "pointer",
+                    padding: "0 2px",
+                    lineHeight: 1,
+                  }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            {idx < whereRows.length - 1 && (
+              <div style={{ display: "flex", justifyContent: "center", padding: "4px 0" }}>
+                <div
+                  style={{
+                    display: "inline-flex",
+                    borderRadius: 4,
+                    overflow: "hidden",
+                    border: `1px solid ${colors.borderMedium}`,
+                  }}
+                >
+                  {(["-and", "-or"] as const).map((op) => (
+                    <button
+                      key={op}
+                      onClick={() => handleJoinOperatorChange(op)}
+                      disabled={stage.locked}
+                      aria-label={`Join with ${op}`}
+                      style={{
+                        background: whereJoinOperator === op ? colors.accentLink : colors.bgDeep,
+                        color: whereJoinOperator === op ? "#fff" : colors.textMuted,
+                        border: "none",
+                        padding: "2px 10px",
+                        fontSize: fontSizes.xs,
+                        fontFamily: fonts.mono,
+                        cursor: stage.locked ? "default" : "pointer",
+                        fontWeight: whereJoinOperator === op ? 600 : 400,
+                      }}
+                    >
+                      {op}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      {!stage.locked && (
+        <button
+          onClick={addWhereRow}
+          style={{
+            background: "none",
+            border: `1px dashed ${colors.borderMedium}`,
+            borderRadius: 4,
+            color: colors.accentLink,
+            fontSize: fontSizes.xs,
+            cursor: "pointer",
+            padding: "4px 10px",
+            fontFamily: fonts.sans,
+            marginTop: 4,
+          }}
+        >
+          + Add Condition
+        </button>
+      )}
+      {switchToFreeTextButton}
+    </div>
+  );
+
+  const renderForEachStructured = (paramDef: { name: string; required?: boolean }) => {
+    const preview = assembleForEachExpression(foreachOpType, foreachProperty || "Name", foreachTemplate, foreachOperator, foreachOperatorArgs) || "{ $_.Name }";
+
+    return (
+      <div key={paramDef.name}>
+        <label style={labelStyle}>
+          {paramDef.name} {paramDef.required && <span style={{ color: colors.statusError }}>*</span>}
+        </label>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 6,
+              flexWrap: isMobile ? "wrap" : "nowrap",
+              alignItems: "center",
+            }}
+          >
+            <select
+              aria-label="ForEach operation type"
+              value={foreachOpType}
+              onChange={(e) => {
+                const newType = e.target.value as ForEachOpType;
+                setForeachOpType(newType);
+                updateForEachParam(newType, foreachProperty, foreachTemplate, foreachOperator, foreachOperatorArgs);
+              }}
+              disabled={stage.locked}
+              style={selectStyle}
+            >
+              <option value="property">Property access</option>
+              <option value="interpolation">String interpolation</option>
+              <option value="operator">Operator expression</option>
+              <option value="writehost">Write-Host</option>
+            </select>
+            <select
+              aria-label="ForEach property"
+              value={foreachProperty}
+              onChange={(e) => {
+                const val = e.target.value;
+                setForeachProperty(val);
+                updateForEachParam(foreachOpType, val, foreachTemplate, foreachOperator, foreachOperatorArgs);
+              }}
+              disabled={stage.locked}
+              style={selectStyle}
+            >
+              <option value="">Property...</option>
+              {COMMON_PROPERTIES.map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+
+            {/* Interpolation: prefix/suffix template input */}
+            {foreachOpType === "interpolation" && (
+              <input
+                type="text"
+                aria-label="String template"
+                value={foreachTemplate}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setForeachTemplate(val);
+                  updateForEachParam(foreachOpType, foreachProperty, val, foreachOperator, foreachOperatorArgs);
+                }}
+                disabled={stage.locked}
+                placeholder="prefix text"
+                style={{ ...inputStyle, flex: 1, minWidth: 80 }}
+              />
+            )}
+
+            {/* Operator: operator dropdown + args */}
+            {foreachOpType === "operator" && (
+              <>
+                <select
+                  aria-label="ForEach operator"
+                  value={foreachOperator}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setForeachOperator(val);
+                    updateForEachParam(foreachOpType, foreachProperty, foreachTemplate, val, foreachOperatorArgs);
+                  }}
+                  disabled={stage.locked}
+                  style={selectStyle}
+                >
+                  {FOREACH_OPERATORS.map((op) => (
+                    <option key={op} value={op}>{op}</option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  aria-label="Operator arguments"
+                  value={foreachOperatorArgs}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setForeachOperatorArgs(val);
+                    updateForEachParam(foreachOpType, foreachProperty, foreachTemplate, foreachOperator, val);
+                  }}
+                  disabled={stage.locked}
+                  placeholder={'"old","new"'}
+                  style={{ ...inputStyle, flex: 1, minWidth: 80 }}
+                />
+              </>
+            )}
+          </div>
+
+          {/* Preview */}
+          <div
+            style={{
+              fontSize: fontSizes.xs,
+              fontFamily: fonts.mono,
+              color: colors.textMuted,
+              padding: "4px 8px",
+              background: colors.bgDeep,
+              borderRadius: 4,
+              border: `1px solid ${colors.borderLight}`,
+            }}
+          >
+            <span style={{ color: colors.textSecondary }}>Preview: </span>
+            {preview}
+          </div>
+        </div>
+        {switchToFreeTextButton}
+      </div>
+    );
   };
 
   return (
@@ -182,6 +534,7 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile }
       {def.params.map((paramDef) => {
         const isExpression = paramDef.type === "expression";
         const isFilterScript = paramDef.name === "FilterScript";
+        const isProcess = paramDef.name === "Process";
 
         if (paramDef.type === "criteriaList") {
           return (
@@ -316,69 +669,105 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile }
           );
         }
 
+        // Where-Object structured editor
         if (isExpression && isFilterScript && useStructured) {
+          return renderWhereStructured(paramDef);
+        }
+
+        // ForEach-Object structured editor
+        if (isExpression && isProcess && useStructured) {
+          return renderForEachStructured(paramDef);
+        }
+
+        // Group First + Last on one row for Select-Object
+        if (paramDef.name === "First" && def.params.some((p) => p.name === "Last")) {
+          const lastDef = def.params.find((p) => p.name === "Last")!;
           return (
-            <div key={paramDef.name}>
-              <label style={labelStyle}>
-                {paramDef.name} {paramDef.required && <span style={{ color: colors.statusError }}>*</span>}
-              </label>
-              <div
-                style={{
-                  display: "flex",
-                  gap: 6,
-                  flexWrap: isMobile ? "wrap" : "nowrap",
-                  alignItems: "center",
-                }}
-              >
-                <select
-                  aria-label="Filter property"
-                  value={filterProperty}
-                  onChange={(e) => handleStructuredFilterChange(e.target.value, filterOperator, filterValue)}
-                  disabled={stage.locked}
-                  style={selectStyle}
-                >
-                  <option value="">Property...</option>
-                  {COMMON_PROPERTIES.map((p) => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
-                <select
-                  aria-label="Filter operator"
-                  value={filterOperator}
-                  onChange={(e) => handleStructuredFilterChange(filterProperty, e.target.value, filterValue)}
-                  disabled={stage.locked}
-                  style={selectStyle}
-                >
-                  {FILTER_OPERATORS.map((op) => (
-                    <option key={op} value={op}>{op}</option>
-                  ))}
-                </select>
+            <div key="First-Last" style={{ display: "flex", gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>First</label>
                 <input
                   type="text"
-                  aria-label="Filter value"
-                  value={filterValue}
-                  onChange={(e) => handleStructuredFilterChange(filterProperty, filterOperator, e.target.value)}
+                  aria-label="First"
+                  value={stage.params.First ?? ""}
+                  onChange={(e) => handleParamChange("First", e.target.value)}
                   disabled={stage.locked}
-                  placeholder="Value"
-                  style={{ ...inputStyle, flex: 1 }}
+                  placeholder={paramDef.placeholder}
+                  style={inputStyle}
                 />
               </div>
-              <button
-                onClick={() => setUseStructured(false)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: colors.accentLink,
-                  fontSize: fontSizes.xs,
-                  cursor: "pointer",
-                  padding: "4px 0 0 0",
-                  fontFamily: fonts.sans,
-                }}
-              >
-                Switch to free-text
-              </button>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>Last</label>
+                <input
+                  type="text"
+                  aria-label="Last"
+                  value={stage.params.Last ?? ""}
+                  onChange={(e) => handleParamChange("Last", e.target.value)}
+                  disabled={stage.locked}
+                  placeholder={lastDef.placeholder}
+                  style={inputStyle}
+                />
+              </div>
             </div>
           );
+        }
+        // Skip standalone Last if already rendered with First
+        if (paramDef.name === "Last" && def.params.some((p) => p.name === "First")) {
+          return null;
+        }
+
+        // Group OrderBy + First + Skip on one row for Find-Item
+        if (paramDef.name === "OrderBy" && def.params.some((p) => p.name === "Skip")) {
+          const firstDef = def.params.find((p) => p.name === "First");
+          const skipDef = def.params.find((p) => p.name === "Skip");
+          return (
+            <div key="OrderBy-First-Skip" style={{ display: "flex", gap: 10 }}>
+              <div style={{ flex: 2 }}>
+                <label style={labelStyle}>OrderBy</label>
+                <input
+                  type="text"
+                  aria-label="OrderBy"
+                  value={stage.params.OrderBy ?? ""}
+                  onChange={(e) => handleParamChange("OrderBy", e.target.value)}
+                  disabled={stage.locked}
+                  placeholder={paramDef.placeholder}
+                  style={inputStyle}
+                />
+              </div>
+              {firstDef && (
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>First</label>
+                  <input
+                    type="text"
+                    aria-label="First"
+                    value={stage.params.First ?? ""}
+                    onChange={(e) => handleParamChange("First", e.target.value)}
+                    disabled={stage.locked}
+                    placeholder={firstDef.placeholder}
+                    style={inputStyle}
+                  />
+                </div>
+              )}
+              {skipDef && (
+                <div style={{ flex: 1 }}>
+                  <label style={labelStyle}>Skip</label>
+                  <input
+                    type="text"
+                    aria-label="Skip"
+                    value={stage.params.Skip ?? ""}
+                    onChange={(e) => handleParamChange("Skip", e.target.value)}
+                    disabled={stage.locked}
+                    placeholder={skipDef.placeholder}
+                    style={inputStyle}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        }
+        // Skip standalone First/Skip if already rendered with OrderBy
+        if ((paramDef.name === "First" || paramDef.name === "Skip") && def.params.some((p) => p.name === "OrderBy")) {
+          return null;
         }
 
         return (
@@ -398,22 +787,7 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile }
               placeholder={paramDef.placeholder}
               style={inputStyle}
             />
-            {isExpression && isFilterScript && !useStructured && (
-              <button
-                onClick={() => setUseStructured(true)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: colors.accentLink,
-                  fontSize: fontSizes.xs,
-                  cursor: "pointer",
-                  padding: "4px 0 0 0",
-                  fontFamily: fonts.sans,
-                }}
-              >
-                Switch to structured
-              </button>
-            )}
+            {isExpression && (isFilterScript || isProcess) && !useStructured && switchToStructuredButton(paramDef.name)}
           </div>
         );
       })}

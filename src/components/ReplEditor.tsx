@@ -88,7 +88,14 @@ export function ReplEditor({
   }, [consoleOutput]);
 
   useEffect(() => {
-    inputRef.current?.focus({ preventScroll: true });
+    const input = inputRef.current;
+    if (input) {
+      input.focus({ preventScroll: true });
+      if (code) {
+        input.selectionStart = input.selectionEnd = code.length;
+        setCursorPos(code.length);
+      }
+    }
   }, []);
 
   // Focus search input when search activates
