@@ -8,6 +8,10 @@ interface ParamPanelProps {
   onUpdateParams: (stageId: string, params: Record<string, string>) => void;
   onUpdateSwitches: (stageId: string, switches: string[]) => void;
   isMobile?: boolean;
+  collapsible?: boolean;
+  stageIndex?: number;
+  stageCount?: number;
+  onReorderStage?: (fromIndex: number, toIndex: number) => void;
 }
 
 interface WhereConditionRow {
@@ -18,7 +22,8 @@ interface WhereConditionRow {
 
 type ForEachOpType = "property" | "interpolation" | "operator" | "writehost";
 
-export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile }: ParamPanelProps) {
+export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile, collapsible, stageIndex, stageCount, onReorderStage }: ParamPanelProps) {
+  const [expanded, setExpanded] = useState(true);
   // Where-Object multi-row state
   const [whereRows, setWhereRows] = useState<WhereConditionRow[]>([{ property: "", operator: "-eq", value: "" }]);
   const [whereJoinOperator, setWhereJoinOperator] = useState<"-and" | "-or">("-and");
@@ -126,7 +131,13 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile }
     setCriteriaRows([{ Filter: "Equals", Field: "_templatename", Value: "", Invert: false }]);
   }, [stage?.id]);
 
+  // Auto-expand when a new stage is selected
+  useEffect(() => {
+    if (stage && collapsible) setExpanded(true);
+  }, [stage?.id, collapsible]);
+
   if (!stage) {
+    if (collapsible) return null;
     return (
       <div
         style={{
@@ -558,26 +569,32 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile }
     );
   };
 
+  const stageColor = getCmdletColor(def);
+
   return (
     <div
       style={{
-        padding: "10px 12px",
+        padding: collapsible ? "0" : "10px 12px",
         borderTop: `1px solid ${colors.borderBase}`,
         background: colors.bgPanel,
         display: "flex",
         flexDirection: "column",
-        gap: 10,
+        gap: expanded ? 10 : 0,
       }}
     >
       <div
+        onClick={collapsible ? () => setExpanded((v) => !v) : undefined}
         style={{
           fontSize: fontSizes.sm,
           fontFamily: fonts.sans,
-          color: getCmdletColor(def),
+          color: stageColor,
           fontWeight: 600,
           display: "flex",
           alignItems: "center",
           gap: 6,
+          cursor: collapsible ? "pointer" : undefined,
+          padding: collapsible ? "8px 10px" : undefined,
+          userSelect: collapsible ? "none" : undefined,
         }}
       >
         <span>{def.icon}</span>
@@ -587,8 +604,61 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile }
             (locked)
           </span>
         )}
+        {collapsible && (
+          <span style={{ fontSize: 10, marginLeft: 2, color: colors.textMuted }}>
+            {expanded ? "▼" : "▶"}
+          </span>
+        )}
+        {/* Mobile reorder controls in header */}
+        {collapsible && onReorderStage && stageIndex != null && stageCount != null && !stage.locked && (
+          <div style={{ display: "flex", gap: 4, marginLeft: "auto" }} onClick={(e) => e.stopPropagation()}>
+            <button
+              disabled={stageIndex === 0}
+              onClick={() => onReorderStage(stageIndex, stageIndex - 1)}
+              style={{
+                background: stageIndex === 0 ? "transparent" : `${stageColor}22`,
+                border: `1px solid ${stageIndex === 0 ? `${stageColor}22` : `${stageColor}55`}`,
+                borderRadius: 4,
+                color: stageIndex === 0 ? colors.textDimmed : stageColor,
+                cursor: stageIndex === 0 ? "default" : "pointer",
+                fontSize: 12,
+                minWidth: 32,
+                minHeight: 32,
+                padding: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                touchAction: "manipulation",
+              }}
+            >
+              ◀
+            </button>
+            <button
+              disabled={stageIndex === stageCount - 1}
+              onClick={() => onReorderStage(stageIndex, stageIndex + 2)}
+              style={{
+                background: stageIndex === stageCount - 1 ? "transparent" : `${stageColor}22`,
+                border: `1px solid ${stageIndex === stageCount - 1 ? `${stageColor}22` : `${stageColor}55`}`,
+                borderRadius: 4,
+                color: stageIndex === stageCount - 1 ? colors.textDimmed : stageColor,
+                cursor: stageIndex === stageCount - 1 ? "default" : "pointer",
+                fontSize: 12,
+                minWidth: 32,
+                minHeight: 32,
+                padding: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                touchAction: "manipulation",
+              }}
+            >
+              ▶
+            </button>
+          </div>
+        )}
       </div>
 
+      {(!collapsible || expanded) && <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: collapsible ? "0 10px 8px" : undefined }}>
       {def.params.map((paramDef) => {
         const isExpression = paramDef.type === "expression";
         const isFilterScript = paramDef.name === "FilterScript";
@@ -879,6 +949,7 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile }
           </div>
         </div>
       )}
+      </div>}
     </div>
   );
 }
