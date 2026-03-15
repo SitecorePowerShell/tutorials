@@ -66,14 +66,12 @@ export function QuizPanel({
       passed: result.passed,
       message: result.feedback ?? (result.passed ? "Correct!" : "Not quite right. Check your syntax and try again."),
     });
-    if (result.passed) {
-      setAnswers((prev) => ({ ...prev, [currentQuestion]: codeInput }));
-      setQuestionResults((prev) => ({
-        ...prev,
-        [currentQuestion]: true,
-      }));
-      setCorrectCount((c) => c + 1);
-    }
+    setAnswers((prev) => ({ ...prev, [currentQuestion]: codeInput }));
+    setQuestionResults((prev) => ({
+      ...prev,
+      [currentQuestion]: result.passed,
+    }));
+    if (result.passed) setCorrectCount((c) => c + 1);
   }, [question, currentQuestion, codeInput]);
 
   const handleNext = useCallback(() => {
@@ -569,7 +567,7 @@ export function QuizPanel({
         )}
 
         {/* Next button */}
-        {feedback?.passed && (
+        {feedback && (
           <button
             onClick={handleNext}
             style={{
