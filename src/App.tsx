@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import type { ConsoleEntry } from "./types";
+import type { ConsoleEntry, QuizResult } from "./types";
 import type { PipelineStage } from "./builder/assembleCommand";
 import { LESSONS } from "./lessons/loader";
+import { QUIZZES, getQuizForModule } from "./quizzes/loader";
 import { VIRTUAL_TREE } from "./engine/virtualTree";
 import { executeScript, executeCommand } from "./engine/executor";
 import { ScriptContext } from "./engine/scriptContext";
@@ -11,6 +12,7 @@ import { loadUIPreferences, saveUIPreferences, type ActivePanel } from "./hooks/
 import { useMediaQuery } from "./hooks/useMediaQuery";
 import { Sidebar } from "./components/Sidebar";
 import { LessonPanel } from "./components/LessonPanel";
+import { QuizPanel } from "./components/QuizPanel";
 import { ReplEditor } from "./components/ReplEditor";
 import { IseEditor } from "./components/IseEditor";
 import { BuilderEditor } from "./components/BuilderEditor";
@@ -53,6 +55,8 @@ export default function SPETutorial() {
   const [builderSelectedStageId, setBuilderSelectedStageId] = useState<string | null>(null);
   const [a11yAnnouncement, setA11yAnnouncement] = useState("");
   const [themeMode, setThemeMode] = useState<ThemeMode>(initialTheme);
+  const [activeQuiz, setActiveQuiz] = useState<string | null>(null);
+  const [quizResults, setQuizResults] = useState<Record<string, QuizResult>>(initialProgress.quizResults);
   const tour = useTourState();
   const sessionCtxRef = useRef(new ScriptContext());
   const lessonPanelRef = useRef<HTMLDivElement>(null);
@@ -71,6 +75,18 @@ export default function SPETutorial() {
   const totalTasks = LESSONS.reduce((sum, l) => sum + l.tasks.length, 0);
   const completedCount = Object.keys(completedTasks).length;
   const showLanding = currentLesson === -1;
+  const activeQuizData = activeQuiz ? QUIZZES.find((q) => q.id === activeQuiz) : undefined;
+
+  // Determine if the current lesson is the last in its module and a quiz is available
+  const quizNextLabel = (() => {
+    if (!lesson) return undefined;
+    const nextIdx = currentLesson + 1;
+    const isLastInModule = nextIdx >= LESSONS.length || LESSONS[nextIdx].module !== lesson.module;
+    if (!isLastInModule) return undefined;
+    const quiz = getQuizForModule(lesson.module);
+    if (!quiz || quizResults[quiz.id]?.completed) return undefined;
+    return "Take Module Quiz →";
+  })();
 
   // Persist progress to localStorage
   useEffect(() => {
@@ -80,8 +96,9 @@ export default function SPETutorial() {
       completedTasks,
       taskAttempts,
       sidebarCollapsed,
+      quizResults,
     });
-  }, [currentLesson, currentTask, completedTasks, taskAttempts, sidebarCollapsed]);
+  }, [currentLesson, currentTask, completedTasks, taskAttempts, sidebarCollapsed, quizResults]);
 
   // Initialize lesson panel height from saved percentage once container is measured
   useEffect(() => {
@@ -137,6 +154,8 @@ export default function SPETutorial() {
     setCompletedTasks({});
     setTaskAttempts({});
     setSidebarCollapsed(false);
+    setQuizResults({});
+    setActiveQuiz(null);
   }, []);
 
   const handleBuilderInsert = useCallback((command: string) => {
@@ -275,20 +294,69 @@ export default function SPETutorial() {
   const advanceTask = () => {
     if (currentTask < lesson.tasks.length - 1) {
       setCurrentTask(currentTask + 1);
-    } else if (currentLesson < LESSONS.length - 1) {
-      setCurrentLesson(currentLesson + 1);
-      setCurrentTask(0);
+    } else {
+      // Last task in lesson — check if this is the last lesson in the module
+      // and a quiz is available
+      const currentModule = lesson.module;
+      const nextLessonIdx = currentLesson + 1;
+      const isLastInModule =
+        nextLessonIdx >= LESSONS.length ||
+        LESSONS[nextLessonIdx].module !== currentModule;
+
+      if (isLastInModule) {
+        const quiz = getQuizForModule(currentModule);
+        if (quiz && !quizResults[quiz.id]?.completed) {
+          setActiveQuiz(quiz.id);
+          return;
+        }
+      }
+
+      if (currentLesson < LESSONS.length - 1) {
+        setCurrentLesson(currentLesson + 1);
+        setCurrentTask(0);
+      }
     }
   };
 
   const goToLesson = (idx: number) => {
     setCurrentLesson(idx);
     setCurrentTask(0);
+    setActiveQuiz(null);
     if (isMobile) {
       setMobileSidebarOpen(false);
       setMobilePanel("lesson");
     }
   };
+
+  const goToQuiz = (quizId: string) => {
+    setActiveQuiz(quizId);
+    if (isMobile) {
+      setMobileSidebarOpen(false);
+      setMobilePanel("lesson");
+    }
+  };
+
+  const handleQuizComplete = useCallback((result: QuizResult) => {
+    if (!activeQuiz) return;
+    setQuizResults((prev) => ({ ...prev, [activeQuiz]: result }));
+  }, [activeQuiz]);
+
+  const handleQuizSkip = useCallback(() => {
+    // Navigate to the first lesson of the next module
+    if (activeQuiz) {
+      const quiz = QUIZZES.find((q) => q.id === activeQuiz);
+      if (quiz) {
+        const nextModuleLesson = LESSONS.findIndex(
+          (l, i) => i > 0 && l.module !== quiz.module && LESSONS[i - 1]?.module === quiz.module
+        );
+        if (nextModuleLesson >= 0) {
+          setCurrentLesson(nextModuleLesson);
+          setCurrentTask(0);
+        }
+      }
+    }
+    setActiveQuiz(null);
+  }, [activeQuiz]);
 
   const goToTask = (taskIdx: number) => {
     setCurrentTask(taskIdx);
@@ -446,23 +514,23 @@ export default function SPETutorial() {
                 whiteSpace: "nowrap",
               }}
             >
-              {lesson.title}
+              {activeQuizData ? activeQuizData.title : lesson.title}
             </div>
             <div style={{ fontSize: fs.xs, color: colors.textMuted }}>
-              Task {currentTask + 1}/{lesson.tasks.length}
+              {activeQuizData ? activeQuizData.module : `Task ${currentTask + 1}/${lesson.tasks.length}`}
             </div>
           </div>
           <div
             style={{
               fontSize: fs.xs,
-              color: isBuilder ? colors.syntaxBrace : isISE ? colors.accentSecondary : colors.accentPrimary,
+              color: activeQuizData ? colors.statusHint : isBuilder ? colors.syntaxBrace : isISE ? colors.accentSecondary : colors.accentPrimary,
               padding: "4px 10px",
               background: colors.bgOverlay,
               borderRadius: 4,
-              border: `1px solid ${isBuilder ? colors.syntaxBrace + "44" : isISE ? colors.borderAccentIse : colors.borderBase}`,
+              border: `1px solid ${activeQuizData ? colors.statusHint + "44" : isBuilder ? colors.syntaxBrace + "44" : isISE ? colors.borderAccentIse : colors.borderBase}`,
             }}
           >
-            {isBuilder ? "Builder" : isISE ? "ISE" : "Console"}
+            {activeQuizData ? "Quiz" : isBuilder ? "Builder" : isISE ? "ISE" : "Console"}
           </div>
         </header>
 
@@ -493,6 +561,10 @@ export default function SPETutorial() {
                 onThemeToggle={handleThemeToggle}
                 isMobile={true}
                 onClose={() => setMobileSidebarOpen(false)}
+                quizzes={QUIZZES}
+                quizResults={quizResults}
+                onGoToQuiz={goToQuiz}
+                activeQuiz={activeQuiz}
               />
             </div>
           </>
@@ -502,21 +574,32 @@ export default function SPETutorial() {
             rendering so components stay mounted and preserve state (e.g. builder stages) */}
         <main id="main-content" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
           <div style={{ flex: 1, display: mobilePanel === "lesson" ? "flex" : "none", flexDirection: "column", overflow: "hidden" }}>
-            <LessonPanel
-              lesson={lesson}
-              task={task}
-              currentTask={currentTask}
-              currentLesson={currentLesson}
-              currentTaskComplete={currentTaskComplete}
-              attempts={currentAttempts}
-              revealedHintLevel={revealedHintLevel}
-              onRevealHint={(level) => setRevealedHintLevel(level)}
-              onAdvanceTask={advanceTask}
-              onGoToTask={goToTask}
-              isTaskComplete={isTaskComplete}
-              lessonsLength={LESSONS.length}
-              isMobile={true}
-            />
+            {activeQuizData ? (
+              <QuizPanel
+                quiz={activeQuizData}
+                existingResult={quizResults[activeQuizData.id]}
+                onComplete={handleQuizComplete}
+                onSkip={handleQuizSkip}
+                isMobile={true}
+              />
+            ) : (
+              <LessonPanel
+                lesson={lesson}
+                task={task}
+                currentTask={currentTask}
+                currentLesson={currentLesson}
+                currentTaskComplete={currentTaskComplete}
+                attempts={currentAttempts}
+                revealedHintLevel={revealedHintLevel}
+                onRevealHint={(level) => setRevealedHintLevel(level)}
+                onAdvanceTask={advanceTask}
+                onGoToTask={goToTask}
+                isTaskComplete={isTaskComplete}
+                lessonsLength={LESSONS.length}
+                nextLabel={quizNextLabel}
+                isMobile={true}
+              />
+            )}
           </div>
           <div data-tour="editor" style={{ flex: 1, display: mobilePanel === "editor" ? "flex" : "none", flexDirection: "column", minWidth: 0, minHeight: 0 }}>
             {isBuilder ? (
@@ -642,6 +725,10 @@ export default function SPETutorial() {
           themeMode={themeMode}
           onThemeToggle={handleThemeToggle}
           onStartTour={tour.startTour}
+          quizzes={QUIZZES}
+          quizResults={quizResults}
+          onGoToQuiz={goToQuiz}
+          activeQuiz={activeQuiz}
         />
       </div>
 
@@ -669,56 +756,85 @@ export default function SPETutorial() {
         >
           <div style={{ fontSize: fontSizes.body, color: colors.textSecondary }}>
             <span style={{ color: colors.accentPrimary, fontWeight: 600 }}>
-              {lesson.module}
+              {activeQuizData ? activeQuizData.module : lesson.module}
             </span>
             <span style={{ margin: "0 8px", color: colors.borderDim }}>/</span>
-            <span style={{ color: colors.textPrimary }}>{lesson.title}</span>
+            <span style={{ color: colors.textPrimary }}>
+              {activeQuizData ? activeQuizData.title : lesson.title}
+            </span>
           </div>
           <div style={{ flex: 1 }} />
-          <button
-            onClick={() => setLayoutStacked(!layoutStacked)}
-            aria-label={layoutStacked ? "Switch to side-by-side layout" : "Switch to stacked layout"}
-            title={layoutStacked ? "Switch to side-by-side layout" : "Switch to stacked layout"}
-            style={{
-              background: "transparent",
-              border: `1px solid ${colors.borderMedium}`,
-              color: colors.textSecondary,
-              padding: "5px 12px",
-              borderRadius: 4,
-              cursor: "pointer",
-              fontSize: fontSizes.base,
-              fontFamily: "inherit",
-            }}
-          >
-            {layoutStacked ? "⬌ Side-by-side" : "⬍ Stacked"}
-          </button>
-          <div
-            style={{
-              fontSize: fontSizes.sm,
-              color: isBuilder ? colors.syntaxBrace : isISE ? colors.accentSecondary : colors.accentPrimary,
-              padding: "4px 10px",
-              background: colors.bgOverlay,
-              borderRadius: 4,
-              border: `1px solid ${isBuilder ? colors.syntaxBrace + "44" : isISE ? colors.borderAccentIse : colors.borderBase}`,
-            }}
-          >
-            {isBuilder ? "Builder" : isISE ? "ISE" : "Console"}
-          </div>
-          <div
-            style={{
-              fontSize: fontSizes.sm,
-              color: colors.textMuted,
-              padding: "4px 10px",
-              background: colors.bgOverlay,
-              borderRadius: 4,
-            }}
-          >
-            Task {currentTask + 1} of {lesson.tasks.length}
-          </div>
+          {!activeQuizData && (
+            <>
+              <button
+                onClick={() => setLayoutStacked(!layoutStacked)}
+                aria-label={layoutStacked ? "Switch to side-by-side layout" : "Switch to stacked layout"}
+                title={layoutStacked ? "Switch to side-by-side layout" : "Switch to stacked layout"}
+                style={{
+                  background: "transparent",
+                  border: `1px solid ${colors.borderMedium}`,
+                  color: colors.textSecondary,
+                  padding: "5px 12px",
+                  borderRadius: 4,
+                  cursor: "pointer",
+                  fontSize: fontSizes.base,
+                  fontFamily: "inherit",
+                }}
+              >
+                {layoutStacked ? "⬌ Side-by-side" : "⬍ Stacked"}
+              </button>
+              <div
+                style={{
+                  fontSize: fontSizes.sm,
+                  color: isBuilder ? colors.syntaxBrace : isISE ? colors.accentSecondary : colors.accentPrimary,
+                  padding: "4px 10px",
+                  background: colors.bgOverlay,
+                  borderRadius: 4,
+                  border: `1px solid ${isBuilder ? colors.syntaxBrace + "44" : isISE ? colors.borderAccentIse : colors.borderBase}`,
+                }}
+              >
+                {isBuilder ? "Builder" : isISE ? "ISE" : "Console"}
+              </div>
+              <div
+                style={{
+                  fontSize: fontSizes.sm,
+                  color: colors.textMuted,
+                  padding: "4px 10px",
+                  background: colors.bgOverlay,
+                  borderRadius: 4,
+                }}
+              >
+                Task {currentTask + 1} of {lesson.tasks.length}
+              </div>
+            </>
+          )}
+          {activeQuizData && (
+            <div
+              style={{
+                fontSize: fontSizes.sm,
+                color: colors.statusHint,
+                padding: "4px 10px",
+                background: colors.bgOverlay,
+                borderRadius: 4,
+                border: `1px solid ${colors.statusHint}44`,
+              }}
+            >
+              Quiz
+            </div>
+          )}
         </header>
 
-        {/* Split pane — stacked or side-by-side */}
-        {layoutStacked ? (
+        {/* Quiz view or split pane */}
+        {activeQuizData ? (
+          <main id="main-content" style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+            <QuizPanel
+              quiz={activeQuizData}
+              existingResult={quizResults[activeQuizData.id]}
+              onComplete={handleQuizComplete}
+              onSkip={handleQuizSkip}
+            />
+          </main>
+        ) : layoutStacked ? (
           <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
             {/* TOP — Tabbed panel (Lesson / Content Tree) */}
             <div ref={lessonPanelRef} data-tour="lesson-panel">
@@ -783,6 +899,7 @@ export default function SPETutorial() {
                     onGoToTask={goToTask}
                     isTaskComplete={isTaskComplete}
                     lessonsLength={LESSONS.length}
+                    nextLabel={quizNextLabel}
                     collapsed={lessonPanelCollapsed}
                     onToggleCollapse={() => setLessonPanelCollapsed(!lessonPanelCollapsed)}
                     height={lessonPanelCollapsed ? undefined : lessonPanelHeight}
@@ -972,6 +1089,7 @@ export default function SPETutorial() {
                         onGoToTask={goToTask}
                         isTaskComplete={isTaskComplete}
                         lessonsLength={LESSONS.length}
+                        nextLabel={quizNextLabel}
                         collapsed={lessonPanelCollapsed}
                         onToggleCollapse={() => setLessonPanelCollapsed(!lessonPanelCollapsed)}
                       />
@@ -997,6 +1115,7 @@ export default function SPETutorial() {
                 onGoToTask={goToTask}
                 isTaskComplete={isTaskComplete}
                 lessonsLength={LESSONS.length}
+                nextLabel={quizNextLabel}
                 sideBySide={true}
                 collapsed={true}
                 onToggleCollapse={() => setLessonPanelCollapsed(!lessonPanelCollapsed)}

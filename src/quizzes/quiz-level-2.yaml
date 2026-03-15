@@ -1,0 +1,56 @@
+id: "quiz-level-2"
+module: "Level 2 – Scripting Essentials"
+title: "Scripting Essentials Quiz"
+questions:
+  - type: "multiple-choice"
+    question: "What is the ISE in Sitecore PowerShell Extensions?"
+    options:
+      - "A command-line-only console"
+      - "An Integrated Scripting Environment for writing multi-line scripts"
+      - "A database management tool"
+      - "A template editor"
+    correctIndex: 1
+    explanation: "The ISE (Integrated Scripting Environment) provides a multi-line script editor with syntax highlighting and execution capabilities."
+
+  - type: "multiple-choice"
+    question: "How do you assign a value to a variable in PowerShell?"
+    options:
+      - "set myVar = 10"
+      - "var myVar = 10"
+      - "$myVar = 10"
+      - "let $myVar = 10"
+    correctIndex: 2
+    explanation: "PowerShell variables start with $ and are assigned with the = operator: $myVar = 10."
+
+  - type: "code-challenge"
+    question: "Assign the children of `master:\\content\\Home` to a variable called `$items`, then pipe `$items` to `Measure-Object`."
+    hint: |
+      $items = Get-ChildItem "master:\content\Home"
+      $items | Measure-Object
+    starterCode: |
+      $items =
+      $items | Measure-Object
+    validation:
+      type: "output"
+      outputContains: "Count"
+    explanation: "Variables store pipeline results for reuse. When you assign a pipeline result to a variable, it captures all items."
+
+  - type: "multiple-choice"
+    question: "What does `ForEach-Object` do?"
+    options:
+      - "Counts the number of items in a collection"
+      - "Executes a script block for each item in the pipeline"
+      - "Filters items based on a condition"
+      - "Sorts items by a property"
+    correctIndex: 1
+    explanation: "ForEach-Object (alias: %) runs a script block once per pipeline item, with $_ representing the current item."
+
+  - type: "code-challenge"
+    question: "Use `Get-ChildItem` on `master:\\content\\Home` and pipe to `ForEach-Object` to output each item's `Name` property using `Write-Host`."
+    hint: 'Get-ChildItem "master:\content\Home" | ForEach-Object { Write-Host $_.Name }'
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "foreach-object"
+    explanation: "ForEach-Object with $_.Name accesses the Name property of each item as it flows through the pipeline."

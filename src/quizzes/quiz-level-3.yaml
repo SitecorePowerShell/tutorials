@@ -1,0 +1,53 @@
+id: "quiz-level-3"
+module: "Level 3 – Content Management"
+title: "Content Management Quiz"
+questions:
+  - type: "multiple-choice"
+    question: "Which cmdlet creates a new Sitecore item?"
+    options:
+      - "Add-Item"
+      - "Set-Item"
+      - "New-Item"
+      - "Create-Item"
+    correctIndex: 2
+    explanation: "New-Item creates a new item at a specified path with a given template and name."
+
+  - type: "multiple-choice"
+    question: "What parameters does `New-Item` require to create a Sitecore item?"
+    options:
+      - "-Name and -Value"
+      - "-Path, -Name, and -ItemType (template)"
+      - "-Path and -Content"
+      - "-Template and -Location"
+    correctIndex: 1
+    explanation: "New-Item needs a -Path (parent location), -Name (item name), and -ItemType (template path) to create a Sitecore item."
+
+  - type: "multiple-choice"
+    question: "What is the difference between `Move-Item` and `Copy-Item`?"
+    options:
+      - "Move-Item deletes the original; Copy-Item keeps it"
+      - "Move-Item is faster than Copy-Item"
+      - "Move-Item works on folders; Copy-Item works on files"
+      - "There is no difference"
+    correctIndex: 0
+    explanation: "Move-Item relocates an item (removing it from the original location), while Copy-Item creates a duplicate at the destination and leaves the original intact."
+
+  - type: "code-challenge"
+    question: "Get all children of `master:\\content\\Home` and select only their `Name` and `TemplateName` properties."
+    hint: 'Get-ChildItem "master:\content\Home" | Select-Object -Property Name, TemplateName'
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "select-object"
+    explanation: "Select-Object with -Property lets you choose which properties to include in the output, creating a focused view of your data."
+
+  - type: "multiple-choice"
+    question: "Which cmdlet removes a Sitecore item?"
+    options:
+      - "Delete-Item"
+      - "Clear-Item"
+      - "Remove-Item"
+      - "Destroy-Item"
+    correctIndex: 2
+    explanation: "Remove-Item deletes the specified item from the content tree. Use with caution — deletions can be destructive."

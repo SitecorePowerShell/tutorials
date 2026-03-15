@@ -1,0 +1,65 @@
+id: "quiz-level-1"
+module: "Level 1 – Console Fundamentals"
+title: "Console Fundamentals Quiz"
+questions:
+  - type: "multiple-choice"
+    question: "What is the difference between `Get-Item` and `Get-ChildItem`?"
+    options:
+      - "Get-Item is faster than Get-ChildItem"
+      - "Get-Item retrieves a single item by path; Get-ChildItem lists an item's children"
+      - "Get-Item only works with files; Get-ChildItem works with folders"
+      - "There is no difference — they are aliases for each other"
+    correctIndex: 1
+    explanation: "Get-Item returns the item at the specified path, while Get-ChildItem returns the children of that item."
+
+  - type: "multiple-choice"
+    question: "Which parameter makes `Get-ChildItem` search all descendants, not just direct children?"
+    options:
+      - "-Deep"
+      - "-All"
+      - "-Recurse"
+      - "-Descendants"
+    correctIndex: 2
+    explanation: "The -Recurse switch tells Get-ChildItem to traverse the entire subtree."
+
+  - type: "code-challenge"
+    question: "Use `Get-Item` to retrieve the Home item at path `master:\\content\\Home`."
+    hint: 'Get-Item -Path "master:\content\Home"'
+    validation:
+      type: "structural"
+      cmdlet: "get-item"
+      requirePath:
+        - "master:\\content\\Home"
+        - "master:/content/Home"
+    explanation: "Get-Item with a -Path parameter fetches a single Sitecore item by its full content tree path."
+
+  - type: "multiple-choice"
+    question: "What does `Where-Object` do in a pipeline?"
+    options:
+      - "Sorts items by a property"
+      - "Selects specific properties to display"
+      - "Filters items based on a condition"
+      - "Groups items by a shared value"
+    correctIndex: 2
+    explanation: "Where-Object (alias: Where, ?) evaluates a condition for each item and only passes through items where the condition is true."
+
+  - type: "code-challenge"
+    question: "List the children of `master:\\content\\Home` and filter to only items whose `TemplateName` equals `Sample Item`."
+    hint: 'Get-ChildItem "master:\content\Home" | Where-Object { $_.TemplateName -eq "Sample Item" }'
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "where-object"
+      outputContains: "Sample Item"
+    explanation: "Piping Get-ChildItem into Where-Object lets you filter children by any property."
+
+  - type: "multiple-choice"
+    question: "Which path format is used to access items in the master database?"
+    options:
+      - "sitecore:\\master\\content"
+      - "master:\\content\\Home"
+      - "//master/content/Home"
+      - "db:master/content/Home"
+    correctIndex: 1
+    explanation: "SPE uses the provider path format `master:\\content\\...` where `master:` specifies the database."

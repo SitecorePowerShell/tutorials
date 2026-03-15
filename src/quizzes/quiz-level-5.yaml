@@ -1,0 +1,53 @@
+id: "quiz-level-5"
+module: "Level 5 – Content Search"
+title: "Content Search Quiz"
+questions:
+  - type: "multiple-choice"
+    question: "What is the main advantage of `Find-Item` over `Get-ChildItem -Recurse`?"
+    options:
+      - "Find-Item has more parameters"
+      - "Find-Item uses the search index for much faster queries on large trees"
+      - "Find-Item can create items"
+      - "Find-Item works without a database connection"
+    correctIndex: 1
+    explanation: "Find-Item queries the Sitecore search index, making it dramatically faster than Get-ChildItem -Recurse for large content trees."
+
+  - type: "multiple-choice"
+    question: "Which parameter in `Find-Item` specifies the search index to use?"
+    options:
+      - "-Database"
+      - "-Index"
+      - "-SearchIndex"
+      - "-Source"
+    correctIndex: 1
+    explanation: "The -Index parameter specifies which Sitecore search index to query (e.g., sitecore_master_index)."
+
+  - type: "multiple-choice"
+    question: "How do you filter `Find-Item` results by template?"
+    options:
+      - "-Template 'Sample Item'"
+      - "-Where { $_.TemplateName -eq 'Sample Item' }"
+      - "Using a -Criteria filter with field '_templatename'"
+      - "-Filter 'TemplateName=Sample Item'"
+    correctIndex: 2
+    explanation: "Find-Item uses -Criteria with hashtable filters specifying the field name, comparison operator, and value."
+
+  - type: "multiple-choice"
+    question: "What does the `-First` parameter do in `Find-Item`?"
+    options:
+      - "Returns only the first matching item"
+      - "Limits the number of results returned (pagination)"
+      - "Sorts results by creation date"
+      - "Searches only the first level of children"
+    correctIndex: 1
+    explanation: "The -First parameter limits the number of search results returned, useful for pagination and performance."
+
+  - type: "code-challenge"
+    question: "Use `Find-Item` with `-Index sitecore_master_index` and add a `-Criteria` filter for `_templatename` equals `Sample Item`. Pipe the results to `Measure-Object`."
+    hint: 'Find-Item -Index sitecore_master_index -Criteria @{Filter = "Equals"; Field = "_templatename"; Value = "Sample Item"} | Measure-Object'
+    validation:
+      type: "pipeline"
+      stages:
+        - "find-item"
+        - "measure-object"
+    explanation: "Find-Item with -Criteria and piping to Measure-Object is an efficient way to count items matching specific search criteria."
