@@ -9,8 +9,9 @@ interface KeyDef {
 }
 
 const OPERATORS = [
-  "-eq", "-ne", "-like", "-notlike", "-match", "-gt", "-lt", "-ge", "-le",
-  "-replace", "-split", "-join", "-contains", "-in", "-and", "-or", "-not",
+  "-eq", "-ne", "-like", "-notlike", "-match", "-notmatch", "-gt", "-lt", "-ge", "-le",
+  "-contains", "-notcontains", "-in", "-notin", "-is", "-isnot",
+  "-replace", "-split", "-join", "-and", "-or", "-not",
 ];
 
 const KEYS: KeyDef[] = [

@@ -169,10 +169,17 @@ export const FILTER_OPERATORS = [
   "-like",
   "-notlike",
   "-match",
+  "-notmatch",
   "-gt",
   "-lt",
   "-ge",
   "-le",
+  "-contains",
+  "-notcontains",
+  "-in",
+  "-notin",
+  "-is",
+  "-isnot",
 ];
 
 /** Available filter types for Find-Item -Criteria */
