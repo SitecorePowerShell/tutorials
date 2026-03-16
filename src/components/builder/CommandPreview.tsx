@@ -82,20 +82,23 @@ export function CommandPreview({ command, onRun, onClear, validationErrors = [],
             </span>
           )}
         </pre>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: isMobile ? 6 : 8 }}>
           <button
             onClick={onRun}
             disabled={!canRun}
-            title={validationErrors.length > 0 ? validationErrors.map((e) => `${e.cmdlet}: ${e.paramName} required`).join(", ") : undefined}
+            aria-label="Run"
+            title={validationErrors.length > 0 ? validationErrors.map((e) => `${e.cmdlet}: ${e.paramName} required`).join(", ") : "Run"}
             style={{
               background: canRun ? gradients.accent : colors.borderDim,
               border: "none",
-              borderRadius: 4,
+              borderRadius: isMobile ? 6 : 4,
               color: canRun ? colors.textWhite : colors.textMuted,
               fontFamily: "inherit",
-              fontSize: isMobile ? 14 : fontSizes.base,
+              fontSize: isMobile ? 16 : fontSizes.base,
               fontWeight: 600,
-              padding: isMobile ? "8px 14px" : "5px 16px",
+              padding: isMobile ? 0 : "5px 16px",
+              width: isMobile ? 40 : undefined,
+              height: isMobile ? 32 : undefined,
               cursor: canRun ? "pointer" : "default",
               whiteSpace: "nowrap",
               opacity: canRun ? 1 : 0.5,
@@ -103,29 +106,34 @@ export function CommandPreview({ command, onRun, onClear, validationErrors = [],
               alignItems: "center",
               justifyContent: "center",
               gap: 6,
-              minHeight: isMobile ? 44 : undefined,
-              flex: isMobile ? 1 : undefined,
+              touchAction: "manipulation",
             }}
           >
-            ▶ Run
+            {isMobile ? "▶" : "▶ Run"}
           </button>
           <button
             onClick={onClear}
+            aria-label="Clear output"
+            title="Clear output"
             style={{
               background: "transparent",
               border: `1px solid ${colors.borderMedium}`,
-              borderRadius: 4,
+              borderRadius: isMobile ? 6 : 4,
               color: colors.textClear,
               fontFamily: "inherit",
               fontSize: isMobile ? 14 : fontSizes.base,
-              padding: isMobile ? "8px 14px" : "5px 12px",
+              padding: isMobile ? 0 : "5px 12px",
+              width: isMobile ? 40 : undefined,
+              height: isMobile ? 32 : undefined,
               cursor: "pointer",
               whiteSpace: "nowrap",
-              minHeight: isMobile ? 44 : undefined,
-              flex: isMobile ? 1 : undefined,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              touchAction: "manipulation",
             }}
           >
-            Clear
+            {isMobile ? "⌫" : "Clear"}
           </button>
         </div>
       </div>

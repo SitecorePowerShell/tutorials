@@ -15,57 +15,24 @@ description: |
     content/
       Home/
         About/
-          Contributors/
+          Contributors/   ← 25 items
             Michael West
             Adam Najmanowicz
-            Alex Washtell
-            Alan Płócieniak
-            Rodrigo Peplau
-            Dan Solovay
-            Mike Reynolds
-            Ro Se
-            Søren Kruse
-            ptaront
-            Dawid Rutkowski
-            simoncroak
-            Marcin Zabłocki
-            Aaron Bickle
-            Andy Cohen
-            Anton Kuryan
-            Benjamin Vangansewinkel
-            Corey Smith
-            Harsh Baid
-            Jason St-Cyr
-            Mark Gibbons
-            Özkan Sayın
-            Robert Senktas
-            Stanislav
-            Szymon Kuźniak
+            ...
           History
           Careers
         Products/
           XM Cloud/
-            Features/
-              Pages Editor
-              Components
-              Forms
           Content Hub
-          Sitecore Search
-          Sitecore Send
+          ...
         News/
           SPE 7.0 Released
-          SPE Remoting Update
-          SPE XM Cloud Support
-          SPE 6.4 Security Patch
+          ...
       Data/
-        Settings
-        Lookups/
-          Countries/
-          Categories/
     media library/
-      Images/
-      Documents/
   ```
+
+  > **Tip:** Switch to the **Tree** tab to browse the full content tree interactively.
 
   Let's start with the most fundamental command in SPE.
 tasks:

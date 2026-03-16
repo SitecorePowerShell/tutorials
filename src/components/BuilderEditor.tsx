@@ -132,6 +132,19 @@ export function BuilderEditor({
         minHeight: 0,
       }}
     >
+      {/* Command preview + run (top on mobile) */}
+      {isMobile && (
+        <div style={{ flexShrink: 0 }}>
+          <CommandPreview
+            command={code}
+            onRun={onRun}
+            onClear={onClear}
+            validationErrors={validationErrors}
+            isMobile={true}
+          />
+        </div>
+      )}
+
       {/* Scrollable content area */}
       <div
         style={{
@@ -191,16 +204,18 @@ export function BuilderEditor({
         </div>
       </div>
 
-      {/* Command preview + run (sticky at bottom) */}
-      <div style={{ flexShrink: 0 }}>
-        <CommandPreview
-          command={code}
-          onRun={onRun}
-          onClear={onClear}
-          validationErrors={validationErrors}
-          isMobile={isMobile}
-        />
-      </div>
+      {/* Command preview + run (sticky at bottom, desktop only) */}
+      {!isMobile && (
+        <div style={{ flexShrink: 0 }}>
+          <CommandPreview
+            command={code}
+            onRun={onRun}
+            onClear={onClear}
+            validationErrors={validationErrors}
+            isMobile={false}
+          />
+        </div>
+      )}
     </div>
   );
 }

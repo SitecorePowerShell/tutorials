@@ -83,6 +83,95 @@ export function BuilderInsertView({
         minHeight: 0,
       }}
     >
+      {/* Action buttons (top on mobile) */}
+      {isMobile && (
+        <div
+          style={{
+            padding: "6px 10px",
+            borderBottom: `1px solid ${colors.borderBase}`,
+            background: colors.bgDeep,
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            flexShrink: 0,
+          }}
+        >
+          <pre
+            style={{
+              flex: 1,
+              margin: 0,
+              padding: "4px 8px",
+              background: colors.bgBase,
+              border: `1px solid ${colors.borderBase}`,
+              borderRadius: 4,
+              fontFamily: fonts.monoFull,
+              fontSize: fontSizes.xs,
+              color: colors.textPrimary,
+              overflowX: "auto",
+              whiteSpace: "nowrap",
+              minHeight: 24,
+              lineHeight: 1.5,
+              WebkitOverflowScrolling: "touch",
+            }}
+          >
+            {command ? (
+              <HighlightedCode code={command} />
+            ) : (
+              <span style={{ color: colors.textDimmed, fontStyle: "italic" }}>
+                Build a pipeline...
+              </span>
+            )}
+          </pre>
+          <button
+            onClick={() => { onStagesChange([]); onSelectedStageIdChange(null); }}
+            disabled={stages.length === 0}
+            aria-label="Reset"
+            title="Reset pipeline"
+            style={{
+              background: "transparent",
+              border: `1px solid ${stages.length ? colors.borderMedium : colors.borderDim}`,
+              borderRadius: 6,
+              color: stages.length ? colors.textClear : colors.textMuted,
+              width: 40,
+              height: 32,
+              cursor: stages.length ? "pointer" : "default",
+              opacity: stages.length ? 1 : 0.5,
+              fontSize: 14,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              touchAction: "manipulation",
+            }}
+          >
+            ↺
+          </button>
+          <button
+            onClick={() => onInsert(command)}
+            disabled={!canInsert}
+            aria-label={insertLabel}
+            title={insertLabel}
+            style={{
+              background: canInsert ? gradients.accent : colors.borderDim,
+              border: "none",
+              borderRadius: 6,
+              color: canInsert ? colors.textWhite : colors.textMuted,
+              width: 40,
+              height: 32,
+              cursor: canInsert ? "pointer" : "default",
+              opacity: canInsert ? 1 : 0.5,
+              fontSize: 16,
+              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              touchAction: "manipulation",
+            }}
+          >
+            ⤓
+          </button>
+        </div>
+      )}
+
       {/* Scrollable content area */}
       <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
         <CmdletPalette usedCmdlets={usedCmdlets} onAddStage={addStage} isMobile={isMobile} />
@@ -110,8 +199,8 @@ export function BuilderInsertView({
         />
       </div>
 
-      {/* Sticky bottom: errors + preview + buttons */}
-      <div style={{ flexShrink: 0 }}>
+      {/* Sticky bottom: errors + preview + buttons (desktop only) */}
+      <div style={{ flexShrink: 0, display: isMobile ? "none" : undefined }}>
         {/* Validation errors */}
         {errors.length > 0 && (
           <div
