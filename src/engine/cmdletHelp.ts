@@ -22,6 +22,8 @@ export interface CmdletHelp {
   synopsis: string;
   description: string;
   syntax: string[];
+  /** Optional labels for each syntax line (e.g. parameter set names) */
+  syntaxLabels?: string[];
   parameters: ParamHelp[];
   examples: CmdletExample[];
   aliases: string[];
@@ -195,10 +197,10 @@ const FULL_HELP: CmdletHelp[] = [
       "-ExcludeProperty to remove properties from the output, and -Unique to remove duplicates.",
     syntax: [
       "... | Select-Object [-Property] <String[]> [-ExcludeProperty <String[]>]",
-      "... | Select-Object [-Property] <String[]> [-First <Int>] [-Last <Int>] [-Skip <Int>] [-SkipLast <Int>]",
       "... | Select-Object -ExpandProperty <String>",
-      "... | Select-Object [-Property] <String[]> -Unique",
+      "... | Select-Object [-First <Int>] [-Last <Int>] [-Skip <Int>] [-SkipLast <Int>]",
     ],
+    syntaxLabels: ["Properties", "Expand", "Subset"],
     parameters: [
       {
         name: "Property",
@@ -608,6 +610,7 @@ const FULL_HELP_2: CmdletHelp[] = [
       "<input> | Measure-Object",
       "<input> | Measure-Object [-Property] <String> [-Sum] [-Average] [-Maximum] [-Minimum]",
     ],
+    syntaxLabels: ["Count", "Numeric"],
     parameters: [
       {
         name: "Property",
@@ -1416,8 +1419,16 @@ export function formatHelpText(
   }
 
   lines.push("SYNTAX");
-  for (const s of help.syntax) {
-    lines.push(`    ${s}`);
+  for (let i = 0; i < help.syntax.length; i++) {
+    if (help.syntaxLabels && help.syntaxLabels[i]) {
+      lines.push(`    ${help.syntaxLabels[i]}:`);
+      lines.push(`        ${help.syntax[i]}`);
+    } else if (help.syntax.length > 1) {
+      lines.push(`    Set ${i + 1}:`);
+      lines.push(`        ${help.syntax[i]}`);
+    } else {
+      lines.push(`    ${help.syntax[i]}`);
+    }
   }
   lines.push("");
 

@@ -554,6 +554,19 @@ export function ReplEditor({
         const cmdlet = detectCurrentCmdlet(code);
         const help = cmdlet ? getCmdletHelp(cmdlet) : null;
         if (!help || !help.syntax[0]) return null;
+        // Pick the best-matching syntax line based on params the user has typed
+        let bestSyntax = help.syntax[0];
+        if (help.syntax.length > 1) {
+          const codeLower = code.toLowerCase();
+          for (const s of help.syntax) {
+            // Extract param names from the syntax string
+            const paramNames = s.match(/-\w+/g) || [];
+            if (paramNames.some((p) => codeLower.includes(p.toLowerCase()))) {
+              bestSyntax = s;
+              break;
+            }
+          }
+        }
         return (
           <div
             style={{
@@ -570,7 +583,7 @@ export function ReplEditor({
             }}
           >
             <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {help.syntax[0]}
+              {bestSyntax}
             </span>
             {onShowHelp && !isMobile && (
               <button

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { getCmdletHelp, type CmdletHelp } from "../engine/cmdletHelp";
+import { CMDLET_REGISTRY } from "../builder/cmdletRegistry";
 import { colors, fonts, fontSizes } from "../theme";
 
 interface HelpPanelProps {
@@ -75,7 +76,11 @@ export function HelpPanel({ cmdletName, onClose, onNavigate, isMobile }: HelpPan
       role="complementary"
       aria-label={`Help for ${help.name}`}
       style={{
-        ...(isMobile ? {} : {
+        ...(isMobile ? {
+          flex: 1,
+          minHeight: 0,
+          overflow: "hidden",
+        } : {
           position: "absolute" as const,
           top: 0,
           right: 0,
@@ -140,9 +145,28 @@ export function HelpPanel({ cmdletName, onClose, onNavigate, isMobile }: HelpPan
 
         {/* Syntax */}
         <div style={sectionHeaderStyle}>Syntax</div>
-        {help.syntax.map((s, i) => (
-          <div key={i} style={codeBlockStyle}>{s}</div>
-        ))}
+        {help.syntax.map((s, i) => {
+          const label = help.syntaxLabels?.[i] ?? CMDLET_REGISTRY[help.name]?.paramSets?.[i]?.label;
+          return (
+            <div key={i} style={{ marginBottom: 4 }}>
+              {label && (
+                <div style={{
+                  fontSize: 10,
+                  fontFamily: fonts.sans,
+                  color: colors.textDimmed,
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.04em",
+                  marginBottom: 2,
+                  marginTop: i > 0 ? 6 : 0,
+                }}>
+                  {label}
+                </div>
+              )}
+              <div style={codeBlockStyle}>{s}</div>
+            </div>
+          );
+        })}
 
         {/* Aliases */}
         {help.aliases.length > 0 && (
@@ -158,26 +182,69 @@ export function HelpPanel({ cmdletName, onClose, onNavigate, isMobile }: HelpPan
         {help.parameters.length > 0 && (
           <>
             <div style={sectionHeaderStyle}>Parameters</div>
-            {help.parameters.map((p) => (
-              <div
-                key={p.name}
-                style={{
-                  marginBottom: 8,
-                  padding: "6px 8px",
-                  background: colors.bgSurface,
-                  borderRadius: 4,
-                  border: `1px solid ${colors.borderLight}`,
-                }}
-              >
-                <div style={{ fontFamily: fonts.mono, fontSize: fontSizes.xs, fontWeight: 600, color: colors.syntaxParam }}>
-                  -{p.name} &lt;{p.type}&gt;
-                  {p.required && <span style={{ color: colors.statusError, marginLeft: 4 }}>*</span>}
+            {(() => {
+              const regDef = CMDLET_REGISTRY[help.name];
+              const sets = regDef?.paramSets;
+
+              const renderParam = (p: typeof help.parameters[0]) => (
+                <div
+                  key={p.name}
+                  style={{
+                    marginBottom: 8,
+                    padding: "6px 8px",
+                    background: colors.bgSurface,
+                    borderRadius: 4,
+                    border: `1px solid ${colors.borderLight}`,
+                  }}
+                >
+                  <div style={{ fontFamily: fonts.mono, fontSize: fontSizes.xs, fontWeight: 600, color: colors.syntaxParam }}>
+                    -{p.name} &lt;{p.type}&gt;
+                    {p.required && <span style={{ color: colors.statusError, marginLeft: 4 }}>*</span>}
+                  </div>
+                  <div style={{ fontSize: fontSizes.xs, color: colors.textMuted, marginTop: 2 }}>
+                    {p.description}
+                  </div>
                 </div>
-                <div style={{ fontSize: fontSizes.xs, color: colors.textMuted, marginTop: 2 }}>
-                  {p.description}
-                </div>
-              </div>
-            ))}
+              );
+
+              if (!sets || sets.length <= 1) {
+                return help.parameters.map(renderParam);
+              }
+
+              // Group params by set, with "common" params shown first
+              const allSetParams = new Set(sets.flatMap((s) => [...s.params, ...(s.switches ?? [])]));
+              const commonParams = help.parameters.filter((p) => !allSetParams.has(p.name));
+              const result: React.ReactNode[] = [];
+
+              if (commonParams.length > 0) {
+                result.push(...commonParams.map(renderParam));
+              }
+
+              for (const set of sets) {
+                const setParamNames = new Set([...set.params, ...(set.switches ?? [])]);
+                const setParams = help.parameters.filter((p) => setParamNames.has(p.name));
+                if (setParams.length === 0) continue;
+                result.push(
+                  <div key={`set-${set.label}`} style={{
+                    fontSize: 10,
+                    fontFamily: fonts.sans,
+                    color: colors.textDimmed,
+                    fontWeight: 600,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.04em",
+                    marginTop: 8,
+                    marginBottom: 4,
+                    paddingBottom: 2,
+                    borderBottom: `1px solid ${colors.borderLight}`,
+                  }}>
+                    {set.label}
+                  </div>
+                );
+                result.push(...setParams.map(renderParam));
+              }
+
+              return result;
+            })()}
           </>
         )}
 

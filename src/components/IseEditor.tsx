@@ -714,13 +714,25 @@ export function IseEditor({
                 const cmdlet = detectCurrentCmdlet(code, cursorPos);
                 const help = cmdlet ? getCmdletHelp(cmdlet) : null;
                 if (help?.syntax[0]) {
+                  // Pick the best-matching syntax line based on params in the code
+                  let bestSyntax = help.syntax[0];
+                  if (help.syntax.length > 1) {
+                    const codeLower = code.toLowerCase();
+                    for (const s of help.syntax) {
+                      const paramNames = s.match(/-\w+/g) || [];
+                      if (paramNames.some((p) => codeLower.includes(p.toLowerCase()))) {
+                        bestSyntax = s;
+                        break;
+                      }
+                    }
+                  }
                   return (
                     <span
                       style={{ color: colors.textDimmed, cursor: onShowHelp ? "pointer" : undefined }}
                       onClick={onShowHelp ? () => onShowHelp(cmdlet!) : undefined}
                       title="Press F1 for help"
                     >
-                      {help.syntax[0]}
+                      {bestSyntax}
                     </span>
                   );
                 }
