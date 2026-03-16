@@ -5,7 +5,32 @@ import type { ScriptContext } from "./scriptContext";
 
 export function formatItemTable(items: SitecoreItem[]): string {
   if (items.length === 0) return "";
-  // Match real SPE table format from Sitecore_Views.ps1xml:
+
+  // SearchResultItem (from Find-Item) shows a reduced column set
+  if (items[0]._isSearchResult) {
+    const headers = ["Name", "Language", "Id", "TemplateName", "Path"];
+    const rows = items.map((item) => [
+      item.name,
+      "en",
+      item.node._id || "-",
+      item.node._template || "-",
+      item.path || "-",
+    ]);
+    const colWidths = headers.map((h, i) =>
+      Math.max(h.length, ...rows.map((r) => String(r[i]).length))
+    );
+    const sep = colWidths.map((w) => "-".repeat(w)).join(" ");
+    const headerLine = headers.map((h, i) => h.padEnd(colWidths[i])).join(" ");
+    const rowLines = rows.map((r) =>
+      r.map((c, i) => String(c).padEnd(colWidths[i])).join(" ")
+    );
+    return (
+      "   TypeName: Sitecore.ContentSearch.SearchTypes.SearchResultItem\n\n" +
+      [headerLine, sep, ...rowLines].join("\n")
+    );
+  }
+
+  // Full Item format from Sitecore_Views.ps1xml:
   // Name(32) Children/HasChildren(8) Language(8) Version(7) Id/ID(38) TemplateName(32)
   const headers = ["Name", "Children", "Language", "Version", "Id", "TemplateName"];
   const rows = items.map((item) => [

@@ -251,10 +251,11 @@ export default function SPETutorial() {
       setCwd(ctx.cwd);
     }
 
+    if (result.output) {
+      newOutput.push({ type: "output", text: result.output });
+    }
     if (result.error) {
       newOutput.push({ type: "error", text: result.error });
-    } else if (result.output) {
-      newOutput.push({ type: "output", text: result.output });
     }
 
     // Validate against current task

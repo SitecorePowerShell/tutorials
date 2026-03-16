@@ -426,14 +426,45 @@ export function executeCommandWithContext(
   }
 
   // Parse and execute the pipeline
-  const { raw: rawStages, parsed: stages } = parseCommand(expanded);
+  let rawStages: string[];
+  let stages: ReturnType<typeof parseCommand>["parsed"];
+  try {
+    const parsed = parseCommand(expanded);
+    rawStages = parsed.raw;
+    stages = parsed.parsed;
+  } catch (e) {
+    return { output: "", error: (e as Error).message };
+  }
   if (stages.length === 0) return { output: "", error: null };
 
   let pipelineData: SitecoreItemArray | SitecoreItem[] | null = null;
 
+  // Max positional parameters each cmdlet accepts (0 = none, 1 = path, etc.)
+  const MAX_POSITIONAL: Record<string, number> = {
+    "get-item": 1, "get-childitem": 1, "set-location": 1, "get-help": 1,
+    "new-item": 1, "remove-item": 1, "move-item": 2, "copy-item": 2,
+    "rename-item": 2, "set-itemproperty": 1, "publish-item": 1,
+    "write-output": 10, "write-host": 10, "write-error": 1, "write-warning": 1,
+    "where-object": 1, "foreach-object": 1, "select-object": 1,
+    "sort-object": 1, "group-object": 1, "measure-object": 1,
+    "format-table": 1, "show-listview": 1, "show-alert": 1,
+    "get-member": 0, "get-alias": 0, "find-item": 1,
+    "initialize-item": 0, "convertto-json": 0,
+  };
+
   for (let i = 0; i < stages.length; i++) {
     const stage = stages[i];
     const cmdLower = ALIAS_MAP[stage.cmdlet.toLowerCase()] ?? stage.cmdlet.toLowerCase();
+
+    // Reject unexpected positional parameters
+    const maxPos = MAX_POSITIONAL[cmdLower];
+    if (maxPos !== undefined && stage.params._positional && stage.params._positional.length > maxPos) {
+      const extras = stage.params._positional.slice(maxPos).join(" ");
+      return {
+        output: "",
+        error: `${stage.cmdlet} : Unexpected token '${extras}'. Check your command syntax.`,
+      };
+    }
 
     // Check if the first stage is a variable reference
     if (i === 0 && stage.cmdlet.startsWith("$")) {
@@ -768,8 +799,11 @@ export function executeCommandWithContext(
         if (!pipelineData || pipelineData.length === 0) {
           return { output: "", error: "Get-Member : No input object." };
         }
+        const typeName = pipelineData[0]?._isSearchResult
+          ? "Sitecore.ContentSearch.SearchTypes.SearchResultItem"
+          : "Sitecore.Data.Items.Item";
         const members = [
-          "   TypeName: Sitecore.Data.Items.Item",
+          `   TypeName: ${typeName}`,
           "",
           "Name                    MemberType Definition",
           "----                    ---------- ----------",
@@ -1269,6 +1303,10 @@ export function executeCommandWithContext(
         const searchIndex = buildSearchIndex(tree);
         const results = executeSearch(searchIndex, criteria, options, tree);
         pipelineData = entriesToItems(results, tree);
+        // Mark as SearchResultItem (not full Item) until Initialize-Item
+        for (const item of pipelineData) {
+          item._isSearchResult = true;
+        }
 
       } else if (cmdLower === "get-help") {
         // Get-Help [Name] [-Examples] [-Full] [-Parameter <name>]
@@ -1349,7 +1387,10 @@ export function executeCommandWithContext(
       } else if (cmdLower === "initialize-item") {
         if (!pipelineData || pipelineData.length === 0)
           return { output: "", error: "Initialize-Item : No pipeline input." };
-        // In simulation, items are already "initialized" — pass through
+        // Convert SearchResultItem → full Item by clearing the flag
+        for (const item of pipelineData) {
+          delete item._isSearchResult;
+        }
 
       } else {
         return {

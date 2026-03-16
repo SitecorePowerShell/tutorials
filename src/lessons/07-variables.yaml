@@ -23,8 +23,8 @@ tasks:
       $items | Measure-Object
     starterCode: |
       # Store items in a variable, then count them
-      $items = Get-ChildItem -Path "master:\content\Home" -Recurse
-      $items | Measure-Object
+      $items =
+      # Pipe your variable to Measure-Object on the next line
     validation:
       type: "pipeline"
       stages:
@@ -44,8 +44,8 @@ tasks:
     starterCode: |
       # Multi-step filtering with variables
       $allItems = Get-ChildItem -Path "master:\content\Home" -Recurse
-      $folders = $allItems | Where-Object { $_.TemplateName -eq "Folder" }
-      $folders | Show-ListView -Property Name,ItemPath,TemplateName
+      $folders = $allItems | Where-Object { }
+      # Display $folders with Show-ListView
     validation:
       type: "pipeline"
       stages:

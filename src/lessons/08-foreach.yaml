@@ -23,7 +23,7 @@ tasks:
     starterCode: |
       # Iterate over items and output formatted info
       Get-ChildItem -Path "master:\content\Home" |
-          ForEach-Object { Write-Host "$($_.Name) [$($_.TemplateName)]" }
+          ForEach-Object { }
     validation:
       type: "pipeline"
       stages:
@@ -43,7 +43,7 @@ tasks:
     starterCode: |
       # Audit: what templates are used in the content tree?
       Get-ChildItem -Path "master:\content\Home" -Recurse |
-          Group-Object -Property TemplateName
+          # Add Group-Object here
     validation:
       type: "pipeline"
       stages:

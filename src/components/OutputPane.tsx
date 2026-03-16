@@ -74,7 +74,6 @@ export function OutputPane({ entries, isISE, isBuilder, endRef }: OutputPaneProp
                 PS {entry.cwd || "master:\\content\\Home"}&gt;{" "}
               </span>
               <HighlightedCode code={entry.text} />
-              <CopyButton text={entry.text} />
             </div>
           )}
           {entry.type === "script" && (

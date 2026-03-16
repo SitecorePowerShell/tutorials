@@ -26,9 +26,9 @@ tasks:
           Show-ListView -Property Name,ItemPath,__Updated
     starterCode: |
       # Get all items, filter by template, display as report
-      Get-ChildItem -Path "master:\content\Home" -Recurse |
-          Where-Object { $_.TemplateName -eq "" } |
-          Show-ListView -Property Name,ItemPath,__Updated
+      # 1. Get recursive children of Home
+      # 2. Filter where TemplateName equals "Sample Item"
+      # 3. Pipe to Show-ListView with -Property Name,ItemPath,__Updated
     validation:
       type: "pipeline"
       stages:
@@ -50,9 +50,8 @@ tasks:
           Show-ListView -Property Name,TemplateName,__Updated
     starterCode: |
       # Audit report: all items sorted by last update date
-      Get-ChildItem -Path "master:\content\Home" -Recurse |
-          Sort-Object -Property __Updated |
-          Show-ListView -Property Name,TemplateName,__Updated
+      Get-ChildItem -Path "master:\content\Home" -Recurse
+      # Add Sort-Object and Show-ListView stages above
     validation:
       type: "pipeline"
       stages:

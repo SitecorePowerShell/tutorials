@@ -9,10 +9,13 @@ export interface Token {
 
 /** All cmdlets recognized for syntax highlighting — registry + executor-only commands */
 const EXTRA_CMDLETS = [
-  "Set-Location", "Get-Location", "Show-Alert", "Read-Variable", "Close-Window",
-  "Write-Host", "Write-Output", "Set-ItemProperty", "Format-Table", "ConvertTo-Json",
-  "Get-Alias", "Get-Help", "Get-Command", "Export-Csv", "ConvertFrom-Json",
+  "Set-Location", "Get-Location", "Show-Alert", "Show-ListView", "Read-Variable", "Close-Window",
+  "Write-Host", "Write-Output", "Write-Error", "Write-Warning",
+  "Set-ItemProperty", "Format-Table", "ConvertTo-Json",
+  "Get-Alias", "Get-Help", "Get-Command", "Get-Member", "Export-Csv", "ConvertFrom-Json",
   "Out-String", "Test-Path", "Import-Csv", "Add-Member", "New-Object", "Set-Item",
+  "New-Item", "Remove-Item", "Move-Item", "Copy-Item", "Rename-Item",
+  "Publish-Item", "Initialize-Item", "ForEach-Object",
 ];
 const allCmdlets = [...new Set([...ALL_CMDLET_NAMES, ...EXTRA_CMDLETS])];
 const cmdletPattern = allCmdlets.map((c) => c.replace("-", "\\-")).join("|");

@@ -20,6 +20,8 @@ export interface SitecoreItem {
   name: string;
   node: SitecoreNode;
   path?: string;
+  /** True when returned by Find-Item (SearchResultItem), cleared by Initialize-Item */
+  _isSearchResult?: boolean;
 }
 
 /** A property specifier — either a plain name or a calculated @{} expression */
