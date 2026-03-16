@@ -166,6 +166,105 @@ describe("completions", () => {
     });
   });
 
+  describe(".NET type name completion", () => {
+    it("completes [D to DateTime types", () => {
+      const result = getCompletions("[D", 2);
+      expect(result).not.toBeNull();
+      expect(result!.matches).toContain("DateTime");
+    });
+
+    it("completes [System.D to full type names", () => {
+      const result = getCompletions("[System.I", 9);
+      expect(result).not.toBeNull();
+      expect(result!.matches).toContain("System.IO.Path");
+    });
+
+    it("completes [Sitecore. to Sitecore types", () => {
+      const result = getCompletions("[Sitecore.", 10);
+      expect(result).not.toBeNull();
+      expect(result!.matches).toContain("Sitecore.Data.ID");
+      expect(result!.matches).toContain("Sitecore.Data.Database");
+      expect(result!.matches).toContain("Sitecore.Configuration.Factory");
+    });
+
+    it("is case-insensitive", () => {
+      const result = getCompletions("[date", 5);
+      expect(result).not.toBeNull();
+      expect(result!.matches).toContain("DateTime");
+    });
+
+    it("replaces only the type name portion", () => {
+      const result = getCompletions("[Ti", 3);
+      expect(result).not.toBeNull();
+      expect(result!.replaceStart).toBe(1);
+      expect(result!.replaceEnd).toBe(3);
+    });
+  });
+
+  describe(".NET static member completion", () => {
+    it("completes [DateTime]:: with all members", () => {
+      const result = getCompletions("[DateTime]::", 12);
+      expect(result).not.toBeNull();
+      expect(result!.matches).toContain("Now");
+      expect(result!.matches).toContain("UtcNow");
+      expect(result!.matches).toContain("Parse");
+    });
+
+    it("completes partial member [DateTime]::N", () => {
+      const result = getCompletions("[DateTime]::N", 13);
+      expect(result).not.toBeNull();
+      expect(result!.matches).toContain("Now");
+      expect(result!.matches).not.toContain("Parse");
+    });
+
+    it("completes [Math]:: members", () => {
+      const result = getCompletions("[Math]::", 8);
+      expect(result).not.toBeNull();
+      expect(result!.matches).toContain("Round");
+      expect(result!.matches).toContain("Floor");
+      expect(result!.matches).toContain("Ceiling");
+      expect(result!.matches).toContain("Abs");
+    });
+
+    it("completes fully-qualified [System.IO.Path]:: members", () => {
+      const result = getCompletions("[System.IO.Path]::", 18);
+      expect(result).not.toBeNull();
+      expect(result!.matches).toContain("GetExtension");
+      expect(result!.matches).toContain("Combine");
+    });
+
+    it("completes [Convert]:: members", () => {
+      const result = getCompletions("[Convert]::To", 13);
+      expect(result).not.toBeNull();
+      expect(result!.matches).toContain("ToInt32");
+      expect(result!.matches).toContain("ToBase64String");
+    });
+
+    it("is case-insensitive for type name", () => {
+      const result = getCompletions("[datetime]::", 12);
+      expect(result).not.toBeNull();
+      expect(result!.matches).toContain("Now");
+    });
+
+    it("works mid-expression", () => {
+      const result = getCompletions("Write-Host $([DateTime]::N", 26);
+      expect(result).not.toBeNull();
+      expect(result!.matches).toContain("Now");
+    });
+
+    it("returns null for unknown type", () => {
+      const result = getCompletions("[FakeType]::", 12);
+      expect(result).toBeNull();
+    });
+
+    it("replaces only the member portion", () => {
+      const result = getCompletions("[DateTime]::N", 13);
+      expect(result).not.toBeNull();
+      expect(result!.replaceStart).toBe(12);
+      expect(result!.replaceEnd).toBe(13);
+    });
+  });
+
   describe("path completion", () => {
     it("completes bare master: with root children", () => {
       const result = getCompletions(

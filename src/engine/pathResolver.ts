@@ -17,9 +17,9 @@ export function resolvePath(
     return { node: tree.sitecore, name: "sitecore", path: "/sitecore" };
   }
 
-  // Handle "master:" (bare, no backslash) → current location (same as ".")
+  // Handle "master:" (bare, no backslash) → root of drive (the sitecore node)
   if (/^(master|core|web):$/i.test(clean)) {
-    return resolveAbsolutePath(cwd, tree);
+    return { node: tree.sitecore, name: "sitecore", path: "/sitecore" };
   }
 
   // Strip drive prefix: master:\content\Home → content\Home

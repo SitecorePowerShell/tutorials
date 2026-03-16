@@ -452,6 +452,36 @@ foreach($item in $items) { Write-Host $item.Name }`;
     const result = executeScript(script);
     expect(result.error).toBeNull();
   });
+
+  it("evaluates standalone [DateTime]::Now as expression", () => {
+    const result = executeScript("[DateTime]::Now");
+    expect(result.error).toBeNull();
+    expect(result.output).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it("evaluates standalone .NET calls case-insensitively", () => {
+    const result = executeScript("[datetime]::now");
+    expect(result.error).toBeNull();
+    expect(result.output).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it("evaluates standalone [Math]::Round()", () => {
+    const result = executeScript("[Math]::Round(3.14159, 2)");
+    expect(result.error).toBeNull();
+    expect(result.output).toBe("3.14");
+  });
+
+  it("evaluates standalone [Guid]::NewGuid()", () => {
+    const result = executeScript("[Guid]::NewGuid()");
+    expect(result.error).toBeNull();
+    expect(result.output).toMatch(/^[0-9a-f]{8}-/i);
+  });
+
+  it("handles [datetime]::now inside Where-Object filter", () => {
+    const script = 'Get-ChildItem -Path "master:\\content\\Home" | Where-Object { $_.__Updated -lt [datetime]::now }';
+    const result = executeScript(script);
+    expect(result.error).toBeNull();
+  });
 });
 
 describe("executeCommandWithContext - Write-Error", () => {

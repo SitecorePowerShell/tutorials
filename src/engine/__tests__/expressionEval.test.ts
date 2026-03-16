@@ -146,6 +146,25 @@ describe("evaluateExpression", () => {
       ctx.setVar("items", [makeItem("A"), makeItem("B")]);
       expect(evaluateExpression("$items.Length", ctx)).toBe(2);
     });
+
+    it("resolves $_.Template.FullName as dotted property", () => {
+      const item = makeItem("About");
+      expect(evaluateExpression("$_.Template.FullName", ctx, item)).toBe(
+        "Sample/Sample Item"
+      );
+    });
+
+    it("resolves $_.Paths.FullPath as dotted property", () => {
+      const item = makeItem("About");
+      expect(evaluateExpression("$_.Paths.FullPath", ctx, item)).toBe(
+        "/sitecore/content/Home/About"
+      );
+    });
+
+    it("resolves $_.Key as lowercase name", () => {
+      const item = makeItem("About");
+      expect(evaluateExpression("$_.Key", ctx, item)).toBe("about");
+    });
   });
 
   describe("indexer access", () => {

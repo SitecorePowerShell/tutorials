@@ -409,6 +409,15 @@ export function executeCommandWithContext(
     return match; // Don't expand arrays/objects (handled by pipeline)
   });
 
+  // Check if the input is a standalone .NET static call (e.g. [DateTime]::Now)
+  // This must be checked before pipeline parsing, which would treat it as a cmdlet.
+  const trimmedInput = expanded.trim();
+  if (/^\[[\w.]+\]::/.test(trimmedInput) && !looksLikeCommand(trimmedInput)) {
+    const value = evaluateExpression(trimmedInput, ctx);
+    const output = value !== undefined && value !== null ? String(value) : "";
+    return { output, error: null };
+  }
+
   // Check if the input is just a variable reference (to pipe variable contents)
   const bareVarMatch = expanded.trim().match(/^\$(\w+)$/);
   if (bareVarMatch) {

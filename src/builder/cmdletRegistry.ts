@@ -144,16 +144,7 @@ export function getCmdletColor(def: CmdletDef): string {
   return isLightMode() ? def.lightColor : def.color;
 }
 
-export const COMMON_PROPERTIES = [
-  "Name",
-  "TemplateName",
-  "Template.FullName",
-  "Id",
-  "__Updated",
-  "__Created",
-  "Language",
-  "Version",
-];
+export { COMMON_PROPERTY_NAMES as COMMON_PROPERTIES } from "../engine/properties";
 
 export const FOREACH_OPERATORS = [
   "-replace",

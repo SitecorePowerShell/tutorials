@@ -70,4 +70,27 @@ describe("getItemProperty", () => {
   it("returns empty string for unknown properties", () => {
     expect(getItemProperty(home, "DoesNotExist")).toBe("");
   });
+
+  it("returns Key (lowercase Name)", () => {
+    expect(getItemProperty(home, "Key")).toBe("home");
+  });
+
+  it("returns Template.FullName", () => {
+    expect(getItemProperty(home, "Template.FullName")).toBe("Sample/Sample Item");
+  });
+
+  it("returns Paths.FullPath (same as ItemPath)", () => {
+    expect(getItemProperty(home, "Paths.FullPath")).toBe("/sitecore/content/Home");
+  });
+
+  it("returns Parent from path", () => {
+    expect(getItemProperty(home, "Parent")).toBe("content");
+    const aboutResolved = resolvePath('master:\\content\\Home\\About', tree)!;
+    const about = { name: aboutResolved.name, node: aboutResolved.node, path: aboutResolved.path };
+    expect(getItemProperty(about, "Parent")).toBe("Home");
+  });
+
+  it("returns __Created by field", () => {
+    expect(getItemProperty(home, "__Created by")).toBe("sitecore\\admin");
+  });
 });

@@ -1,4 +1,5 @@
 import type { SitecoreNode } from "../types";
+import { ALL_PROPERTY_NAMES } from "./properties";
 
 // ============================================================================
 // Tab Completion Engine for ISE Editor (Ctrl+Space)
@@ -98,23 +99,31 @@ const CMDLET_PARAMS: Record<string, string[]> = {
   "Get-Help": ["-Name", "-Examples", "-Full", "-Parameter"],
 };
 
+/** .NET type names — short and fully-qualified forms */
+const DOTNET_TYPES: Record<string, string[]> = {
+  DateTime: ["Now", "UtcNow", "Parse"],
+  Math: ["Round", "Floor", "Ceiling", "Abs"],
+  String: ["IsNullOrEmpty", "Join", "Format"],
+  Guid: ["NewGuid"],
+  TimeSpan: ["FromDays", "FromHours", "FromMinutes", "FromSeconds", "Parse"],
+  Regex: ["IsMatch", "Match", "Replace", "Split"],
+  Array: ["Reverse", "Sort"],
+  Convert: ["ToInt32", "ToString", "ToDouble", "ToBoolean", "ToBase64String", "FromBase64String"],
+  Environment: ["NewLine", "MachineName", "UserName"],
+  "System.IO.Path": ["GetExtension", "GetFileNameWithoutExtension", "Combine"],
+  "Sitecore.Data.ID": ["NewID", "Parse"],
+  "Sitecore.Data.Database": ["GetDatabase"],
+  "Sitecore.Configuration.Factory": ["GetDatabase"],
+};
+
+/** All type name strings for bracket completion */
+const ALL_TYPE_NAMES = Object.keys(DOTNET_TYPES);
+
 /** Built-in variables */
 const BUILTIN_VARS = ["$_", "$PSItem", "$true", "$false", "$null"];
 
-/** Common item properties for property-name completion */
-const ITEM_PROPERTIES = [
-  "Name",
-  "ID",
-  "TemplateName",
-  "ItemPath",
-  "HasChildren",
-  "Fields",
-  "Title",
-  "Text",
-  "__Updated",
-  "__Created",
-  "__Updated by",
-];
+/** Item properties for property-name completion (from canonical registry) */
+const ITEM_PROPERTY_COMPLETIONS = [...ALL_PROPERTY_NAMES];
 
 export interface CompletionResult {
   /** The list of possible completions (full text to replace the token) */
@@ -137,6 +146,37 @@ export function getCompletions(
 ): CompletionResult | null {
   // Extract the token to the left of the cursor
   const beforeCursor = text.slice(0, cursorPos);
+
+  // Try static member completion ([TypeName]::...)
+  const memberMatch = beforeCursor.match(/\[([A-Za-z][\w.]*)\]::(\w*)$/);
+  if (memberMatch) {
+    const typeName = memberMatch[1];
+    const prefix = memberMatch[2];
+    const start = cursorPos - prefix.length;
+    const members = resolveTypeMembers(typeName);
+    if (members) {
+      const matches = members.filter((m) =>
+        m.toLowerCase().startsWith(prefix.toLowerCase())
+      );
+      if (matches.length > 0) {
+        return { matches, replaceStart: start, replaceEnd: cursorPos };
+      }
+    }
+  }
+
+  // Try type name completion ([...)
+  const typeMatch = beforeCursor.match(/\[([A-Za-z][\w.]*)$/);
+  if (typeMatch) {
+    const prefix = typeMatch[1];
+    const start = cursorPos - prefix.length;
+    const matches = ALL_TYPE_NAMES.filter((t) =>
+      t.toLowerCase().startsWith(prefix.toLowerCase())
+    );
+    matches.sort((a, b) => a.localeCompare(b));
+    if (matches.length > 0) {
+      return { matches, replaceStart: start, replaceEnd: cursorPos };
+    }
+  }
 
   // Try variable completion ($...)
   const varMatch = beforeCursor.match(/(\$[\w]*)$/);
@@ -292,6 +332,20 @@ function tryPathCompletion(
     if (matches.length === 0) return null;
     return { matches, replaceStart: start, replaceEnd: cursorPos };
   }
+}
+
+/** Resolve type members by short or fully-qualified name (case-insensitive) */
+function resolveTypeMembers(typeName: string): string[] | null {
+  const lower = typeName.toLowerCase();
+  for (const [name, members] of Object.entries(DOTNET_TYPES)) {
+    if (name.toLowerCase() === lower) return members;
+  }
+  // Also try with "System." prefix stripped (e.g. "System.DateTime" → "DateTime")
+  const stripped = lower.replace(/^system\./, "");
+  for (const [name, members] of Object.entries(DOTNET_TYPES)) {
+    if (name.toLowerCase() === stripped) return members;
+  }
+  return null;
 }
 
 /** Case-insensitive child lookup */

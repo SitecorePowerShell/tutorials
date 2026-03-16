@@ -3,6 +3,20 @@
  * Only a curated set of types commonly used in Sitecore PowerShell scripts.
  */
 
+function formatTimeSpan(totalSeconds: number): string {
+  const negative = totalSeconds < 0;
+  totalSeconds = Math.abs(totalSeconds);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = Math.floor(totalSeconds % 60);
+  const hh = String(hours).padStart(2, "0");
+  const mm = String(minutes).padStart(2, "0");
+  const ss = String(seconds).padStart(2, "0");
+  const sign = negative ? "-" : "";
+  return days > 0 ? `${sign}${days}.${hh}:${mm}:${ss}` : `${sign}${hh}:${mm}:${ss}`;
+}
+
 export function callStaticMethod(
   typeName: string,
   methodOrProp: string,
@@ -100,6 +114,82 @@ export function callStaticMethod(
     }
   }
 
+  // [TimeSpan]
+  if (t === "timespan") {
+    if (m === "fromdays") return formatTimeSpan(parseFloat(args[0] || "0") * 86400);
+    if (m === "fromhours") return formatTimeSpan(parseFloat(args[0] || "0") * 3600);
+    if (m === "fromminutes") return formatTimeSpan(parseFloat(args[0] || "0") * 60);
+    if (m === "fromseconds") return formatTimeSpan(parseFloat(args[0] || "0"));
+    if (m === "parse" && args.length > 0) return args[0];
+  }
+
+  // [Regex] / [System.Text.RegularExpressions.Regex]
+  if (t === "regex" || t === "text.regularexpressions.regex") {
+    if (m === "ismatch" && args.length >= 2) {
+      try {
+        return new RegExp(args[1]).test(args[0]);
+      } catch {
+        return false;
+      }
+    }
+    if (m === "match" && args.length >= 2) {
+      try {
+        const match = args[0].match(new RegExp(args[1]));
+        return match ? match[0] : "";
+      } catch {
+        return "";
+      }
+    }
+    if (m === "replace" && args.length >= 3) {
+      try {
+        return args[0].replace(new RegExp(args[1], "g"), args[2]);
+      } catch {
+        return args[0];
+      }
+    }
+    if (m === "split" && args.length >= 2) {
+      try {
+        return args[0].split(new RegExp(args[1]));
+      } catch {
+        return [args[0]];
+      }
+    }
+  }
+
+  // [Array]
+  if (t === "array") {
+    if (m === "reverse") return [...args].reverse();
+    if (m === "sort") return [...args].sort();
+  }
+
+  // [Convert]
+  if (t === "convert") {
+    if (m === "toint32") return parseInt(String(args[0])) || 0;
+    if (m === "tostring") return String(args[0] ?? "");
+    if (m === "todouble") return parseFloat(String(args[0])) || 0;
+    if (m === "toboolean") {
+      const s = String(args[0]).toLowerCase();
+      return s !== "" && s !== "0" && s !== "false";
+    }
+    if (m === "tobase64string") return btoa(args[0] || "");
+    if (m === "frombase64string") return atob(args[0] || "");
+  }
+
+  // [Environment]
+  if (t === "environment") {
+    if (m === "newline") return "\n";
+    if (m === "machinename") return "SC-SERVER-01";
+    if (m === "username") return "sitecore\\admin";
+  }
+
+  // [Sitecore.Data.Database] / [Sitecore.Configuration.Factory]
+  if (
+    typeName.toLowerCase() === "sitecore.data.database" ||
+    typeName.toLowerCase() === "sitecore.configuration.factory"
+  ) {
+    if (m === "getdatabase") return args[0] || "master";
+  }
+
   // Fallback: return a descriptive string
   return `[${typeName}]::${methodOrProp}(${args.join(", ")})`;
 }
@@ -119,6 +209,25 @@ export function castType(typeName: string, value: unknown): unknown {
   }
   if (t === "double" || t === "float" || t === "decimal") {
     return parseFloat(String(value)) || 0;
+  }
+
+  if (t === "array") {
+    return Array.isArray(value) ? value : [value];
+  }
+  if (t === "datetime") {
+    try {
+      return new Date(String(value)).toISOString();
+    } catch {
+      return String(value);
+    }
+  }
+  if (t === "timespan") {
+    const n = parseFloat(String(value));
+    if (!isNaN(n)) return formatTimeSpan(n);
+    return String(value);
+  }
+  if (t === "regex") {
+    return String(value);
   }
 
   return value;

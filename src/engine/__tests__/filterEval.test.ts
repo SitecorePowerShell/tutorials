@@ -352,4 +352,21 @@ describe("evaluateFilter", () => {
       expect(evaluateFilter("$val -is [bool]", ctx)).toBe(true);
     });
   });
+
+  describe(".NET type calls in filters", () => {
+    it("evaluates [datetime]::now on the right side of -lt", () => {
+      const item = makeItem("About");
+      // __Updated is a date string in the past, so -lt [datetime]::now should be true
+      expect(
+        evaluateFilter('$_.__Updated -lt [datetime]::now', ctx, item)
+      ).toBe(true);
+    });
+
+    it("[String]::IsNullOrEmpty works with -not", () => {
+      const item = makeItem("About");
+      expect(
+        evaluateFilter("-not [String]::IsNullOrEmpty($_.Title)", ctx, item)
+      ).toBe(true);
+    });
+  });
 });

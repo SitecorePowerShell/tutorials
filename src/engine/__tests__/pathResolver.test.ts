@@ -30,10 +30,11 @@ describe("resolvePath", () => {
     expect(result!.name).toBe("Home");
   });
 
-  it("resolves master: (bare) to CWD (Home)", () => {
+  it("resolves master: (bare) to sitecore root", () => {
     const result = resolvePath("master:", tree);
     expect(result).not.toBeNull();
-    expect(result!.name).toBe("Home");
+    expect(result!.name).toBe("sitecore");
+    expect(result!.path).toBe("/sitecore");
   });
 
   it("resolves master:\\ to sitecore root", () => {

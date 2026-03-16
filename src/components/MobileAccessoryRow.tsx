@@ -29,6 +29,8 @@ const KEYS: KeyDef[] = [
   { label: "\\", char: "\\" },
   { label: "?", char: "?" },
   { label: "()", char: "(", pair: ")" },
+  { label: "[]", char: "[", pair: "]" },
+  { label: "::", char: "::" },
   { label: "@", char: "@" },
   { label: ";", char: ";" },
 ];

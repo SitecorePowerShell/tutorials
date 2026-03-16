@@ -5,7 +5,7 @@
  */
 import type { SitecoreItem } from "../types";
 import { ScriptContext } from "./scriptContext";
-import { getItemProperty } from "./properties";
+import { getItemProperty, isDottedProperty } from "./properties";
 import { callStaticMethod, castType } from "./dotnetTypes";
 
 /**
@@ -148,10 +148,20 @@ export function interpolateString(
     return String(val ?? "");
   });
 
-  // Handle $_.Property
-  result = result.replace(/\$_\.(\w+)/g, (match, prop) => {
-    if (currentItem) return getItemProperty(currentItem, prop);
-    return match;
+  // Handle $_.Property (including dotted properties like Template.FullName)
+  result = result.replace(/\$_\.(\w+(?:\.\w+)?)/g, (match, prop) => {
+    if (!currentItem) return match;
+    // Check if full dotted form is a known property (e.g. Template.FullName)
+    if (prop.includes(".") && isDottedProperty(prop)) {
+      return getItemProperty(currentItem, prop);
+    }
+    // Otherwise only use the first segment
+    const firstProp = prop.split(".")[0];
+    if (prop.includes(".")) {
+      // Not a known dotted property — let the first segment resolve and leave the rest
+      return match;
+    }
+    return getItemProperty(currentItem, firstProp);
   });
 
   // Handle $var.Property
@@ -338,7 +348,12 @@ export function evaluateExpression(
     return "";
   }
 
-  // $_ property: $_.Prop
+  // $_ property: $_.Prop or $_.Dotted.Prop (e.g. Template.FullName)
+  const uPropDotted = trimmed.match(/^\$_\.(\w+\.\w+)$/);
+  if (uPropDotted && isDottedProperty(uPropDotted[1])) {
+    if (currentItem) return getItemProperty(currentItem, uPropDotted[1]);
+    return "";
+  }
   const uProp = trimmed.match(/^\$_\.(\w+)$/);
   if (uProp) {
     if (currentItem) return getItemProperty(currentItem, uProp[1]);

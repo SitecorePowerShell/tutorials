@@ -11,8 +11,11 @@ description: |
   • `[String]::IsNullOrEmpty($value)` — check for empty strings
   • `[Guid]::NewGuid()` — generate a new GUID
   • `[Sitecore.Data.ID]::NewId` — generate a Sitecore-formatted ID
+  • `[TimeSpan]::FromDays(n)` — time interval calculations
+  • `[Regex]::IsMatch($input, $pattern)` — regular expression matching
+  • `[Convert]::ToBase64String($value)` — encoding and type conversion
 
-  These are used constantly in SPE scripts for timestamps, validation, and ID generation.
+  These are used constantly in SPE scripts for timestamps, validation, pattern matching, and ID generation.
 tasks:
   - instruction: |
       Create a report header that includes the current date and time. Use `Write-Host` with `[DateTime]::Now` to display a timestamp.
@@ -59,3 +62,57 @@ tasks:
       outputContains: "New"
     successMessage: |
       Sitecore IDs are GUIDs wrapped in braces `{...}`. `[Guid]::NewGuid()` gives you a raw GUID, while `[Sitecore.Data.ID]::NewId` gives you the Sitecore-formatted version with braces. Both are used in migration and import scripts.
+  - instruction: |
+      Use `[TimeSpan]` to calculate time intervals. Display the result of `[TimeSpan]::FromDays(7)` and `[TimeSpan]::FromHours(36)` to see how PowerShell formats time spans with days and hours.
+    hint: |
+      Write-Host "7 days: $([TimeSpan]::FromDays(7))"
+      Write-Host "36 hours: $([TimeSpan]::FromHours(36))"
+    starterCode: |
+      # TimeSpan Calculations
+      Write-Host "7 days: $([TimeSpan]::FromDays(7))"
+      Write-Host "36 hours: $([TimeSpan]::FromHours(36))"
+    validation:
+      type: "output"
+      outputContains: "days"
+    successMessage: |
+      `[TimeSpan]` is invaluable for calculating cache durations, publish intervals, and content age. `FromDays()`, `FromHours()`, and `FromMinutes()` create intervals that PowerShell formats as `d.HH:mm:ss`.
+  - instruction: |
+      Use `[Regex]` to validate and extract patterns. Check if a string contains a GUID pattern using `[Regex]::IsMatch()`, then extract it with `[Regex]::Match()`.
+    hint: |
+      $text = "Item ID is 550e8400-e29b-41d4-a716-446655440000 in the database"
+      $hasGuid = [Regex]::IsMatch($text, "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+      Write-Host "Has GUID: $hasGuid"
+      $guid = [Regex]::Match($text, "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+      Write-Host "Extracted GUID: $guid"
+    starterCode: |
+      # Regex Pattern Matching
+      $text = "Item ID is 550e8400-e29b-41d4-a716-446655440000 in the database"
+      $hasGuid = [Regex]::IsMatch($text, "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+      Write-Host "Has GUID: $hasGuid"
+      $guid = [Regex]::Match($text, "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")
+      Write-Host "Extracted GUID: $guid"
+    validation:
+      type: "output"
+      outputContains: "GUID"
+    successMessage: |
+      `[Regex]` gives you full .NET regular expression power. `IsMatch()` validates patterns, `Match()` extracts them, and `Replace()` transforms text. Essential for parsing log files and validating field formats.
+  - instruction: |
+      Use `[Convert]` to encode and decode Base64 strings. Encode a string with `ToBase64String()` and then decode it back with `FromBase64String()`.
+    hint: |
+      $original = "Sitecore PowerShell"
+      $encoded = [Convert]::ToBase64String($original)
+      Write-Host "Encoded: $encoded"
+      $decoded = [Convert]::FromBase64String($encoded)
+      Write-Host "Decoded: $decoded"
+    starterCode: |
+      # Base64 Encoding with Convert
+      $original = "Sitecore PowerShell"
+      $encoded = [Convert]::ToBase64String($original)
+      Write-Host "Encoded: $encoded"
+      $decoded = [Convert]::FromBase64String($encoded)
+      Write-Host "Decoded: $decoded"
+    validation:
+      type: "output"
+      outputContains: "Encoded"
+    successMessage: |
+      `[Convert]` handles type conversions and encoding. `ToBase64String()`/`FromBase64String()` are commonly used for encoding data in Sitecore fields, API calls, and serialization tasks.
