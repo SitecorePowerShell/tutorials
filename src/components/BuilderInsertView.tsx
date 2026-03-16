@@ -83,6 +83,37 @@ export function BuilderInsertView({
         minHeight: 0,
       }}
     >
+      {/* Validation errors (separate row above preview) */}
+      {errors.length > 0 && (
+        <div
+          style={{
+            padding: "4px 12px",
+            borderBottom: `1px solid ${colors.borderBase}`,
+            background: colors.bgDeep,
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 4,
+            flexShrink: 0,
+          }}
+        >
+          {errors.map((err, i) => (
+            <span
+              key={i}
+              style={{
+                fontSize: fontSizes.xs,
+                fontFamily: fonts.sans,
+                color: colors.statusError,
+                background: "rgba(239,83,80,0.1)",
+                borderRadius: 4,
+                padding: "2px 6px",
+              }}
+            >
+              {err.cmdlet}: {err.paramName} required
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* Command preview + action buttons (top) */}
       <div
         style={{
@@ -95,26 +126,6 @@ export function BuilderInsertView({
           flexShrink: 0,
         }}
       >
-        {/* Validation errors inline */}
-        {errors.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, flex: "none" }}>
-            {errors.map((err, i) => (
-              <span
-                key={i}
-                style={{
-                  fontSize: fontSizes.xs,
-                  fontFamily: fonts.sans,
-                  color: colors.statusError,
-                  background: "rgba(239,83,80,0.1)",
-                  borderRadius: 4,
-                  padding: "2px 6px",
-                }}
-              >
-                {err.cmdlet}: {err.paramName}
-              </span>
-            ))}
-          </div>
-        )}
         <pre
           style={{
             flex: 1,

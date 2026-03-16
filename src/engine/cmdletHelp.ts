@@ -191,29 +191,61 @@ const FULL_HELP: CmdletHelp[] = [
     synopsis: "Selects specific properties or a subset of items from the pipeline.",
     description:
       "The Select-Object cmdlet selects specified properties from items, creating objects with only those properties. " +
-      "Use -First or -Last to limit the number of items returned.",
+      "Use -First/-Last to limit items, -Skip/-SkipLast to skip items, -ExpandProperty to unwrap a single property, " +
+      "-ExcludeProperty to remove properties from the output, and -Unique to remove duplicates.",
     syntax: [
-      "... | Select-Object [-Property] <String[]> [-First <Int>] [-Last <Int>]",
+      "... | Select-Object [-Property] <String[]> [-ExcludeProperty <String[]>]",
+      "... | Select-Object [-Property] <String[]> [-First <Int>] [-Last <Int>] [-Skip <Int>] [-SkipLast <Int>]",
+      "... | Select-Object -ExpandProperty <String>",
+      "... | Select-Object [-Property] <String[]> -Unique",
     ],
     parameters: [
       {
         name: "Property",
         type: "String[]",
-        description: "The properties to select. Separate multiple properties with commas.",
+        description: "The properties to select. Separate multiple properties with commas. Use * for all properties.",
         required: false,
         position: 0,
       },
       {
+        name: "ExcludeProperty",
+        type: "String[]",
+        description: "Properties to exclude from the output. Often used with -Property * to select all except specific properties.",
+        required: false,
+        position: null,
+      },
+      {
+        name: "ExpandProperty",
+        type: "String",
+        description: "Expands a single property value instead of returning the item. Useful for extracting strings or nested collections.",
+        required: false,
+        position: null,
+      },
+      {
         name: "First",
         type: "Int32",
-        description: "Gets only the specified number of items from the beginning.",
+        description: "Gets only the specified number of items from the beginning of the pipeline.",
         required: false,
         position: null,
       },
       {
         name: "Last",
         type: "Int32",
-        description: "Gets only the specified number of items from the end.",
+        description: "Gets only the specified number of items from the end of the pipeline.",
+        required: false,
+        position: null,
+      },
+      {
+        name: "Skip",
+        type: "Int32",
+        description: "Skips the specified number of items from the beginning, then selects the rest.",
+        required: false,
+        position: null,
+      },
+      {
+        name: "SkipLast",
+        type: "Int32",
+        description: "Skips the specified number of items from the end of the pipeline.",
         required: false,
         position: null,
       },
@@ -229,6 +261,21 @@ const FULL_HELP: CmdletHelp[] = [
         code: 'Get-ChildItem master:\\content\\Home -Recurse | Select-Object -First 3',
         description: "Returns only the first 3 items from the pipeline.",
       },
+      {
+        title: "Example 3: Skip and take",
+        code: 'Get-ChildItem master:\\content\\Home | Select-Object -Skip 2 -First 3',
+        description: "Skips the first 2 items, then takes the next 3.",
+      },
+      {
+        title: "Example 4: Expand a property",
+        code: 'Get-ChildItem master:\\content\\Home | Select-Object -ExpandProperty Name',
+        description: "Returns just the Name string values instead of item objects.",
+      },
+      {
+        title: "Example 5: Exclude properties",
+        code: 'Get-Item master:\\content\\Home | Select-Object * -ExcludeProperty TemplateID',
+        description: "Selects all properties except TemplateID.",
+      },
     ],
     aliases: ["select"],
     relatedCmdlets: ["Sort-Object", "Where-Object", "Format-Table"],
@@ -238,15 +285,16 @@ const FULL_HELP: CmdletHelp[] = [
     synopsis: "Sorts items in the pipeline by property values.",
     description:
       "The Sort-Object cmdlet sorts items by one or more property values. " +
-      "By default, sorting is ascending. Use -Descending to reverse the order.",
+      "By default, sorting is ascending. Use -Descending to reverse the order. " +
+      "Use -Unique to remove duplicates from the sorted output.",
     syntax: [
-      "... | Sort-Object [-Property] <String> [-Descending]",
+      "... | Sort-Object [-Property] <String[]> [-Descending] [-Unique]",
     ],
     parameters: [
       {
         name: "Property",
-        type: "String",
-        description: "The property to sort by.",
+        type: "String[]",
+        description: "The property or properties to sort by. Separate multiple properties with commas.",
         required: false,
         position: 0,
       },
@@ -254,6 +302,13 @@ const FULL_HELP: CmdletHelp[] = [
         name: "Descending",
         type: "SwitchParameter",
         description: "Sorts in descending order.",
+        required: false,
+        position: null,
+      },
+      {
+        name: "Unique",
+        type: "SwitchParameter",
+        description: "Eliminates duplicates and returns only unique items.",
         required: false,
         position: null,
       },
@@ -349,9 +404,10 @@ const FULL_HELP: CmdletHelp[] = [
     synopsis: "Formats pipeline output as a table with selected columns.",
     description:
       "The Format-Table cmdlet formats the output of a pipeline as a table with specified properties as columns. " +
-      "This is useful for creating readable reports with specific fields.",
+      "Use -AutoSize to fit columns to the data width, -HideTableHeaders for header-free output, " +
+      "or -GroupBy to break the table into groups by a property value.",
     syntax: [
-      "... | Format-Table [-Property] <String[]>",
+      "... | Format-Table [-Property] <String[]> [-AutoSize] [-HideTableHeaders] [-GroupBy <String>]",
     ],
     parameters: [
       {
@@ -360,6 +416,27 @@ const FULL_HELP: CmdletHelp[] = [
         description: "The properties to display as table columns.",
         required: false,
         position: 0,
+      },
+      {
+        name: "GroupBy",
+        type: "String",
+        description: "Groups the table output by the specified property, adding a header for each group.",
+        required: false,
+        position: null,
+      },
+      {
+        name: "AutoSize",
+        type: "SwitchParameter",
+        description: "Adjusts the column size based on the width of the data.",
+        required: false,
+        position: null,
+      },
+      {
+        name: "HideTableHeaders",
+        type: "SwitchParameter",
+        description: "Omits the column headers from the table.",
+        required: false,
+        position: null,
       },
     ],
     examples: [
@@ -377,9 +454,11 @@ const FULL_HELP: CmdletHelp[] = [
     synopsis: "Writes text to the console output.",
     description:
       "The Write-Host cmdlet writes customized output to the console. " +
-      "Unlike Write-Output, it writes directly to the host and does not pass objects through the pipeline.",
+      "Unlike Write-Output, it writes directly to the host and does not pass objects through the pipeline. " +
+      "Use -ForegroundColor for colored output, -NoNewline to suppress the trailing newline, " +
+      "or -Separator to control how multiple objects are joined.",
     syntax: [
-      "Write-Host [-Object] <String> [-ForegroundColor <String>]",
+      "Write-Host [-Object] <String> [-ForegroundColor <String>] [-NoNewline] [-Separator <String>]",
     ],
     parameters: [
       {
@@ -393,6 +472,20 @@ const FULL_HELP: CmdletHelp[] = [
         name: "ForegroundColor",
         type: "String",
         description: "The text color (e.g. Red, Green, Yellow, Cyan).",
+        required: false,
+        position: null,
+      },
+      {
+        name: "NoNewline",
+        type: "SwitchParameter",
+        description: "Suppresses the newline at the end of the output.",
+        required: false,
+        position: null,
+      },
+      {
+        name: "Separator",
+        type: "String",
+        description: "String to insert between multiple objects.",
         required: false,
         position: null,
       },
@@ -472,8 +565,8 @@ const FULL_HELP_2: CmdletHelp[] = [
     description:
       "The Group-Object cmdlet groups pipeline items that share the same value for a specified property. " +
       "Each group includes a Count, Name (the shared value), and the grouped items. " +
-      "This is useful for summarizing content by template, field value, or other properties.",
-    syntax: ["<input> | Group-Object [-Property] <String>"],
+      "Use -NoElement to omit the grouped items and show only the count and name.",
+    syntax: ["<input> | Group-Object [-Property] <String> [-NoElement]"],
     parameters: [
       {
         name: "Property",
@@ -481,6 +574,13 @@ const FULL_HELP_2: CmdletHelp[] = [
         description: "The property to group by.",
         required: true,
         position: 0,
+      },
+      {
+        name: "NoElement",
+        type: "SwitchParameter",
+        description: "Omits the members of a group from the results, showing only Count and Name.",
+        required: false,
+        position: null,
       },
     ],
     examples: [
@@ -500,13 +600,51 @@ const FULL_HELP_2: CmdletHelp[] = [
   },
   {
     name: "Measure-Object",
-    synopsis: "Counts items in the pipeline.",
+    synopsis: "Calculates numeric properties or counts items in the pipeline.",
     description:
-      "The Measure-Object cmdlet counts the number of items in the pipeline. " +
-      "It returns an object with a Count property. " +
-      "Use it to quickly determine how many items match your query.",
-    syntax: ["<input> | Measure-Object"],
-    parameters: [],
+      "The Measure-Object cmdlet counts pipeline items and optionally calculates Sum, Average, Maximum, and Minimum " +
+      "for a numeric property. Without -Property, it returns only the Count.",
+    syntax: [
+      "<input> | Measure-Object",
+      "<input> | Measure-Object [-Property] <String> [-Sum] [-Average] [-Maximum] [-Minimum]",
+    ],
+    parameters: [
+      {
+        name: "Property",
+        type: "String",
+        description: "A numeric property to measure. Required when using -Sum, -Average, -Maximum, or -Minimum.",
+        required: false,
+        position: 0,
+      },
+      {
+        name: "Sum",
+        type: "SwitchParameter",
+        description: "Calculates the sum of the specified property values.",
+        required: false,
+        position: null,
+      },
+      {
+        name: "Average",
+        type: "SwitchParameter",
+        description: "Calculates the average of the specified property values.",
+        required: false,
+        position: null,
+      },
+      {
+        name: "Maximum",
+        type: "SwitchParameter",
+        description: "Returns the maximum value of the specified property.",
+        required: false,
+        position: null,
+      },
+      {
+        name: "Minimum",
+        type: "SwitchParameter",
+        description: "Returns the minimum value of the specified property.",
+        required: false,
+        position: null,
+      },
+    ],
     examples: [
       {
         title: "Example 1: Count children of Home",

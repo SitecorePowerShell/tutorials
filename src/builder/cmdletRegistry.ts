@@ -10,6 +10,16 @@ export interface CmdletParam {
   defaultValue?: string;
 }
 
+/** A named parameter set groups mutually-exclusive params */
+export interface ParamSet {
+  /** Display label shown in the toggle (e.g. "Properties", "Expand") */
+  label: string;
+  /** Which param names belong to this set */
+  params: string[];
+  /** Which switch names belong to this set */
+  switches?: string[];
+}
+
 export interface CmdletDef {
   name: string;
   shortLabel: string;
@@ -18,6 +28,9 @@ export interface CmdletDef {
   icon: string;
   params: CmdletParam[];
   switches: string[];
+  /** Optional parameter sets. If defined, the UI shows a toggle.
+   *  Params not listed in any set are shown in all sets (common params). */
+  paramSets?: ParamSet[];
 }
 
 export const CMDLET_REGISTRY: Record<string, CmdletDef> = {
@@ -73,10 +86,19 @@ export const CMDLET_REGISTRY: Record<string, CmdletDef> = {
     icon: "✂️",
     params: [
       { name: "Property", type: "propertyList", placeholder: "Name, TemplateName" },
+      { name: "ExcludeProperty", type: "propertyList", placeholder: "TemplateID" },
+      { name: "ExpandProperty", type: "string", placeholder: "Name" },
       { name: "First", type: "string", placeholder: "5" },
       { name: "Last", type: "string", placeholder: "5" },
+      { name: "Skip", type: "string", placeholder: "2" },
+      { name: "SkipLast", type: "string", placeholder: "2" },
     ],
-    switches: [],
+    switches: ["Unique"],
+    paramSets: [
+      { label: "Properties", params: ["Property", "ExcludeProperty"], switches: ["Unique"] },
+      { label: "Expand", params: ["ExpandProperty"] },
+      { label: "Subset", params: ["First", "Last", "Skip", "SkipLast"] },
+    ],
   },
   "Sort-Object": {
     name: "Sort-Object",
@@ -87,7 +109,7 @@ export const CMDLET_REGISTRY: Record<string, CmdletDef> = {
     params: [
       { name: "Property", type: "propertyList", placeholder: "Name" },
     ],
-    switches: ["Descending"],
+    switches: ["Descending", "Unique"],
   },
   "Measure-Object": {
     name: "Measure-Object",
@@ -95,8 +117,14 @@ export const CMDLET_REGISTRY: Record<string, CmdletDef> = {
     color: "#ffcc80",
     lightColor: "#e65100",
     icon: "📊",
-    params: [],
-    switches: [],
+    params: [
+      { name: "Property", type: "string", placeholder: "Name" },
+    ],
+    switches: ["Sum", "Average", "Maximum", "Minimum"],
+    paramSets: [
+      { label: "Count", params: [] },
+      { label: "Numeric", params: ["Property"], switches: ["Sum", "Average", "Maximum", "Minimum"] },
+    ],
   },
   "Format-Table": {
     name: "Format-Table",
@@ -106,8 +134,9 @@ export const CMDLET_REGISTRY: Record<string, CmdletDef> = {
     icon: "📋",
     params: [
       { name: "Property", type: "propertyList", placeholder: "Name, TemplateName" },
+      { name: "GroupBy", type: "string", placeholder: "TemplateName" },
     ],
-    switches: [],
+    switches: ["AutoSize", "HideTableHeaders"],
   },
   "Group-Object": {
     name: "Group-Object",
@@ -118,7 +147,7 @@ export const CMDLET_REGISTRY: Record<string, CmdletDef> = {
     params: [
       { name: "Property", type: "propertyList", required: true, placeholder: "TemplateName" },
     ],
-    switches: [],
+    switches: ["NoElement"],
   },
   "Find-Item": {
     name: "Find-Item",

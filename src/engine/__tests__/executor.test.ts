@@ -137,6 +137,41 @@ describe("executeCommandWithContext", () => {
       const lines = result.output.split("\n").filter((l) => l.trim());
       expect(lines.length).toBe(4); // header, separator, 2 rows
     });
+
+    it("applies -Skip before -First (correct PowerShell order)", () => {
+      const result = executeCommandWithContext(
+        'Get-ChildItem -Path "master:\\content\\Home" | Select-Object -Skip 1 -First 1',
+        ctx,
+        tree
+      );
+      expect(result.error).toBeNull();
+      // Home has About, Products, News — skip 1 (About), take 1 (Products)
+      expect(result.output).toContain("Products");
+      expect(result.output).not.toContain("About");
+    });
+
+    it("supports -SkipLast", () => {
+      const result = executeCommandWithContext(
+        'Get-ChildItem -Path "master:\\content\\Home" | Select-Object -SkipLast 1',
+        ctx,
+        tree
+      );
+      expect(result.error).toBeNull();
+      // Home has About, Products, News — skip last 1 (News)
+      expect(result.output).toContain("About");
+      expect(result.output).toContain("Products");
+      expect(result.output).not.toContain("News");
+    });
+
+    it("supports -ExpandProperty", () => {
+      const result = executeCommandWithContext(
+        'Get-ChildItem -Path "master:\\content\\Home" | Select-Object -ExpandProperty Name',
+        ctx,
+        tree
+      );
+      expect(result.error).toBeNull();
+      expect(result.output).toBe("About\nProducts\nNews");
+    });
   });
 
   describe("Sort-Object", () => {

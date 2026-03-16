@@ -656,13 +656,18 @@ export function executeCommandWithContext(
           const specs = expandPropertyWildcard(parsePropertyList(propParam), pipelineData);
           (pipelineData as SitecoreItemArray)._selectedProperties = specs;
         }
-        const first = stage.params.First || stage.params.first;
-        if (first) pipelineData = pipelineData.slice(0, parseInt(first));
-        const last = stage.params.Last || stage.params.last;
-        if (last) pipelineData = pipelineData.slice(-parseInt(last));
-
+        // Apply in correct PowerShell order: Skip → SkipLast → First → Last
         const skip = stage.params.Skip || stage.params.skip;
         if (skip) pipelineData = pipelineData.slice(parseInt(skip));
+
+        const skipLast = stage.params.SkipLast || stage.params.skiplast;
+        if (skipLast) pipelineData = pipelineData.slice(0, -parseInt(skipLast));
+
+        const first = stage.params.First || stage.params.first;
+        if (first) pipelineData = pipelineData.slice(0, parseInt(first));
+
+        const last = stage.params.Last || stage.params.last;
+        if (last) pipelineData = pipelineData.slice(-parseInt(last));
 
         const unique = stage.switches.some(
           (s) => s.toLowerCase() === "unique"
@@ -693,6 +698,19 @@ export function executeCommandWithContext(
             output: values.filter((v) => v).join("\n"),
             error: null,
           };
+        }
+
+        const excludeProp =
+          stage.params.ExcludeProperty || stage.params.excludeproperty;
+        if (excludeProp && (pipelineData as SitecoreItemArray)._selectedProperties) {
+          const excludeList = excludeProp.split(",").map((p: string) => p.trim().toLowerCase());
+          (pipelineData as SitecoreItemArray)._selectedProperties =
+            (pipelineData as SitecoreItemArray)._selectedProperties!.filter(
+              (spec) => {
+                const propName = spec.type === "plain" ? spec.name : spec.label;
+                return !excludeList.includes(propName.toLowerCase());
+              }
+            );
         }
       } else if (cmdLower === "sort-object") {
         if (!pipelineData)

@@ -47,9 +47,13 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile, 
   }
   const [criteriaRows, setCriteriaRows] = useState<CriterionRow[]>([{ Filter: "Equals", Field: "_templatename", Value: "", Invert: false }]);
 
+  // Parameter set toggle state
+  const [activeParamSet, setActiveParamSet] = useState(0);
+
   // Reset all structured state when selected stage changes
   useEffect(() => {
     setUseStructured(true);
+    setActiveParamSet(0);
     setForeachOpType("property");
     setForeachProperty("");
     setForeachTemplate("");
@@ -679,7 +683,43 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile, 
       </div>
 
       {(!collapsible || expanded) && <div style={{ display: "flex", flexDirection: "column", gap: 10, padding: collapsible ? "0 10px 8px" : undefined }}>
-      {def.params.map((paramDef) => {
+
+      {/* Parameter set toggle */}
+      {def.paramSets && def.paramSets.length > 1 && (
+        <div style={{ display: "flex", gap: 0, borderRadius: 6, overflow: "hidden", border: `1px solid ${colors.borderMedium}` }}>
+          {def.paramSets.map((ps, idx) => (
+            <button
+              key={ps.label}
+              onClick={() => setActiveParamSet(idx)}
+              style={{
+                flex: 1,
+                padding: "5px 10px",
+                fontSize: fontSizes.xs,
+                fontFamily: fonts.sans,
+                fontWeight: activeParamSet === idx ? 600 : 400,
+                background: activeParamSet === idx ? stageColor : colors.bgDeep,
+                color: activeParamSet === idx ? "#fff" : colors.textSecondary,
+                border: "none",
+                borderRight: idx < def.paramSets!.length - 1 ? `1px solid ${colors.borderMedium}` : "none",
+                cursor: stage.locked ? "default" : "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {ps.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {def.params.filter((paramDef) => {
+        if (!def.paramSets || def.paramSets.length <= 1) return true;
+        const activeSet = def.paramSets[activeParamSet];
+        // Show param if it belongs to the active set
+        if (activeSet.params.includes(paramDef.name)) return true;
+        // Show param if it doesn't belong to ANY set (common param)
+        const inAnySet = def.paramSets.some((ps) => ps.params.includes(paramDef.name));
+        return !inAnySet;
+      }).map((paramDef) => {
         const isExpression = paramDef.type === "expression";
         const isFilterScript = paramDef.name === "FilterScript";
         const isProcess = paramDef.name === "Process";
@@ -952,11 +992,25 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile, 
         );
       })}
 
-      {def.switches.length > 0 && (
+      {def.switches.filter((sw) => {
+        if (!def.paramSets || def.paramSets.length <= 1) return true;
+        const activeSet = def.paramSets[activeParamSet];
+        // Show switch if it belongs to the active set
+        if (activeSet.switches?.includes(sw)) return true;
+        // Show switch if it doesn't belong to ANY set (common switch)
+        const inAnySet = def.paramSets.some((ps) => ps.switches?.includes(sw));
+        return !inAnySet;
+      }).length > 0 && (
         <div>
           <label style={labelStyle}>Switches</label>
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            {def.switches.map((sw) => (
+            {def.switches.filter((sw) => {
+              if (!def.paramSets || def.paramSets.length <= 1) return true;
+              const activeSet = def.paramSets[activeParamSet];
+              if (activeSet.switches?.includes(sw)) return true;
+              const inAnySet = def.paramSets.some((ps) => ps.switches?.includes(sw));
+              return !inAnySet;
+            }).map((sw) => (
               <label
                 key={sw}
                 style={{
