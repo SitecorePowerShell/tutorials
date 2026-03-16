@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ConsoleEntry } from "../types";
 import { HighlightedCode } from "./HighlightedCode";
 import { MarkdownLite } from "./MarkdownLite";
+import { DialogEntry } from "./DialogEntry";
 import { colors, fontSizes } from "../theme";
 
 function CopyButton({ text }: { text: string }) {
@@ -143,6 +144,9 @@ export function OutputPane({ entries, isISE, isBuilder, endRef }: OutputPaneProp
             <div style={{ color: colors.accentPrimary, fontSize: fontSizes.sm, marginLeft: 16 }}>
               {entry.text}
             </div>
+          )}
+          {(entry.type === "dialog-alert" || entry.type === "dialog-read-variable" || entry.type === "dialog-listview") && (
+            <DialogEntry entry={entry} />
           )}
         </div>
       ))}

@@ -19,7 +19,7 @@ import { ScriptContext } from "./scriptContext";
 import { evaluateExpression } from "./expressionEval";
 import { evaluateFilter } from "./filterEval";
 import { findMatchingDelimiter } from "./expressionEval";
-import { parsePropertyList } from "./propertySpec";
+import { parsePropertyList, getPropertyLabel, evaluatePropertySpec } from "./propertySpec";
 import {
   buildSearchIndex,
   executeSearch,
@@ -511,7 +511,7 @@ export function executeCommandWithContext(
     "write-output": 10, "write-host": 10, "write-error": 1, "write-warning": 1,
     "where-object": 1, "foreach-object": 1, "select-object": 1,
     "sort-object": 1, "group-object": 1, "measure-object": 1,
-    "format-table": 1, "show-listview": 1, "show-alert": 1,
+    "format-table": 1, "show-listview": 1, "show-alert": 1, "show-confirm": 1, "show-input": 1, "show-yesnocancel": 1, "show-fieldeditor": 0, "show-modaldialog": 0,
     "get-member": 0, "get-alias": 0, "find-item": 1,
     "initialize-item": 0, "convertto-json": 0,
   };
@@ -1030,6 +1030,33 @@ export function executeCommandWithContext(
           output += formatItemTable(pipelineData);
         }
         output += `\n\n  ${pipelineData.length} item(s) displayed.`;
+
+        // Build structured table data for visual dialog rendering
+        let columns: string[];
+        let rows: string[][];
+        if (specs) {
+          columns = specs.map((p) => getPropertyLabel(p));
+          rows = pipelineData.map((item) =>
+            specs!.map((p) => {
+              if (p.type === "calculated" && ctx) {
+                return evaluatePropertySpec(p, item, ctx);
+              }
+              const name = p.type === "plain" ? p.name : p.label;
+              return getItemProperty(item, name) || "-";
+            })
+          );
+        } else {
+          columns = ["Name", "Children", "Language", "Version", "Id", "TemplateName"];
+          rows = pipelineData.map((item) => [
+            item.name,
+            Object.keys(item.node._children || {}).length > 0 ? "True" : "False",
+            "en",
+            String(item.node._version || 1),
+            item.node._id || "-",
+            item.node._template || "-",
+          ]);
+        }
+        ctx.dialogRequests.push({ type: "listview", title, itemCount: pipelineData.length, columns, rows });
         return { output, error: null };
       } else if (cmdLower === "show-alert") {
         const msg =
@@ -1517,10 +1544,44 @@ export function executeCommandWithContext(
           delete item._isSearchResult;
         }
 
+      } else if (cmdLower === "show-confirm") {
+        const msg =
+          stage.params.Title || stage.params.title ||
+          (stage.params._positional && stage.params._positional[0]) || "Confirm";
+        return {
+          output: `Show-Confirm : "${msg}"\n   (In real SPE, this opens a Yes/No confirmation dialog)`,
+          error: null,
+        };
+      } else if (cmdLower === "show-input") {
+        const prompt =
+          stage.params.Prompt || stage.params.prompt ||
+          (stage.params._positional && stage.params._positional[0]) || "Input";
+        return {
+          output: `Show-Input : "${prompt}"\n   (In real SPE, this opens a text input dialog)`,
+          error: null,
+        };
+      } else if (cmdLower === "show-yesnocancel") {
+        const msg =
+          stage.params.Title || stage.params.title ||
+          (stage.params._positional && stage.params._positional[0]) || "Confirm";
+        return {
+          output: `Show-YesNoCancel : "${msg}"\n   (In real SPE, this opens a Yes/No/Cancel dialog)`,
+          error: null,
+        };
+      } else if (cmdLower === "show-fieldeditor") {
+        return {
+          output: `Show-FieldEditor\n   (In real SPE, this opens a field editor dialog for item fields)`,
+          error: null,
+        };
+      } else if (cmdLower === "show-modaldialog") {
+        return {
+          output: `Show-ModalDialog\n   (In real SPE, this opens a custom XAML modal dialog)`,
+          error: null,
+        };
       } else {
         return {
           output: "",
-          error: `${stage.cmdlet} : The term '${stage.cmdlet}' is not recognized. Supported commands: Get-Item, Get-ChildItem, Set-Location, Where-Object, ForEach-Object, Select-Object, Sort-Object, Group-Object, Measure-Object, Get-Member, Get-Alias, Get-Help, Show-ListView, New-Item, Remove-Item, Move-Item, Copy-Item, Rename-Item, Set-ItemProperty, Format-Table, ConvertTo-Json, Write-Host, Write-Error, Write-Warning, Show-Alert, Read-Variable, Find-Item, Publish-Item, Initialize-Item`,
+          error: `${stage.cmdlet} : The term '${stage.cmdlet}' is not recognized. Supported commands: Get-Item, Get-ChildItem, Set-Location, Where-Object, ForEach-Object, Select-Object, Sort-Object, Group-Object, Measure-Object, Get-Member, Get-Alias, Get-Help, Show-ListView, New-Item, Remove-Item, Move-Item, Copy-Item, Rename-Item, Set-ItemProperty, Format-Table, ConvertTo-Json, Write-Host, Write-Error, Write-Warning, Show-Alert, Read-Variable, Show-Confirm, Show-Input, Show-YesNoCancel, Show-FieldEditor, Show-ModalDialog, Find-Item, Publish-Item, Initialize-Item`,
         };
       }
     } catch (err) {

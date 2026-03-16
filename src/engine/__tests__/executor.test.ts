@@ -771,3 +771,47 @@ describe("executeCommand (backward-compatible wrapper)", () => {
     expect(result.output).toContain("master:\\content\\Home");
   });
 });
+
+describe("Dialog requests", () => {
+  it("Show-Alert populates dialogRequests with alert type", () => {
+    const result = executeCommandWithContext(
+      'Show-Alert "Hello World"',
+      ctx,
+      tree
+    );
+    expect(result.error).toBeNull();
+    expect(ctx.dialogRequests).toHaveLength(1);
+    expect(ctx.dialogRequests[0]).toEqual({
+      type: "alert",
+      message: "Hello World",
+    });
+  });
+
+  it("Read-Variable populates dialogRequests with read-variable type", () => {
+    const result = executeCommandWithContext(
+      'Read-Variable -Title "Config" -Description "Enter settings"',
+      ctx,
+      tree
+    );
+    expect(result.error).toBeNull();
+    expect(ctx.dialogRequests).toHaveLength(1);
+    expect(ctx.dialogRequests[0]).toEqual({
+      type: "read-variable",
+      title: "Config",
+      description: "Enter settings",
+    });
+  });
+
+  it("Show-ListView populates dialogRequests with listview type and itemCount", () => {
+    const result = executeCommandWithContext(
+      'Get-ChildItem -Path "master:\\content\\Home" | Show-ListView -Title "Results"',
+      ctx,
+      tree
+    );
+    expect(result.error).toBeNull();
+    expect(ctx.dialogRequests).toHaveLength(1);
+    expect(ctx.dialogRequests[0].type).toBe("listview");
+    expect(ctx.dialogRequests[0].title).toBe("Results");
+    expect(ctx.dialogRequests[0].itemCount).toBeGreaterThan(0);
+  });
+});

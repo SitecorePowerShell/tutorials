@@ -76,10 +76,13 @@ export interface ExecutionResult {
 }
 
 export interface DialogRequest {
-  type: "alert" | "read-variable";
+  type: "alert" | "read-variable" | "listview";
   message?: string;
   title?: string;
   description?: string;
+  itemCount?: number;
+  columns?: string[];
+  rows?: string[][];
 }
 
 export interface ScriptResult {
@@ -226,8 +229,36 @@ export interface QuizResult {
 // UI types
 // ============================================================================
 
-export interface ConsoleEntry {
+interface BaseConsoleEntry {
   type: "command" | "script" | "output" | "error" | "success" | "hint" | "partial";
   text: string;
   cwd?: string;
 }
+
+interface DialogAlertEntry {
+  type: "dialog-alert";
+  text: string;
+  message: string;
+}
+
+interface DialogReadVarEntry {
+  type: "dialog-read-variable";
+  text: string;
+  title: string;
+  description: string;
+}
+
+interface DialogListViewEntry {
+  type: "dialog-listview";
+  text: string;
+  title: string;
+  itemCount: number;
+  columns: string[];
+  rows: string[][];
+}
+
+export type ConsoleEntry =
+  | BaseConsoleEntry
+  | DialogAlertEntry
+  | DialogReadVarEntry
+  | DialogListViewEntry;

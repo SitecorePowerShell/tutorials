@@ -271,10 +271,7 @@ function findCurrentCmdlet(beforeCursor: string): string | null {
 
 /** Get parameters for a cmdlet (by canonical name) */
 function getParamsForCmdlet(cmdletName: string | null): string[] {
-  if (!cmdletName) {
-    // Return common params if we can't determine the cmdlet
-    return ["-Path", "-Property", "-Name", "-Recurse", "-Descending"];
-  }
+  if (!cmdletName) return [];
   return CMDLET_PARAMS[cmdletName] || [];
 }
 

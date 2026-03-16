@@ -251,9 +251,43 @@ export default function SPETutorial() {
       setCwd(ctx.cwd);
     }
 
+    // Convert dialog requests into styled console entries
+    const dialogTypes = new Set(ctx.dialogRequests.map((d) => d.type));
+
     if (result.output) {
-      newOutput.push({ type: "output", text: result.output });
+      if (dialogTypes.has("listview")) {
+        // Replace plain output with styled listview dialog
+        const lv = ctx.dialogRequests.find((d) => d.type === "listview")!;
+        newOutput.push({
+          type: "dialog-listview",
+          text: result.output,
+          title: lv.title || "List View",
+          itemCount: lv.itemCount ?? 0,
+          columns: lv.columns || [],
+          rows: lv.rows || [],
+        });
+      } else if (!dialogTypes.has("alert") && !dialogTypes.has("read-variable")) {
+        newOutput.push({ type: "output", text: result.output });
+      }
     }
+
+    for (const dr of ctx.dialogRequests) {
+      if (dr.type === "alert") {
+        newOutput.push({
+          type: "dialog-alert",
+          text: dr.message || "",
+          message: dr.message || "",
+        });
+      } else if (dr.type === "read-variable") {
+        newOutput.push({
+          type: "dialog-read-variable",
+          text: `${dr.title}${dr.description ? " — " + dr.description : ""}`,
+          title: dr.title || "Input",
+          description: dr.description || "",
+        });
+      }
+    }
+
     if (result.error) {
       newOutput.push({ type: "error", text: result.error });
     }

@@ -128,10 +128,9 @@ describe("completions", () => {
       expect(result!.matches).toContain("-First");
     });
 
-    it("returns common params for unknown cmdlet", () => {
+    it("returns no params for unknown cmdlet", () => {
       const result = getCompletions("SomeUnknown -", 13);
-      expect(result).not.toBeNull();
-      expect(result!.matches.length).toBeGreaterThan(0);
+      expect(result).toBeNull();
     });
   });
 
