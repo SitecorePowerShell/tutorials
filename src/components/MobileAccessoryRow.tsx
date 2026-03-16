@@ -21,8 +21,10 @@ const KEYS: KeyDef[] = [
   { label: "$", char: "$" },
   { label: "_", char: "_" },
   { label: ".", char: "." },
+  { label: "-", char: "-" },
   { label: "{}", char: "{", pair: "}" },
   { label: '"', char: '"' },
+  { label: "'", char: "'" },
   { label: "\\", char: "\\" },
   { label: "?", char: "?" },
   { label: "()", char: "(", pair: ")" },
@@ -103,7 +105,7 @@ export function MobileAccessoryRow({ onInsert, onAction }: MobileAccessoryRowPro
           const isAction = !!key.action;
 
           // Insert operator dropdown after the "." button (index 6)
-          const showOpBefore = i === 7; // before "{}"
+          const showOpBefore = i === 8; // before "{}"
 
           return (
             <span key={key.label} style={{ display: "contents" }}>

@@ -435,6 +435,75 @@ export function ReplEditor({
         onAction={handleAccessoryAction}
       />
     )}
+    {isMobile && (
+      <div
+        style={{
+          padding: "6px 12px",
+          borderBottom: `1px solid ${colors.borderBase}`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          background: colors.bgSurface,
+          flexShrink: 0,
+        }}
+      >
+        <div
+          style={{
+            fontSize: fontSizes.sm,
+            color: colors.textSecondary,
+            fontWeight: 600,
+            textTransform: "uppercase",
+            letterSpacing: "0.06em",
+          }}
+        >
+          Console
+        </div>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button
+            onClick={() => onRun()}
+            aria-label="Run"
+            title="Run"
+            style={{
+              background: gradients.accent,
+              border: "none",
+              color: colors.textWhite,
+              width: 40,
+              height: 32,
+              borderRadius: 6,
+              cursor: "pointer",
+              fontSize: 16,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              touchAction: "manipulation",
+            }}
+          >
+            ▶
+          </button>
+          <button
+            onClick={onClear}
+            aria-label="Clear output"
+            title="Clear output"
+            style={{
+              background: "transparent",
+              border: `1px solid ${colors.borderMedium}`,
+              color: colors.textClear,
+              width: 40,
+              height: 32,
+              borderRadius: 6,
+              cursor: "pointer",
+              fontSize: 14,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              touchAction: "manipulation",
+            }}
+          >
+            ⌫
+          </button>
+        </div>
+      </div>
+    )}
     <div
       style={{
         flex: 1,
@@ -747,58 +816,6 @@ export function ReplEditor({
       {/* Scroll anchor */}
       <div ref={consoleEndRef} />
     </div>
-    {isMobile && (
-      <div
-        style={{
-          display: "flex",
-          gap: 8,
-          padding: "8px 16px",
-          borderTop: `1px solid ${colors.borderBase}`,
-          background: colors.bgSurface,
-          flexShrink: 0,
-        }}
-      >
-        <button
-          onClick={() => onRun()}
-          style={{
-            background: gradients.accent,
-            border: "none",
-            color: colors.textWhite,
-            padding: "10px 20px",
-            borderRadius: 4,
-            cursor: "pointer",
-            fontSize: 14,
-            fontWeight: 600,
-            fontFamily: "inherit",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 6,
-            minHeight: 44,
-            flex: 1,
-          }}
-        >
-          ▶ Run
-        </button>
-        <button
-          onClick={onClear}
-          style={{
-            background: "transparent",
-            border: `1px solid ${colors.borderMedium}`,
-            color: colors.textClear,
-            padding: "10px 16px",
-            borderRadius: 4,
-            cursor: "pointer",
-            fontSize: 14,
-            fontFamily: "inherit",
-            minHeight: 44,
-            flex: 1,
-          }}
-        >
-          Clear
-        </button>
-      </div>
-    )}
     </div>
   );
 }

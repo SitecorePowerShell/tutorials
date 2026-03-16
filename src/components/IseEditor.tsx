@@ -500,63 +500,78 @@ export function IseEditor({
           >
             Script Editor
           </div>
-          <div style={{ display: "flex", gap: 8, width: isMobile ? "100%" : undefined }}>
+          <div style={{ display: "flex", gap: isMobile ? 6 : 8, width: isMobile ? undefined : undefined }}>
             <button
               onClick={onRun}
+              aria-label="Run"
+              title="Run (Ctrl+Enter)"
               style={{
                 background: gradients.accent,
                 border: "none",
                 color: colors.textWhite,
-                padding: isMobile ? "10px 20px" : "5px 16px",
-                borderRadius: 4,
+                padding: isMobile ? 0 : "5px 16px",
+                width: isMobile ? 40 : undefined,
+                height: isMobile ? 32 : undefined,
+                borderRadius: isMobile ? 6 : 4,
                 cursor: "pointer",
-                fontSize: isMobile ? 14 : fontSizes.base,
+                fontSize: isMobile ? 16 : fontSizes.base,
                 fontWeight: 600,
                 fontFamily: "inherit",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 6,
-                minHeight: isMobile ? 44 : undefined,
-                flex: isMobile ? 1 : undefined,
+                touchAction: "manipulation",
               }}
             >
-              ▶ Run
+              {isMobile ? "▶" : "▶ Run"}
             </button>
             <button
               onClick={onClear}
+              aria-label="Clear output"
+              title="Clear output (Ctrl+L)"
               style={{
                 background: "transparent",
                 border: `1px solid ${colors.borderMedium}`,
                 color: colors.textClear,
-                padding: isMobile ? "10px 16px" : "5px 12px",
-                borderRadius: 4,
+                padding: isMobile ? 0 : "5px 12px",
+                width: isMobile ? 40 : undefined,
+                height: isMobile ? 32 : undefined,
+                borderRadius: isMobile ? 6 : 4,
                 cursor: "pointer",
                 fontSize: isMobile ? 14 : fontSizes.base,
                 fontFamily: "inherit",
-                minHeight: isMobile ? 44 : undefined,
-                flex: isMobile ? 1 : undefined,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                touchAction: "manipulation",
               }}
             >
-              Clear
+              {isMobile ? "⌫" : "Clear"}
             </button>
             {onReset && (
               <button
                 onClick={onReset}
+                aria-label="Reset editor"
+                title="Reset editor"
                 style={{
                   background: "transparent",
                   border: `1px solid ${colors.borderMedium}`,
                   color: colors.textClear,
-                  padding: isMobile ? "10px 16px" : "5px 12px",
-                  borderRadius: 4,
+                  padding: isMobile ? 0 : "5px 12px",
+                  width: isMobile ? 40 : undefined,
+                  height: isMobile ? 32 : undefined,
+                  borderRadius: isMobile ? 6 : 4,
                   cursor: "pointer",
                   fontSize: isMobile ? 14 : fontSizes.base,
                   fontFamily: "inherit",
-                  minHeight: isMobile ? 44 : undefined,
-                  flex: isMobile ? 1 : undefined,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  touchAction: "manipulation",
                 }}
               >
-                Reset
+                {isMobile ? "↺" : "Reset"}
               </button>
             )}
           </div>
