@@ -9,10 +9,10 @@ interface LandingPageProps {
 }
 
 const features = [
-  { icon: ">_", label: "Hands-on Console", desc: "Practice SPE commands in a simulated console" },
-  { icon: "\u25E2", label: "Real Sitecore Tree", desc: "Navigate a virtual content tree" },
-  { icon: "\u25B6", label: "23 Guided Lessons", desc: "From basics to advanced scripting" },
-  { icon: "\u2601", label: "No Setup Required", desc: "Everything runs in the browser" },
+  { icon: ">_", label: "Interactive Console & ISE", desc: "REPL, multi-line editor, and visual pipeline builder" },
+  { icon: "\u25E2", label: "Simulated Content Tree", desc: "Navigate, create, move, and publish items" },
+  { icon: "\u25B6", label: "29 Lessons + Quizzes", desc: "6 levels from beginner to advanced, plus a free playground" },
+  { icon: "\u2601", label: "Nothing to Install", desc: "Runs entirely in the browser — no Sitecore instance needed" },
 ];
 
 export function LandingPage({ onGetStarted, isMobile, themeMode, onThemeToggle }: LandingPageProps) {
@@ -108,7 +108,7 @@ export function LandingPage({ onGetStarted, isMobile, themeMode, onThemeToggle }
             maxWidth: 520,
           }}
         >
-          Learn to harness the power of PowerShell in Sitecore &mdash; right in your browser.
+          Master Sitecore PowerShell Extensions through hands-on practice &mdash; from your first command to real-world scripts.
         </p>
 
         {/* Credits */}
@@ -201,6 +201,57 @@ export function LandingPage({ onGetStarted, isMobile, themeMode, onThemeToggle }
           ))}
         </div>
 
+        {/* What you'll learn */}
+        <div
+          style={{
+            width: "100%",
+            textAlign: "left",
+            background: colors.bgCard,
+            border: `1px solid ${colors.borderBase}`,
+            borderRadius: 8,
+            padding: isMobile ? "16px 18px" : "20px 24px",
+          }}
+        >
+          <div
+            style={{
+              fontSize: fs.sm,
+              fontWeight: 700,
+              color: colors.textSubtle,
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+              marginBottom: 12,
+            }}
+          >
+            What you'll learn
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+              gap: isMobile ? 6 : 8,
+              fontSize: fs.sm,
+              color: colors.textSecondary,
+              lineHeight: 1.5,
+            }}
+          >
+            {[
+              "Navigate and query the Sitecore content tree",
+              "Filter, sort, and format pipeline output",
+              "Create, move, copy, and publish items",
+              "Write multi-line scripts with variables and loops",
+              "Use string operations and .NET type methods",
+              "Build content reports and bulk update scripts",
+              "Search with Find-Item and index criteria",
+              "Handle errors with try/catch and Write-Warning",
+            ].map((item) => (
+              <div key={item} style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+                <span style={{ color: colors.accentPrimary, flexShrink: 0 }}>&bull;</span>
+                {item}
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* CTA button */}
         <button
           onClick={onGetStarted}
@@ -254,6 +305,14 @@ export function LandingPage({ onGetStarted, isMobile, themeMode, onThemeToggle }
             style={{ color: colors.textDimmed, textDecoration: "none" }}
           >
             doc.sitecorepowershell.com
+          </a>
+          <a
+            href="https://github.com/SitecorePowerShell"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: colors.textDimmed, textDecoration: "none" }}
+          >
+            GitHub
           </a>
         </div>
       </div>
