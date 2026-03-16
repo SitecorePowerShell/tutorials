@@ -763,17 +763,27 @@ export function executeCommandWithContext(
         const wantMin = stage.switches.some(
           (s) => s.toLowerCase() === "minimum"
         );
+        const wantStats = wantSum || wantAvg || wantMax || wantMin;
+
+        // If a property was specified, verify it exists on at least one item
+        if (propParam && Array.isArray(pipelineData) && pipelineData.length > 0) {
+          const anyHasProperty = pipelineData.some(
+            (item) => getItemProperty(item, propParam) !== ""
+          );
+          if (!anyHasProperty) {
+            return {
+              output: "",
+              error: `Measure-Object : The property "${propParam}" cannot be found in the input for any objects.`,
+            };
+          }
+        }
 
         let sum: number | undefined;
         let avg: number | undefined;
         let max: number | undefined;
         let min: number | undefined;
 
-        if (
-          propParam &&
-          Array.isArray(pipelineData) &&
-          (wantSum || wantAvg || wantMax || wantMin)
-        ) {
+        if (propParam && Array.isArray(pipelineData) && wantStats) {
           const nums = pipelineData
             .map((item) => parseFloat(getItemProperty(item, propParam)))
             .filter((n) => !isNaN(n));
@@ -787,11 +797,16 @@ export function executeCommandWithContext(
           }
         }
 
+        // Count-only mode: just show Count (matches real PowerShell)
+        if (!wantStats && !propParam) {
+          return { output: `\nCount    : ${count}`, error: null };
+        }
+
         const lines = [`\nCount    : ${count}`];
-        lines.push(`Average  : ${avg !== undefined ? avg : ""}`);
-        lines.push(`Sum      : ${sum !== undefined ? sum : ""}`);
-        lines.push(`Maximum  : ${max !== undefined ? max : ""}`);
-        lines.push(`Minimum  : ${min !== undefined ? min : ""}`);
+        if (wantAvg) lines.push(`Average  : ${avg !== undefined ? avg : ""}`);
+        if (wantSum || wantAvg) lines.push(`Sum      : ${sum !== undefined ? sum : ""}`);
+        if (wantMax) lines.push(`Maximum  : ${max !== undefined ? max : ""}`);
+        if (wantMin) lines.push(`Minimum  : ${min !== undefined ? min : ""}`);
         lines.push(`Property : ${propParam || ""}`);
 
         return { output: lines.join("\n"), error: null };

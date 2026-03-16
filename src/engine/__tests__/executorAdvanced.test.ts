@@ -473,4 +473,59 @@ describe("Measure-Object with stats", () => {
     expect(result.output).toContain("Maximum  : 1");
     expect(result.output).toContain("Minimum  : 1");
   });
+
+  it("errors on unknown property (matches real SPE)", () => {
+    const result = executeCommandWithContext(
+      'Get-ChildItem -Path "master:\\content\\Home" | Measure-Object __Version -Sum',
+      ctx,
+      tree
+    );
+    expect(result.error).toContain(
+      'The property "__Version" cannot be found in the input for any objects.'
+    );
+    expect(result.output).toBe("");
+  });
+
+  it("errors on completely bogus property", () => {
+    const result = executeCommandWithContext(
+      'Get-ChildItem -Path "master:\\content\\Home" | Measure-Object -Property NonExistentProp -Sum',
+      ctx,
+      tree
+    );
+    expect(result.error).toContain(
+      'The property "NonExistentProp" cannot be found in the input for any objects.'
+    );
+  });
+
+  it("count-only mode shows just Count line", () => {
+    const result = executeCommandWithContext(
+      'Get-ChildItem -Path "master:\\content\\Home" | Measure-Object',
+      ctx,
+      tree
+    );
+    expect(result.error).toBeNull();
+    expect(result.output).toContain("Count    : 3");
+    // Should NOT contain stat lines when no switches are used
+    expect(result.output).not.toContain("Average");
+    expect(result.output).not.toContain("Sum");
+    expect(result.output).not.toContain("Maximum");
+    expect(result.output).not.toContain("Minimum");
+    expect(result.output).not.toContain("Property");
+  });
+
+  it("only shows requested stat lines", () => {
+    const result = executeCommandWithContext(
+      'Get-ChildItem -Path "master:\\content\\Home" | Measure-Object -Property Version -Sum',
+      ctx,
+      tree
+    );
+    expect(result.error).toBeNull();
+    expect(result.output).toContain("Count    : 3");
+    expect(result.output).toContain("Sum      : 3");
+    expect(result.output).toContain("Property : Version");
+    // Should NOT contain unrequested stat lines
+    expect(result.output).not.toContain("Average");
+    expect(result.output).not.toContain("Maximum");
+    expect(result.output).not.toContain("Minimum");
+  });
 });
