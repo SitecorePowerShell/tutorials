@@ -454,6 +454,189 @@ foreach($item in $items) { Write-Host $item.Name }`;
   });
 });
 
+describe("executeCommandWithContext - Write-Error", () => {
+  it("produces error output", () => {
+    const result = executeCommandWithContext(
+      'Write-Error "Something went wrong"',
+      ctx,
+      tree
+    );
+    expect(result.error).toContain("Write-Error");
+    expect(result.error).toContain("Something went wrong");
+  });
+
+  it("supports -Message parameter", () => {
+    const result = executeCommandWithContext(
+      'Write-Error -Message "Bad input"',
+      ctx,
+      tree
+    );
+    expect(result.error).toContain("Write-Error : Bad input");
+  });
+});
+
+describe("executeCommandWithContext - Write-Warning", () => {
+  it("produces WARNING: prefixed output", () => {
+    const result = executeCommandWithContext(
+      'Write-Warning "Careful now"',
+      ctx,
+      tree
+    );
+    expect(result.error).toBeNull();
+    expect(result.output).toBe("WARNING: Careful now");
+  });
+
+  it("supports -Message parameter", () => {
+    const result = executeCommandWithContext(
+      'Write-Warning -Message "Proceed with caution"',
+      ctx,
+      tree
+    );
+    expect(result.error).toBeNull();
+    expect(result.output).toBe("WARNING: Proceed with caution");
+  });
+});
+
+describe("executeScript - try/catch", () => {
+  it("catches errors from failing commands", () => {
+    const script = 'try { Get-Item -Path "master:\\content\\DoesNotExist" } catch { Write-Host "caught" }';
+    const result = executeScript(script, ctx);
+    expect(ctx.outputs).toContain("caught");
+    // The error should have been consumed by catch, not propagated
+    expect(ctx.errors.length).toBe(0);
+  });
+
+  it("sets $_ to the error message in catch block", () => {
+    const script = 'try { Get-Item -Path "master:\\content\\NoSuchPath" } catch { $msg = $_ }';
+    const result = executeScript(script, ctx);
+    const msg = ctx.getVar("msg");
+    expect(typeof msg).toBe("string");
+    expect(msg as string).toContain("Cannot find path");
+    expect(ctx.errors.length).toBe(0);
+  });
+
+  it("executes try body normally when no error occurs", () => {
+    const script = 'try { Write-Host "all good" } catch { Write-Host "should not run" }';
+    const result = executeScript(script, ctx);
+    expect(ctx.outputs).toContain("all good");
+    expect(ctx.outputs).not.toContain("should not run");
+  });
+
+  it("works without a catch block", () => {
+    const script = 'try { Write-Host "just try" }';
+    const result = executeScript(script, ctx);
+    expect(ctx.outputs).toContain("just try");
+  });
+});
+
+describe("executeCommandWithContext - Publish-Item", () => {
+  it("publishes a single item by path", () => {
+    const result = executeCommandWithContext(
+      'Publish-Item -Path "master:\\content\\Home"',
+      ctx,
+      tree
+    );
+    expect(result.error).toBeNull();
+    expect(result.output).toContain('Published item "Home"');
+    expect(result.output).toContain('target "web"');
+    expect(result.output).toContain("Smart publish");
+  });
+
+  it("publishes via pipeline input", () => {
+    const result = executeCommandWithContext(
+      'Get-Item -Path "master:\\content\\Home" | Publish-Item',
+      ctx,
+      tree
+    );
+    expect(result.error).toBeNull();
+    expect(result.output).toContain('Published item "Home"');
+  });
+
+  it("publishes multiple items via pipeline", () => {
+    const result = executeCommandWithContext(
+      'Get-ChildItem -Path "master:\\content\\Home" | Publish-Item',
+      ctx,
+      tree
+    );
+    expect(result.error).toBeNull();
+    expect(result.output).toContain("Published 3 items");
+    expect(result.output).toContain('target "web"');
+  });
+
+  it("supports -PublishMode parameter", () => {
+    const result = executeCommandWithContext(
+      'Publish-Item -Path "master:\\content\\Home" -PublishMode Full',
+      ctx,
+      tree
+    );
+    expect(result.error).toBeNull();
+    expect(result.output).toContain("Full publish");
+  });
+
+  it("supports -Target parameter", () => {
+    const result = executeCommandWithContext(
+      'Publish-Item -Path "master:\\content\\Home" -Target "staging"',
+      ctx,
+      tree
+    );
+    expect(result.error).toBeNull();
+    expect(result.output).toContain('target "staging"');
+  });
+
+  it("returns error for invalid path", () => {
+    const result = executeCommandWithContext(
+      'Publish-Item -Path "master:\\content\\DoesNotExist"',
+      ctx,
+      tree
+    );
+    expect(result.error).toContain("Cannot find path");
+  });
+
+  it("returns error when no item specified", () => {
+    const result = executeCommandWithContext("Publish-Item", ctx, tree);
+    expect(result.error).toContain("No item specified");
+  });
+
+  it("works with pi alias", () => {
+    const result = executeCommandWithContext(
+      'pi -Path "master:\\content\\Home"',
+      ctx,
+      tree
+    );
+    expect(result.error).toBeNull();
+    expect(result.output).toContain('Published item "Home"');
+  });
+});
+
+describe("executeCommandWithContext - Initialize-Item", () => {
+  it("passes through pipeline data", () => {
+    const result = executeCommandWithContext(
+      'Get-ChildItem -Path "master:\\content\\Home" | Initialize-Item',
+      ctx,
+      tree
+    );
+    expect(result.error).toBeNull();
+    expect(result.output).toContain("About");
+    expect(result.output).toContain("Products");
+    expect(result.output).toContain("News");
+  });
+
+  it("returns error when no pipeline input", () => {
+    const result = executeCommandWithContext("Initialize-Item", ctx, tree);
+    expect(result.error).toContain("No pipeline input");
+  });
+
+  it("works in a pipeline with Find-Item", () => {
+    const result = executeCommandWithContext(
+      'Find-Item -Index sitecore_master_index -Criteria @{Filter="Equals"; Field="_templatename"; Value="Sample Item"} | Initialize-Item | Measure-Object',
+      ctx,
+      tree
+    );
+    expect(result.error).toBeNull();
+    expect(result.output).toContain("Count");
+  });
+});
+
 describe("executeCommand (backward-compatible wrapper)", () => {
   it("executes a single command", () => {
     const result = executeCommand("Get-Location");

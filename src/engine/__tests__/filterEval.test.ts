@@ -254,4 +254,102 @@ describe("evaluateFilter", () => {
       ).toBe(true);
     });
   });
+
+  describe("-contains / -notcontains", () => {
+    it("-contains returns true when array has matching value", () => {
+      ctx.setVar("colors", ["red", "green", "blue"]);
+      expect(evaluateFilter('$colors -contains "green"', ctx)).toBe(true);
+    });
+
+    it("-contains returns false when array lacks value", () => {
+      ctx.setVar("colors", ["red", "green", "blue"]);
+      expect(evaluateFilter('$colors -contains "yellow"', ctx)).toBe(false);
+    });
+
+    it("-contains is case-insensitive", () => {
+      ctx.setVar("colors", ["Red", "Green", "Blue"]);
+      expect(evaluateFilter('$colors -contains "red"', ctx)).toBe(true);
+    });
+
+    it("-contains with non-array falls back to string comparison", () => {
+      ctx.setVar("val", "hello");
+      expect(evaluateFilter('$val -contains "hello"', ctx)).toBe(true);
+      expect(evaluateFilter('$val -contains "world"', ctx)).toBe(false);
+    });
+
+    it("-notcontains returns true when array lacks value", () => {
+      ctx.setVar("colors", ["red", "green", "blue"]);
+      expect(evaluateFilter('$colors -notcontains "yellow"', ctx)).toBe(true);
+    });
+
+    it("-notcontains returns false when array has value", () => {
+      ctx.setVar("colors", ["red", "green", "blue"]);
+      expect(evaluateFilter('$colors -notcontains "green"', ctx)).toBe(false);
+    });
+  });
+
+  describe("-in / -notin", () => {
+    it("-in returns true when value is in array", () => {
+      ctx.setVar("colors", ["red", "green", "blue"]);
+      expect(evaluateFilter('"green" -in $colors', ctx)).toBe(true);
+    });
+
+    it("-in returns false when value is not in array", () => {
+      ctx.setVar("colors", ["red", "green", "blue"]);
+      expect(evaluateFilter('"yellow" -in $colors', ctx)).toBe(false);
+    });
+
+    it("-in is case-insensitive", () => {
+      ctx.setVar("colors", ["Red", "Green", "Blue"]);
+      expect(evaluateFilter('"RED" -in $colors', ctx)).toBe(true);
+    });
+
+    it("-notin returns true when value is not in array", () => {
+      ctx.setVar("colors", ["red", "green", "blue"]);
+      expect(evaluateFilter('"yellow" -notin $colors', ctx)).toBe(true);
+    });
+
+    it("-notin returns false when value is in array", () => {
+      ctx.setVar("colors", ["red", "green", "blue"]);
+      expect(evaluateFilter('"green" -notin $colors', ctx)).toBe(false);
+    });
+  });
+
+  describe("-is / -isnot", () => {
+    it("-is [string] returns true for string value", () => {
+      ctx.setVar("val", "hello");
+      expect(evaluateFilter("$val -is [string]", ctx)).toBe(true);
+    });
+
+    it("-is [int] returns true for numeric string", () => {
+      ctx.setVar("val", "42");
+      expect(evaluateFilter("$val -is [int]", ctx)).toBe(true);
+    });
+
+    it("-is [int] returns false for non-numeric string", () => {
+      ctx.setVar("val", "hello");
+      expect(evaluateFilter("$val -is [int]", ctx)).toBe(false);
+    });
+
+    it("-is [array] returns true for array value", () => {
+      ctx.setVar("val", ["a", "b", "c"]);
+      expect(evaluateFilter("$val -is [array]", ctx)).toBe(true);
+    });
+
+    it("-is [array] returns false for non-array", () => {
+      ctx.setVar("val", "hello");
+      expect(evaluateFilter("$val -is [array]", ctx)).toBe(false);
+    });
+
+    it("-isnot negates the type check", () => {
+      ctx.setVar("val", "hello");
+      expect(evaluateFilter("$val -isnot [int]", ctx)).toBe(true);
+      expect(evaluateFilter("$val -isnot [string]", ctx)).toBe(false);
+    });
+
+    it("-is [bool] detects boolean-like values", () => {
+      ctx.setVar("val", "True");
+      expect(evaluateFilter("$val -is [bool]", ctx)).toBe(true);
+    });
+  });
 });

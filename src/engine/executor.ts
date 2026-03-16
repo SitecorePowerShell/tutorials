@@ -58,6 +58,7 @@ const ALIAS_MAP: Record<string, string> = {
   gal: "get-alias",
   cd: "set-location", sl: "set-location", chdir: "set-location",
   fi: "find-item",
+  pi: "publish-item",
   help: "get-help",
 };
 
@@ -248,6 +249,50 @@ export function executeLine(line: string, ctx: ScriptContext): void {
           executeLine(bl, ctx);
         }
       }
+    }
+    return;
+  }
+
+  // try/catch block
+  if (/^try\s*\{/i.test(trimmed)) {
+    const tryStart = trimmed.indexOf("{");
+    const tryEnd = findMatchingDelimiter(trimmed, tryStart, "{", "}");
+    if (tryStart === -1 || tryEnd === -1) return;
+
+    const tryBody = trimmed.slice(tryStart + 1, tryEnd);
+
+    // Find catch block
+    const afterTry = trimmed.slice(tryEnd + 1).trim();
+    if (/^catch\s*\{/i.test(afterTry)) {
+      const catchStart = afterTry.indexOf("{");
+      const catchEnd = findMatchingDelimiter(afterTry, catchStart, "{", "}");
+      if (catchStart !== -1 && catchEnd !== -1) {
+        const catchBody = afterTry.slice(catchStart + 1, catchEnd);
+
+        // Execute try body, catch errors
+        const errorsBefore = ctx.errors.length;
+        const bodyLines = tryBody.split(";").map(s => s.trim()).filter(Boolean);
+        for (const bl of bodyLines) {
+          executeLine(bl, ctx);
+          if (ctx.errors.length > errorsBefore) {
+            // Set $_ to the error message in catch context
+            const errorMsg = ctx.errors.pop()!;
+            ctx.setVar("_", errorMsg);
+            const catchLines = catchBody.split(";").map(s => s.trim()).filter(Boolean);
+            for (const cl of catchLines) {
+              executeLine(cl, ctx);
+            }
+            break;
+          }
+        }
+        return;
+      }
+    }
+
+    // No catch block, just execute try body
+    const bodyLines = tryBody.split(";").map(s => s.trim()).filter(Boolean);
+    for (const bl of bodyLines) {
+      executeLine(bl, ctx);
     }
     return;
   }
@@ -575,6 +620,40 @@ export function executeCommandWithContext(
         if (first) pipelineData = pipelineData.slice(0, parseInt(first));
         const last = stage.params.Last || stage.params.last;
         if (last) pipelineData = pipelineData.slice(-parseInt(last));
+
+        const skip = stage.params.Skip || stage.params.skip;
+        if (skip) pipelineData = pipelineData.slice(parseInt(skip));
+
+        const unique = stage.switches.some(
+          (s) => s.toLowerCase() === "unique"
+        );
+        if (unique && pipelineData.length > 0) {
+          const uniqueProp =
+            stage.params.Property ||
+            stage.params.property ||
+            (stage.params._positional && stage.params._positional[0]);
+          const seen = new Set<string>();
+          pipelineData = pipelineData.filter((item) => {
+            const key = uniqueProp
+              ? getItemProperty(item, uniqueProp)
+              : item.name;
+            if (seen.has(key.toLowerCase())) return false;
+            seen.add(key.toLowerCase());
+            return true;
+          });
+        }
+
+        const expandProp =
+          stage.params.ExpandProperty || stage.params.expandproperty;
+        if (expandProp) {
+          const values = pipelineData.map((item) =>
+            getItemProperty(item, expandProp)
+          );
+          return {
+            output: values.filter((v) => v).join("\n"),
+            error: null,
+          };
+        }
       } else if (cmdLower === "sort-object") {
         if (!pipelineData)
           return { output: "", error: "Sort-Object : No pipeline input." };
@@ -634,13 +713,57 @@ export function executeCommandWithContext(
       } else if (cmdLower === "measure-object") {
         if (!pipelineData)
           return { output: "", error: "Measure-Object : No pipeline input." };
-        const count = Array.isArray(pipelineData)
-          ? pipelineData.length
-          : 0;
-        return {
-          output: `\nCount    : ${count}\nAverage  : \nSum      : \nMaximum  : \nMinimum  : \nProperty :`,
-          error: null,
-        };
+        const count = Array.isArray(pipelineData) ? pipelineData.length : 0;
+
+        const propParam =
+          stage.params.Property ||
+          stage.params.property ||
+          (stage.params._positional && stage.params._positional[0]);
+
+        const wantSum = stage.switches.some(
+          (s) => s.toLowerCase() === "sum"
+        );
+        const wantAvg = stage.switches.some(
+          (s) => s.toLowerCase() === "average"
+        );
+        const wantMax = stage.switches.some(
+          (s) => s.toLowerCase() === "maximum"
+        );
+        const wantMin = stage.switches.some(
+          (s) => s.toLowerCase() === "minimum"
+        );
+
+        let sum: number | undefined;
+        let avg: number | undefined;
+        let max: number | undefined;
+        let min: number | undefined;
+
+        if (
+          propParam &&
+          Array.isArray(pipelineData) &&
+          (wantSum || wantAvg || wantMax || wantMin)
+        ) {
+          const nums = pipelineData
+            .map((item) => parseFloat(getItemProperty(item, propParam)))
+            .filter((n) => !isNaN(n));
+
+          if (nums.length > 0) {
+            if (wantSum || wantAvg)
+              sum = nums.reduce((a, b) => a + b, 0);
+            if (wantAvg) avg = sum! / nums.length;
+            if (wantMax) max = Math.max(...nums);
+            if (wantMin) min = Math.min(...nums);
+          }
+        }
+
+        const lines = [`\nCount    : ${count}`];
+        lines.push(`Average  : ${avg !== undefined ? avg : ""}`);
+        lines.push(`Sum      : ${sum !== undefined ? sum : ""}`);
+        lines.push(`Maximum  : ${max !== undefined ? max : ""}`);
+        lines.push(`Minimum  : ${min !== undefined ? min : ""}`);
+        lines.push(`Property : ${propParam || ""}`);
+
+        return { output: lines.join("\n"), error: null };
       } else if (cmdLower === "get-member") {
         if (!pipelineData || pipelineData.length === 0) {
           return { output: "", error: "Get-Member : No input object." };
@@ -786,6 +909,16 @@ export function executeCommandWithContext(
             .map(([, v]) => v),
         ].join(" ");
         return { output: msg || "", error: null };
+      } else if (cmdLower === "write-error") {
+        const msg = stage.params.Message || stage.params.message ||
+          (stage.params._positional && stage.params._positional[0]) || "";
+        const cleanMsg = msg.replace(/^["']|["']$/g, "");
+        return { output: "", error: `Write-Error : ${cleanMsg}` };
+      } else if (cmdLower === "write-warning") {
+        const msg = stage.params.Message || stage.params.message ||
+          (stage.params._positional && stage.params._positional[0]) || "";
+        const cleanMsg = msg.replace(/^["']|["']$/g, "");
+        return { output: `WARNING: ${cleanMsg}`, error: null };
       } else if (cmdLower === "new-item") {
         const parentPath =
           stage.params.Path ||
@@ -1176,10 +1309,52 @@ export function executeCommandWithContext(
           (e) => e.alias.padEnd(nameWidth) + " " + e.cmdlet
         );
         return { output: [header, sep, ...rows].join("\n"), error: null };
+
+      } else if (cmdLower === "publish-item") {
+        // Resolve items from -Item param, -Path param, or pipeline input
+        let items: SitecoreItem[] = [];
+        const pathParam = stage.params.Path || stage.params.path ||
+          (stage.params._positional && stage.params._positional[0]);
+        const itemParam = stage.params.Item || stage.params.item;
+        if (pipelineData && pipelineData.length > 0) {
+          items = pipelineData as SitecoreItem[];
+        } else if (pathParam) {
+          const resolved = resolvePath(pathParam, tree, ctx.cwd);
+          if (!resolved)
+            return { output: "", error: `Publish-Item : Cannot find path '${pathParam}' because it does not exist.` };
+          items = [{ name: resolved.name, node: resolved.node, path: resolved.path }];
+        } else if (itemParam) {
+          const resolved = resolvePath(itemParam, tree, ctx.cwd);
+          if (!resolved)
+            return { output: "", error: `Publish-Item : Cannot find path '${itemParam}' because it does not exist.` };
+          items = [{ name: resolved.name, node: resolved.node, path: resolved.path }];
+        } else {
+          return { output: "", error: "Publish-Item : No item specified. Use -Path, -Item, or pipeline input." };
+        }
+
+        const publishMode = stage.params.PublishMode || stage.params.publishmode || "Smart";
+        const target = stage.params.Target || stage.params.target || "web";
+
+        if (items.length === 1) {
+          return {
+            output: `Publish-Item: Published item "${items[0].name}" to target "${target}" (${publishMode} publish)`,
+            error: null,
+          };
+        }
+        return {
+          output: `Publish-Item: Published ${items.length} items to target "${target}" (${publishMode} publish)`,
+          error: null,
+        };
+
+      } else if (cmdLower === "initialize-item") {
+        if (!pipelineData || pipelineData.length === 0)
+          return { output: "", error: "Initialize-Item : No pipeline input." };
+        // In simulation, items are already "initialized" — pass through
+
       } else {
         return {
           output: "",
-          error: `${stage.cmdlet} : The term '${stage.cmdlet}' is not recognized. Supported commands: Get-Item, Get-ChildItem, Set-Location, Where-Object, ForEach-Object, Select-Object, Sort-Object, Group-Object, Measure-Object, Get-Member, Get-Alias, Get-Help, Show-ListView, New-Item, Remove-Item, Move-Item, Copy-Item, Rename-Item, Set-ItemProperty, Format-Table, ConvertTo-Json, Write-Host, Show-Alert, Read-Variable, Find-Item`,
+          error: `${stage.cmdlet} : The term '${stage.cmdlet}' is not recognized. Supported commands: Get-Item, Get-ChildItem, Set-Location, Where-Object, ForEach-Object, Select-Object, Sort-Object, Group-Object, Measure-Object, Get-Member, Get-Alias, Get-Help, Show-ListView, New-Item, Remove-Item, Move-Item, Copy-Item, Rename-Item, Set-ItemProperty, Format-Table, ConvertTo-Json, Write-Host, Write-Error, Write-Warning, Show-Alert, Read-Variable, Find-Item, Publish-Item, Initialize-Item`,
         };
       }
     } catch (err) {

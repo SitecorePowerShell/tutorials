@@ -1,0 +1,54 @@
+id: "template-introspection"
+module: "Level 3 – Content Management"
+order: 24
+title: "Template Introspection"
+difficulty: "intermediate"
+mode: "ise"
+description: |
+  Every Sitecore item is built from a **template** that defines its structure — what fields it has, their types, and default values. Understanding templates is fundamental to working with content programmatically.
+
+  In SPE, each item exposes template information through properties:
+
+  | Property | Description |
+  |---|---|
+  | `TemplateName` | Short name (e.g., `Sample Item`) |
+  | `Template` | Full template path |
+  | `TemplateID` | Template GUID |
+
+  You can use these to:
+  - **Filter items by template** — find all items of a specific type
+  - **Audit template usage** — which templates are actually used
+  - **Group content by type** — understand your content structure
+
+tasks:
+  - instruction: "List all children of `/sitecore/content/Home` and show just their `Name` and `TemplateName` properties."
+    hint: "Get-ChildItem master:\\content\\Home | Select-Object Name, TemplateName"
+    nudge: "Use `Get-ChildItem` with the Home path, then pipe to `Select-Object` to pick specific properties."
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "select-object"
+      outputContains: "TemplateName"
+    successMessage: "You can see each item's template type. Notice how different sections use different templates."
+
+  - instruction: "Find all items under Home that use the `Sample Item` template. Use `Where-Object` to filter by `TemplateName`."
+    hint: "Get-ChildItem master:\\content\\Home -Recurse | Where-Object { $_.TemplateName -eq 'Sample Item' }"
+    nudge: "Pipe `Get-ChildItem -Recurse` through `Where-Object` and compare `$_.TemplateName` to `'Sample Item'`."
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "where-object"
+      outputContains: "Sample Item"
+    successMessage: "You've filtered items by template type — a very common real-world operation for content audits."
+
+  - instruction: "Group all items under Home by their `TemplateName` to see how many items use each template."
+    hint: "Get-ChildItem master:\\content\\Home -Recurse | Group-Object TemplateName"
+    nudge: "Use `Group-Object` with `TemplateName` as the property to group by."
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "group-object"
+    successMessage: "Grouping by template gives you a quick overview of your content architecture. This is valuable for template cleanup and migration planning."

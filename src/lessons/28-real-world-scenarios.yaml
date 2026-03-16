@@ -1,0 +1,59 @@
+id: "real-world-scenarios"
+module: "Level 4 – Advanced Techniques"
+order: 28
+title: "Real-World Scenarios"
+difficulty: "advanced"
+mode: "ise"
+description: |
+  Let's put your SPE skills to the test with real-world scenarios that content administrators face regularly.
+
+  These challenges combine multiple concepts:
+  - Navigation and path resolution
+  - Filtering and selection
+  - String operations and formatting
+  - Scripting constructs
+
+  Each task represents a common request that a content team might bring to a developer.
+
+tasks:
+  - instruction: "**Content audit:** Find all items under Home that have an empty `Title` field. Display their `Name` and `ItemPath`."
+    hint: |
+      Get-ChildItem master:\content\Home -Recurse |
+        Where-Object { $_.Title -eq "" } |
+        Select-Object Name, ItemPath
+    nudge: "Use `Get-ChildItem -Recurse`, filter with `Where-Object` checking for empty `Title`, then `Select-Object` the properties."
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "where-object"
+        - "select-object"
+    successMessage: "Content audits like this help identify items missing required field values — a common quality check."
+
+  - instruction: "**Content report:** Count how many items are under each direct child of Home. Use `ForEach-Object` to iterate children and `Get-ChildItem -Recurse` inside the loop."
+    hint: |
+      Get-ChildItem master:\content\Home | ForEach-Object {
+        $count = (Get-ChildItem $_.ItemPath -Recurse).Count
+        Write-Output "$($_.Name): $count items"
+      }
+    nudge: "Loop through Home's children with `ForEach-Object`. Inside, use `Get-ChildItem -Recurse` and count the results."
+    validation:
+      type: "output"
+      outputContains: "items"
+    successMessage: "This is a classic content tree report. You can extend it to include template breakdowns, last-modified dates, and more."
+
+  - instruction: "**Bulk rename:** Find all items under Products whose name contains a space, and display what they would be renamed to (replace spaces with hyphens). Use `-replace` in `ForEach-Object`."
+    hint: |
+      Get-ChildItem master:\content\Home\Products -Recurse |
+        Where-Object { $_.Name -match " " } |
+        ForEach-Object {
+          Write-Output "$($_.Name) -> $($_.Name -replace ' ', '-')"
+        }
+    nudge: "Filter items where `$_.Name -match \" \"`, then use `ForEach-Object` with the `-replace` operator."
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "where-object"
+        - "foreach-object"
+    successMessage: "Preview scripts like this are essential before bulk operations — always verify what will change before committing!"

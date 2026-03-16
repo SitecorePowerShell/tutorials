@@ -25,6 +25,7 @@ import { LandingPage } from "./components/LandingPage";
 import { VirtualTour, DESKTOP_STEPS, MOBILE_STEPS } from "./components/VirtualTour";
 import { useTourState } from "./hooks/useTourState";
 import { HelpPanel } from "./components/HelpPanel";
+import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
 
 const initialProgress = loadProgress();
 const initialPrefs = loadUIPreferences();
@@ -59,6 +60,7 @@ export default function SPETutorial() {
   const [activeQuiz, setActiveQuiz] = useState<string | null>(null);
   const [quizResults, setQuizResults] = useState<Record<string, QuizResult>>(initialProgress.quizResults);
   const [helpPanelCmdlet, setHelpPanelCmdlet] = useState<string | null>(null);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const tour = useTourState();
   const sessionCtxRef = useRef(new ScriptContext());
   const lessonPanelRef = useRef<HTMLDivElement>(null);
@@ -216,7 +218,7 @@ export default function SPETutorial() {
 
     const currentCwd = sessionCtxRef.current.cwd;
     const cwdDisplay = `master:\\${currentCwd.replace(/^\/sitecore\//, "").replace(/\//g, "\\")}`;
-    const newOutput: ConsoleEntry[] = (isISE || isBuilder)
+    let newOutput: ConsoleEntry[] = (isISE || isBuilder)
       ? [...consoleOutput]
       : [...consoleOutput, { type: "command", text: effective.trim(), cwd: cwdDisplay }];
 
@@ -284,6 +286,11 @@ export default function SPETutorial() {
       }
     }
 
+    // Prune old entries to prevent unbounded growth
+    const MAX_ENTRIES = 500;
+    if (newOutput.length > MAX_ENTRIES) {
+      newOutput = newOutput.slice(newOutput.length - MAX_ENTRIES);
+    }
     setConsoleOutput(newOutput);
     if (!isISE && !isBuilder) {
       const historyEntry = effective.trim().split("\n").map((l) => l.trim()).filter(Boolean).join(" ");
@@ -420,6 +427,20 @@ export default function SPETutorial() {
     document.addEventListener("keydown", handleEsc);
     return () => document.removeEventListener("keydown", handleEsc);
   }, [mobileSidebarOpen]);
+
+  // Toggle keyboard shortcuts with ? key (only when not focused on an input)
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (e.key === "?" && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setShortcutsOpen((prev) => !prev);
+      }
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, []);
 
   // --- LANDING PAGE ---
   if (showLanding) {
@@ -1249,6 +1270,9 @@ export default function SPETutorial() {
         onNext={() => tour.nextStep(DESKTOP_STEPS.length)}
         onPrev={tour.prevStep}
       />
+
+      {/* Keyboard shortcuts modal */}
+      <KeyboardShortcuts open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
 
       {/* Screen reader announcements */}
       <div

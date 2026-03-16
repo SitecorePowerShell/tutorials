@@ -1,6 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { validateTask } from "../validator";
 import type { Task } from "../../types";
+import { resetVirtualTree } from "../../engine/virtualTree";
 
 describe("validateTask — structural", () => {
   const structuralTask: Task = {
@@ -273,5 +274,135 @@ describe("validateTask — pipeline", () => {
       outputTask
     );
     expect(result.passed).toBe(false);
+  });
+});
+
+describe("validateTask — side-effect", () => {
+  afterEach(() => {
+    resetVirtualTree();
+  });
+
+  it("passes when New-Item creates an item at the required path", () => {
+    const task: Task = {
+      instruction: "Create a Contact Us item",
+      hint: "hint",
+      validation: {
+        type: "side-effect",
+        stages: ["new-item"],
+        requirePaths: ["master:\\content\\Home\\Contact Us"],
+      },
+      successMessage: "Done!",
+    };
+    const result = validateTask(
+      'New-Item -Path "master:\\content\\Home" -Name "Contact Us" -ItemType "Sample/Sample Item"',
+      task
+    );
+    expect(result.passed).toBe(true);
+  });
+
+  it("fails when required path does not exist after execution", () => {
+    const task: Task = {
+      instruction: "Create a Contact Us item",
+      hint: "hint",
+      validation: {
+        type: "side-effect",
+        stages: ["new-item"],
+        requirePaths: ["master:\\content\\Home\\Nonexistent"],
+      },
+      successMessage: "Done!",
+    };
+    const result = validateTask(
+      'New-Item -Path "master:\\content\\Home" -Name "Contact Us" -ItemType "Sample/Sample Item"',
+      task
+    );
+    expect(result.passed).toBe(false);
+    expect(result.feedback).toContain("Nonexistent");
+  });
+
+  it("fails when a required stage is missing", () => {
+    const task: Task = {
+      instruction: "Create an item",
+      hint: "hint",
+      validation: {
+        type: "side-effect",
+        stages: ["new-item"],
+        requirePaths: ["master:\\content\\Home\\About"],
+      },
+      successMessage: "Done!",
+    };
+    const result = validateTask(
+      'Get-Item -Path "master:\\content\\Home\\About"',
+      task
+    );
+    expect(result.passed).toBe(false);
+    expect(result.feedback).toContain("New-Item");
+  });
+
+  it("checks forbidPaths — fails when forbidden path still exists", () => {
+    const task: Task = {
+      instruction: "Remove the About item",
+      hint: "hint",
+      validation: {
+        type: "side-effect",
+        forbidPaths: ["master:\\content\\Home\\About"],
+      },
+      successMessage: "Done!",
+    };
+    // Running a no-op command won't remove About, so it still exists
+    const result = validateTask(
+      'Get-Item -Path "master:\\content\\Home"',
+      task
+    );
+    expect(result.passed).toBe(false);
+    expect(result.feedback).toContain("should not exist");
+  });
+
+  it("checks requireFields for field values", () => {
+    const task: Task = {
+      instruction: "Check field",
+      hint: "hint",
+      validation: {
+        type: "side-effect",
+        requireFields: [
+          {
+            path: "master:\\content\\Home",
+            field: "Title",
+            value: "Welcome to Sitecore",
+          },
+        ],
+      },
+      successMessage: "Done!",
+    };
+    // Just run a no-op command — the field should already have this value
+    const result = validateTask(
+      'Get-Item -Path "master:\\content\\Home"',
+      task
+    );
+    expect(result.passed).toBe(true);
+  });
+
+  it("fails requireFields when field value doesn't match", () => {
+    const task: Task = {
+      instruction: "Check field",
+      hint: "hint",
+      validation: {
+        type: "side-effect",
+        requireFields: [
+          {
+            path: "master:\\content\\Home",
+            field: "Title",
+            value: "Wrong Value",
+          },
+        ],
+      },
+      successMessage: "Done!",
+    };
+    const result = validateTask(
+      'Get-Item -Path "master:\\content\\Home"',
+      task
+    );
+    expect(result.passed).toBe(false);
+    expect(result.feedback).toContain("Title");
+    expect(result.feedback).toContain("Wrong Value");
   });
 });

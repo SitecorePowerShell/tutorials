@@ -1,0 +1,57 @@
+id: "field-deep-dive"
+module: "Level 3 – Content Management"
+order: 25
+title: "Field Values Deep Dive"
+difficulty: "intermediate"
+mode: "ise"
+description: |
+  Sitecore items store their content in **fields**. Every field has a name and a value. SPE provides several ways to read and write field values:
+
+  | Approach | Example | Best For |
+  |---|---|---|
+  | Property access | `$item.Title` | Quick reads in pipelines |
+  | `Set-ItemProperty` | `Set-ItemProperty -Path ... -Name "Title" -Value "New"` | Setting individual fields |
+  | `Select-Object` | `$item \| Select-Object Title, Text` | Displaying specific fields |
+
+  Field names are **case-insensitive** in SPE — `$item.Title` and `$item.title` return the same value.
+
+  Common built-in fields every item has:
+  - `__Created` — When the item was created
+  - `__Updated` — Last modification timestamp
+  - `__Created by` — Who created it
+
+tasks:
+  - instruction: "Get the Home item and display its `Title` field value using `Select-Object`."
+    hint: "Get-Item master:\\content\\Home | Select-Object Name, Title"
+    nudge: "Use `Get-Item` to get the Home item, then pipe to `Select-Object` to display the `Title` field."
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-item"
+        - "select-object"
+      outputContains: "Title"
+    successMessage: "You can access any field as a property — SPE makes field access feel natural."
+
+  - instruction: "Set the `Title` field of the Home item to `Welcome Home` using `Set-ItemProperty`."
+    hint: "Set-ItemProperty -Path master:\\content\\Home -Name Title -Value \"Welcome Home\""
+    nudge: "Use `Set-ItemProperty` with `-Path`, `-Name`, and `-Value` parameters."
+    validation:
+      type: "structural"
+      cmdlet: "set-itemproperty"
+      requireParams:
+        Name: "Title"
+    successMessage: "Field updated! In a real Sitecore instance, this would immediately change the item's content."
+
+  - instruction: "List all children of Home and show just their `Name` and `__Updated` fields, sorted by `__Updated` (most recent first)."
+    hint: |
+      Get-ChildItem master:\content\Home |
+        Select-Object Name, __Updated |
+        Sort-Object __Updated -Descending
+    nudge: "Chain `Get-ChildItem`, `Select-Object`, and `Sort-Object` with the `-Descending` switch."
+    validation:
+      type: "pipeline"
+      stages:
+        - "get-childitem"
+        - "select-object"
+        - "sort-object"
+    successMessage: "Sorting by `__Updated` is a quick way to find recently modified content — great for content audits."

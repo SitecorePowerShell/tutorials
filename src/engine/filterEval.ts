@@ -96,6 +96,37 @@ function splitOnLogicalOp(expr: string, op: string): string[] {
 }
 
 /**
+ * Check if a value matches a given PowerShell type name.
+ */
+function checkType(val: unknown, typeName: string): boolean {
+  switch (typeName) {
+    case "string":
+      return typeof val === "string";
+    case "int":
+    case "int32":
+    case "int64":
+      return (
+        typeof val === "number" ||
+        (typeof val === "string" && /^-?\d+$/.test(val))
+      );
+    case "array":
+    case "object[]":
+      return Array.isArray(val);
+    case "bool":
+    case "boolean":
+      return (
+        typeof val === "boolean" ||
+        val === "true" ||
+        val === "false" ||
+        val === "True" ||
+        val === "False"
+      );
+    default:
+      return false;
+  }
+}
+
+/**
  * Compare two values using a PowerShell comparison operator.
  */
 function compareValues(left: unknown, right: unknown, op: string): boolean {
@@ -212,6 +243,88 @@ export function evaluateFilter(
   const andParts = splitOnLogicalOp(trimmed, "-and");
   if (andParts.length > 1) {
     return andParts.every((part) => evaluateFilter(part, ctx, currentItem));
+  }
+
+  // Special handling for collection/type operators that need raw values
+  const containsOp = findOperator(trimmed, "-contains");
+  if (containsOp) {
+    const leftVal = evaluateExpression(containsOp.left, ctx, currentItem);
+    const rightVal = evaluateExpression(containsOp.right, ctx, currentItem);
+    if (Array.isArray(leftVal)) {
+      return leftVal.some((item) => {
+        const itemStr =
+          typeof item === "object" && item !== null && "name" in item
+            ? (item as any).name
+            : String(item);
+        return itemStr.toLowerCase() === String(rightVal).toLowerCase();
+      });
+    }
+    return String(leftVal).toLowerCase() === String(rightVal).toLowerCase();
+  }
+
+  const notcontainsOp = findOperator(trimmed, "-notcontains");
+  if (notcontainsOp) {
+    const leftVal = evaluateExpression(notcontainsOp.left, ctx, currentItem);
+    const rightVal = evaluateExpression(notcontainsOp.right, ctx, currentItem);
+    if (Array.isArray(leftVal)) {
+      return !leftVal.some((item) => {
+        const itemStr =
+          typeof item === "object" && item !== null && "name" in item
+            ? (item as any).name
+            : String(item);
+        return itemStr.toLowerCase() === String(rightVal).toLowerCase();
+      });
+    }
+    return String(leftVal).toLowerCase() !== String(rightVal).toLowerCase();
+  }
+
+  const inOp = findOperator(trimmed, "-in");
+  if (inOp) {
+    const leftVal = evaluateExpression(inOp.left, ctx, currentItem);
+    const rightVal = evaluateExpression(inOp.right, ctx, currentItem);
+    if (Array.isArray(rightVal)) {
+      return rightVal.some((item) => {
+        const itemStr =
+          typeof item === "object" && item !== null && "name" in item
+            ? (item as any).name
+            : String(item);
+        return itemStr.toLowerCase() === String(leftVal).toLowerCase();
+      });
+    }
+    return String(leftVal).toLowerCase() === String(rightVal).toLowerCase();
+  }
+
+  const notinOp = findOperator(trimmed, "-notin");
+  if (notinOp) {
+    const leftVal = evaluateExpression(notinOp.left, ctx, currentItem);
+    const rightVal = evaluateExpression(notinOp.right, ctx, currentItem);
+    if (Array.isArray(rightVal)) {
+      return !rightVal.some((item) => {
+        const itemStr =
+          typeof item === "object" && item !== null && "name" in item
+            ? (item as any).name
+            : String(item);
+        return itemStr.toLowerCase() === String(leftVal).toLowerCase();
+      });
+    }
+    return String(leftVal).toLowerCase() !== String(rightVal).toLowerCase();
+  }
+
+  const isOp = findOperator(trimmed, "-is");
+  if (isOp) {
+    const leftVal = evaluateExpression(isOp.left, ctx, currentItem);
+    const rightType = isOp.right.replace(/[\[\]]/g, "").trim().toLowerCase();
+    return checkType(leftVal, rightType);
+  }
+
+  const isnotOp = findOperator(trimmed, "-isnot");
+  if (isnotOp) {
+    const leftVal = evaluateExpression(isnotOp.left, ctx, currentItem);
+    const rightType = isnotOp.right
+      .replace(/[\[\]]/g, "")
+      .trim()
+      .toLowerCase();
+    return !checkType(leftVal, rightType);
   }
 
   // Atomic condition: try comparison operators

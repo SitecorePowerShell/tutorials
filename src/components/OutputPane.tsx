@@ -1,7 +1,43 @@
+import { useState } from "react";
 import type { ConsoleEntry } from "../types";
 import { HighlightedCode } from "./HighlightedCode";
 import { MarkdownLite } from "./MarkdownLite";
 import { colors, fontSizes } from "../theme";
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(text).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        });
+      }}
+      title="Copy to clipboard"
+      aria-label="Copy to clipboard"
+      style={{
+        position: "absolute",
+        top: 2,
+        right: 2,
+        background: colors.bgPanel,
+        border: `1px solid ${colors.borderDim}`,
+        borderRadius: 3,
+        color: copied ? colors.statusSuccess : colors.textMuted,
+        cursor: "pointer",
+        fontSize: 11,
+        padding: "2px 6px",
+        opacity: 0,
+        transition: "opacity 0.15s",
+        fontFamily: "inherit",
+        lineHeight: 1.4,
+      }}
+      className="copy-btn"
+    >
+      {copied ? "Copied" : "Copy"}
+    </button>
+  );
+}
 
 interface OutputPaneProps {
   entries: ConsoleEntry[];
@@ -29,14 +65,16 @@ export function OutputPane({ entries, isISE, isBuilder, endRef }: OutputPaneProp
           </div>
         )
       )}
+      <style>{`.output-entry:hover .copy-btn { opacity: 1 !important; }`}</style>
       {entries.map((entry, i) => (
-        <div key={i} style={{ marginBottom: 6 }}>
+        <div key={i} style={{ marginBottom: 6, position: "relative" }} className="output-entry">
           {entry.type === "command" && (
             <div>
               <span style={{ color: colors.accentPrimary }}>
                 PS {entry.cwd || "master:\\content\\Home"}&gt;{" "}
               </span>
               <HighlightedCode code={entry.text} />
+              <CopyButton text={entry.text} />
             </div>
           )}
           {entry.type === "script" && (
@@ -53,17 +91,20 @@ export function OutputPane({ entries, isISE, isBuilder, endRef }: OutputPaneProp
             </div>
           )}
           {entry.type === "output" && (
-            <pre
-              style={{
-                color: colors.textOutput,
-                margin: "4px 0",
-                whiteSpace: "pre-wrap",
-                fontFamily: "inherit",
-                fontSize: "inherit",
-              }}
-            >
-              {entry.text}
-            </pre>
+            <div style={{ position: "relative" }}>
+              <pre
+                style={{
+                  color: colors.textOutput,
+                  margin: "4px 0",
+                  whiteSpace: "pre-wrap",
+                  fontFamily: "inherit",
+                  fontSize: "inherit",
+                }}
+              >
+                {entry.text}
+              </pre>
+              <CopyButton text={entry.text} />
+            </div>
           )}
           {entry.type === "error" && (
             <div role="alert" style={{ color: colors.statusError, margin: "4px 0" }}>

@@ -1360,10 +1360,21 @@ const TREE_DATA: { sitecore: SitecoreNode } = {
   },
 };
 
+/** Snapshot of initial tree state for reset */
+const TREE_DATA_SNAPSHOT = JSON.parse(JSON.stringify(TREE_DATA));
+
 /** Returns a deep clone of the virtual tree so mutable operations get fresh state */
 export function createVirtualTree(): { sitecore: SitecoreNode } {
-  return JSON.parse(JSON.stringify(TREE_DATA));
+  return JSON.parse(JSON.stringify(TREE_DATA_SNAPSHOT));
 }
 
 /** Shared mutable tree instance for the app */
 export const VIRTUAL_TREE = TREE_DATA;
+
+/** Reset the shared tree to its original state (for testing/validation) */
+export function resetVirtualTree(): void {
+  const fresh = JSON.parse(JSON.stringify(TREE_DATA_SNAPSHOT));
+  // Deep replace: clear existing children and copy fresh ones
+  VIRTUAL_TREE.sitecore._children = fresh.sitecore._children;
+  VIRTUAL_TREE.sitecore._fields = fresh.sitecore._fields;
+}

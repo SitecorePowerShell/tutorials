@@ -1,0 +1,55 @@
+id: "error-handling"
+module: "Level 4 – Advanced Techniques"
+order: 26
+title: "Error Handling"
+difficulty: "advanced"
+mode: "ise"
+description: |
+  Real-world SPE scripts need to handle errors gracefully. PowerShell provides `try/catch` blocks for structured error handling, similar to C# or JavaScript.
+
+  ```powershell
+  try {
+      # Code that might fail
+      Get-Item "master:\nonexistent\path"
+  } catch {
+      # Handle the error
+      Write-Warning "Item not found!"
+  }
+  ```
+
+  **Key cmdlets for error communication:**
+  - `Write-Error "message"` — Produces a non-terminating error (red text)
+  - `Write-Warning "message"` — Produces a warning (yellow WARNING: prefix)
+  - `Write-Host "message"` — Outputs plain text (not part of pipeline)
+
+  In production scripts, always wrap risky operations in `try/catch` to provide meaningful feedback to users.
+
+tasks:
+  - instruction: "Use `Write-Warning` to display the message `Check your paths!`"
+    hint: 'Write-Warning "Check your paths!"'
+    nudge: "Use `Write-Warning` with a quoted string message."
+    validation:
+      type: "output"
+      outputContains: "WARNING: Check your paths!"
+    successMessage: "Warnings are a great way to flag potential issues without stopping script execution."
+
+  - instruction: "Write a `try/catch` block that attempts to get a non-existent item at `master:\\content\\Missing` and catches the error with `Write-Warning \"Item not found\"`."
+    hint: |
+      try {
+          Get-Item master:\content\Missing
+      } catch {
+          Write-Warning "Item not found"
+      }
+    nudge: "Wrap `Get-Item` in a `try { }` block, followed by `catch { Write-Warning \"Item not found\" }`."
+    validation:
+      type: "output"
+      outputContains: "WARNING: Item not found"
+    successMessage: "Your script handles the error gracefully instead of showing a raw error message. This is how production SPE scripts should work."
+
+  - instruction: "Use `Write-Host` to output the text `Script complete` (plain text, no formatting)."
+    hint: 'Write-Host "Script complete"'
+    nudge: "`Write-Host` outputs text directly to the console, bypassing the pipeline."
+    validation:
+      type: "output"
+      outputContains: "Script complete"
+    successMessage: "Write-Host is useful for status messages in scripts. Unlike Write-Output, it doesn't pass data through the pipeline."

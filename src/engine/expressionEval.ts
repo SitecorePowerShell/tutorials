@@ -345,8 +345,12 @@ export function evaluateExpression(
     return "";
   }
 
-  // $_ alone
-  if (trimmed === "$_") return currentItem;
+  // $_ alone — use currentItem (pipeline context) or fall back to variable
+  if (trimmed === "$_") {
+    if (currentItem !== undefined) return currentItem;
+    const val = ctx.getVar("_");
+    return val !== undefined ? val : "";
+  }
 
   // $var with indexer: $var["key"]
   const vIndexer = trimmed.match(/^\$(\w+)\[["']([^"']+)["']\]$/);

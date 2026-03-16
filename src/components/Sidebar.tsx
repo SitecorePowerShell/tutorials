@@ -86,6 +86,8 @@ export function Sidebar({
 }: SidebarProps) {
   const [confirmReset, setConfirmReset] = useState(false);
   const [collapsedModules, setCollapsedModules] = useState<Record<string, boolean>>({});
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterMode, setFilterMode] = useState<"all" | "incomplete" | "completed">("all");
 
   const isTaskComplete = (lessonIdx: number, taskIdx: number) =>
     completedTasks[`${lessonIdx}-${taskIdx}`];
@@ -96,6 +98,31 @@ export function Sidebar({
   const toggleModule = (module: string) => {
     setCollapsedModules((prev) => ({ ...prev, [module]: !prev[module] }));
   };
+
+  // Filter lessons based on search query and filter mode
+  const filteredLessons = lessons.filter((lesson, idx) => {
+    // Filter mode
+    if (filterMode === "completed" && !isLessonComplete(idx)) return false;
+    if (filterMode === "incomplete" && isLessonComplete(idx)) return false;
+
+    // Search query
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    if (lesson.title.toLowerCase().includes(q)) return true;
+    if (lesson.module.toLowerCase().includes(q)) return true;
+    if (lesson.description?.toLowerCase().includes(q)) return true;
+    if (lesson.difficulty?.toLowerCase().includes(q)) return true;
+    if (lesson.tasks.some(t =>
+      t.instruction.toLowerCase().includes(q) ||
+      t.hint?.toLowerCase().includes(q)
+    )) return true;
+    return false;
+  });
+
+  // Build a set of visible lesson indices for filtering moduleGroups
+  const visibleIndices = new Set(
+    filteredLessons.map(l => lessons.indexOf(l))
+  );
 
   const moduleGroups = groupByModule(lessons);
 
@@ -199,8 +226,77 @@ export function Sidebar({
 
       {!collapsed && (
         <div style={{ flex: 1, overflow: "auto", padding: "8px 0" }}>
+          {/* Search and filter */}
+          <div style={{ padding: "4px 12px 8px" }}>
+            <div style={{ position: "relative" }}>
+              <input
+                type="text"
+                placeholder="Search lessons..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "7px 30px 7px 10px",
+                  background: colors.bgDeep,
+                  border: `1px solid ${colors.borderBase}`,
+                  borderRadius: 5,
+                  color: colors.textPrimary,
+                  fontSize: fontSizes.sm,
+                  fontFamily: "inherit",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = colors.accentPrimary)}
+                onBlur={(e) => (e.currentTarget.style.borderColor = colors.borderBase)}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  style={{
+                    position: "absolute",
+                    right: 6,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none",
+                    border: "none",
+                    color: colors.textMuted,
+                    cursor: "pointer",
+                    fontSize: 14,
+                    padding: 2,
+                    lineHeight: 1,
+                  }}
+                  aria-label="Clear search"
+                >
+                  &#x2715;
+                </button>
+              )}
+            </div>
+            <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+              {(["all", "incomplete", "completed"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setFilterMode(mode)}
+                  style={{
+                    flex: 1,
+                    padding: "3px 0",
+                    background: filterMode === mode ? `${colors.accentPrimary}22` : "transparent",
+                    border: `1px solid ${filterMode === mode ? colors.accentPrimary : colors.borderDim}`,
+                    borderRadius: 4,
+                    color: filterMode === mode ? colors.accentPrimary : colors.textMuted,
+                    fontSize: 10,
+                    fontFamily: "inherit",
+                    cursor: "pointer",
+                    textTransform: "capitalize",
+                  }}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Start Here banner for new users */}
-          {completedCount === 0 && (
+          {completedCount === 0 && !searchQuery && filterMode === "all" && (
             <div style={{ margin: "4px 12px 12px" }}>
               <button
                 onClick={() => onGoToLesson(0)}
@@ -244,8 +340,19 @@ export function Sidebar({
             </div>
           )}
 
+          {/* No results message */}
+          {(searchQuery || filterMode !== "all") && visibleIndices.size === 0 && (
+            <div style={{ padding: "16px 20px", color: colors.textMuted, fontSize: fontSizes.sm, textAlign: "center" }}>
+              No lessons match your {searchQuery ? "search" : "filter"}.
+            </div>
+          )}
+
           {moduleGroups.map((group) => {
-            const isCollapsed = collapsedModules[group.module] ?? false;
+            // Filter group lessons to only visible ones
+            const groupVisible = group.lessons.filter(({ index }) => visibleIndices.has(index));
+            if (groupVisible.length === 0 && (searchQuery || filterMode !== "all")) return null;
+
+            const isCollapsed = (collapsedModules[group.module] ?? false) && !searchQuery && filterMode === "all";
             const { total, done } = getModuleProgress(group);
             const moduleComplete = done === total;
             const hasActiveLesson = group.lessons.some(({ index }) => index === currentLesson);
@@ -255,6 +362,7 @@ export function Sidebar({
                 {/* Module header */}
                 <button
                   onClick={() => toggleModule(group.module)}
+                  aria-expanded={!isCollapsed}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -338,7 +446,7 @@ export function Sidebar({
 
                 {/* Lessons within module */}
                 {!isCollapsed &&
-                  group.lessons.map(({ lesson: l, index: li }) => {
+                  (searchQuery || filterMode !== "all" ? groupVisible : group.lessons).map(({ lesson: l, index: li }) => {
                     const complete = isLessonComplete(li);
                     const active = li === currentLesson && !activeQuiz;
                     const difficulty = l.difficulty;

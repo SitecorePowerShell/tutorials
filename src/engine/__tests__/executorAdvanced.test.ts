@@ -343,3 +343,134 @@ Write-Host $item["Subtitle"]`;
     expect(result.output).toContain("Our Story");
   });
 });
+
+describe("Select-Object -Skip", () => {
+  it("skips the first N items", () => {
+    const result = executeCommandWithContext(
+      'Get-ChildItem -Path "master:\\content\\Home" | Select-Object -Skip 1',
+      ctx,
+      tree
+    );
+    expect(result.error).toBeNull();
+    expect(result.output).not.toContain("About");
+    expect(result.output).toContain("Products");
+    expect(result.output).toContain("News");
+  });
+
+  it("skips all items returns empty", () => {
+    const result = executeCommandWithContext(
+      'Get-ChildItem -Path "master:\\content\\Home" | Select-Object -Skip 10',
+      ctx,
+      tree
+    );
+    expect(result.error).toBeNull();
+    expect(result.output).toBe("");
+  });
+});
+
+describe("Select-Object -Unique", () => {
+  it("removes duplicates by TemplateName", () => {
+    const result = executeCommandWithContext(
+      'Get-ChildItem -Path "master:\\content\\Home" | Select-Object -Property TemplateName -Unique',
+      ctx,
+      tree
+    );
+    expect(result.error).toBeNull();
+    // About is "Sample Item", Products and News are "Folder"
+    // Should have 2 unique template names
+    const lines = result.output
+      .split("\n")
+      .filter((l: string) => l.trim() && !l.startsWith("-"));
+    // Header + 2 data rows
+    const dataLines = lines.filter(
+      (l: string) => !l.includes("TemplateName") && l.trim()
+    );
+    expect(dataLines.length).toBe(2);
+  });
+});
+
+describe("Select-Object -ExpandProperty", () => {
+  it("expands a single property value", () => {
+    const result = executeCommandWithContext(
+      'Get-ChildItem -Path "master:\\content\\Home" | Select-Object -ExpandProperty Name',
+      ctx,
+      tree
+    );
+    expect(result.error).toBeNull();
+    expect(result.output).toContain("About");
+    expect(result.output).toContain("Products");
+    expect(result.output).toContain("News");
+  });
+
+  it("expands TemplateName property", () => {
+    const result = executeCommandWithContext(
+      'Get-ChildItem -Path "master:\\content\\Home" | Select-Object -ExpandProperty TemplateName',
+      ctx,
+      tree
+    );
+    expect(result.error).toBeNull();
+    expect(result.output).toContain("Sample Item");
+    expect(result.output).toContain("Folder");
+  });
+});
+
+describe("Measure-Object with stats", () => {
+  it("computes count without switches", () => {
+    const result = executeCommandWithContext(
+      'Get-ChildItem -Path "master:\\content\\Home" | Measure-Object',
+      ctx,
+      tree
+    );
+    expect(result.error).toBeNull();
+    expect(result.output).toContain("Count    : 3");
+  });
+
+  it("computes sum of Version property", () => {
+    const result = executeCommandWithContext(
+      'Get-ChildItem -Path "master:\\content\\Home" | Measure-Object -Property Version -Sum',
+      ctx,
+      tree
+    );
+    expect(result.error).toBeNull();
+    expect(result.output).toContain("Sum      :");
+    expect(result.output).toContain("Property : Version");
+    // All items have version 1, so sum should be 3
+    expect(result.output).toContain("Sum      : 3");
+  });
+
+  it("computes average of Version property", () => {
+    const result = executeCommandWithContext(
+      'Get-ChildItem -Path "master:\\content\\Home" | Measure-Object -Property Version -Average',
+      ctx,
+      tree
+    );
+    expect(result.error).toBeNull();
+    expect(result.output).toContain("Average  : 1");
+  });
+
+  it("computes maximum and minimum", () => {
+    const result = executeCommandWithContext(
+      'Get-ChildItem -Path "master:\\content\\Home" | Measure-Object -Property Version -Maximum -Minimum',
+      ctx,
+      tree
+    );
+    expect(result.error).toBeNull();
+    expect(result.output).toContain("Maximum  : 1");
+    expect(result.output).toContain("Minimum  : 1");
+  });
+
+  it("shows property name in output", () => {
+    const result = executeCommandWithContext(
+      'Get-ChildItem -Path "master:\\content\\Home" | Measure-Object -Property Version -Sum -Average -Maximum -Minimum',
+      ctx,
+      tree
+    );
+    expect(result.error).toBeNull();
+    expect(result.output).toContain("Property : Version");
+    expect(result.output).toContain("Count    : 3");
+    expect(result.output).toContain("Sum      : 3");
+    expect(result.output).toContain("Average  : 1");
+    expect(result.output).toContain("Maximum  : 1");
+    expect(result.output).toContain("Minimum  : 1");
+  });
+});

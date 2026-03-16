@@ -1,0 +1,32 @@
+id: "playground"
+module: "Playground"
+order: 23
+title: "Free Exploration"
+difficulty: "intro"
+mode: "ise"
+description: |
+  Welcome to the **SPE Playground** — a free-form sandbox where you can experiment with any command you've learned (or haven't learned yet!).
+
+  There are no wrong answers here. Use this space to:
+
+  - Try commands from memory without looking at lesson hints
+  - Combine multiple cmdlets into complex pipelines
+  - Explore the simulated content tree at your own pace
+  - Test "what if?" scenarios
+
+  **Available cmdlets:** `Get-Item`, `Get-ChildItem`, `Set-ItemProperty`, `New-Item`, `Remove-Item`, `Move-Item`, `Copy-Item`, `Rename-Item`, `Find-Item`, `Publish-Item`, `Initialize-Item`, `Where-Object`, `ForEach-Object`, `Select-Object`, `Sort-Object`, `Group-Object`, `Measure-Object`, `Format-Table`, `Write-Output`, `Write-Host`, `Write-Warning`, `Write-Error`, `Get-Member`, `Show-Alert`, `Get-Help`
+
+  **Tips:**
+  - Use `Get-ChildItem .` to see the current location's children
+  - Use `Get-Help <cmdlet>` for command documentation
+  - Variables persist across runs: `$items = Get-ChildItem .`
+  - Try multi-line scripts with `if/else`, `foreach`, and `try/catch`
+
+tasks:
+  - instruction: "Run any command you like! Try `Get-ChildItem -Path master:\\content -Recurse` to see the full tree."
+    hint: "Get-ChildItem -Path master:\\content -Recurse"
+    nudge: "Type any valid SPE command and press Run (or Ctrl+Enter)."
+    validation:
+      type: "output"
+      outputContains: ""
+    successMessage: "You're exploring! There are no wrong answers here — keep experimenting."

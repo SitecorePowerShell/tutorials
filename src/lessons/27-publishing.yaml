@@ -1,0 +1,46 @@
+id: "publishing"
+module: "Level 3 – Content Management"
+order: 27
+title: "Publishing Items"
+difficulty: "intermediate"
+mode: "ise"
+description: |
+  In Sitecore, content changes aren't visible on the website until you **publish** them. Publishing copies items from the `master` database (authoring) to the `web` database (delivery).
+
+  SPE provides `Publish-Item` for scripted publishing:
+
+  ```powershell
+  # Publish a single item
+  Get-Item master:\content\Home | Publish-Item
+
+  # Publish with specific target and mode
+  Publish-Item -Path master:\content\Home -PublishMode Full -Target "web"
+
+  # Publish item and all descendants
+  Publish-Item -Path master:\content\Home -Recurse
+  ```
+
+  **Publish modes:**
+  - **Smart** (default) — Only publishes changed items
+  - **Full** — Republishes everything, even unchanged items
+  - **Incremental** — Publishes only items changed since last publish
+
+tasks:
+  - instruction: "Publish the Home item using `Publish-Item`."
+    hint: "Get-Item master:\\content\\Home | Publish-Item"
+    nudge: "Pipe `Get-Item` to `Publish-Item`, or use `Publish-Item -Path master:\\content\\Home`."
+    validation:
+      type: "pipeline"
+      stages:
+        - "publish-item"
+    successMessage: "Item published! In a real instance, the Home page would now be updated on the live website."
+
+  - instruction: "Publish the entire content tree under Home using `Publish-Item` with the `-Recurse` switch."
+    hint: "Publish-Item -Path master:\\content\\Home -Recurse"
+    nudge: "Add the `-Recurse` switch to publish the item and all its descendants."
+    validation:
+      type: "structural"
+      cmdlet: "publish-item"
+      requireSwitches:
+        - "recurse"
+    successMessage: "Recursive publish is commonly used after bulk content updates to push all changes to the web database at once."

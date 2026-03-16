@@ -4,10 +4,12 @@ import type {
   StructuralValidation,
   PipelineValidation,
   OutputValidation,
+  SideEffectValidation,
 } from "../types";
 import { resolvePath } from "../engine/pathResolver";
 import { parseCommand } from "../engine/parser";
 import { executeScript } from "../engine/executor";
+import { getItemProperty } from "../engine/properties";
 import { validateStageParams } from "./cmdletParams";
 
 export function validateTask(input: string, task: Task): ValidationResult {
@@ -78,6 +80,11 @@ export function validateTask(input: string, task: Task): ValidationResult {
   // Output-only validation — execute and check output strings, no structural checks
   if (v.type === "output") {
     return validateOutput(v, input);
+  }
+
+  // Side-effect validation — execute and check tree mutations
+  if (v.type === "side-effect") {
+    return validateSideEffect(v, allStages, input);
   }
 
   return { passed: true };
@@ -196,6 +203,12 @@ const ALIASES: Record<string, string[]> = {
   "copy-item": ["copy-item", "ci", "cp", "cpi"],
   "rename-item": ["rename-item", "ren", "rni"],
   "find-item": ["find-item", "fi"],
+  "publish-item": ["publish-item"],
+  "initialize-item": ["initialize-item"],
+  "write-error": ["write-error"],
+  "write-warning": ["write-warning"],
+  "write-host": ["write-host"],
+  "set-itemproperty": ["set-itemproperty", "sp"],
 };
 
 /** Resolve a user-typed cmdlet name to its canonical lowercase form */
@@ -313,6 +326,108 @@ function validateOutput(v: OutputValidation, input: string): ValidationResult {
       partial: ["Script executed"],
     };
   }
+  return { passed: true };
+}
+
+function validateSideEffect(
+  v: SideEffectValidation,
+  allStages: ReturnType<typeof parseCommand>["parsed"],
+  input: string
+): ValidationResult {
+  // 1. Check required stages (like pipeline validation)
+  if (v.stages) {
+    const allCmdlets = allStages.map((s) => s.cmdlet.toLowerCase());
+    for (let i = 0; i < v.stages.length; i++) {
+      const expected = v.stages[i];
+      const validNames = ALIASES[expected] || [expected];
+      const found = allCmdlets.some((cmd) => validNames.includes(cmd));
+      if (!found) {
+        return {
+          passed: false,
+          feedback: `Your script should include \`${formatCmdletName(expected)}\`.`,
+          partial: v.stages
+            .slice(0, i)
+            .filter((s) => {
+              const vn = ALIASES[s] || [s];
+              return allCmdlets.some((cmd) => vn.includes(cmd));
+            })
+            .map((s) => `\u2713 ${formatCmdletName(s)}`),
+        };
+      }
+    }
+  }
+
+  // 2. Execute the script (mutates the shared VIRTUAL_TREE)
+  const result = executeScript(input);
+  if (result.error) {
+    return {
+      passed: false,
+      feedback: `Script error: ${result.error}`,
+      partial: v.stages ? ["Correct pipeline structure"] : [],
+    };
+  }
+
+  // 3. Check output constraint
+  if (v.outputContains && !result.output.includes(v.outputContains)) {
+    return {
+      passed: false,
+      feedback:
+        "Your script runs, but the output doesn't match what's expected.",
+      partial: ["Script executed"],
+    };
+  }
+
+  // 4. Check that required paths exist
+  if (v.requirePaths) {
+    for (const path of v.requirePaths) {
+      const resolved = resolvePath(path);
+      if (!resolved) {
+        return {
+          passed: false,
+          feedback: `Expected item at \`${path}\` was not found. Make sure your script creates it.`,
+          partial: ["Script executed"],
+        };
+      }
+    }
+  }
+
+  // 5. Check that forbidden paths don't exist
+  if (v.forbidPaths) {
+    for (const path of v.forbidPaths) {
+      const resolved = resolvePath(path);
+      if (resolved) {
+        return {
+          passed: false,
+          feedback: `Item at \`${path}\` should not exist after your script runs.`,
+          partial: ["Script executed"],
+        };
+      }
+    }
+  }
+
+  // 6. Check field values at specific paths
+  if (v.requireFields) {
+    for (const { path, field, value } of v.requireFields) {
+      const resolved = resolvePath(path);
+      if (!resolved) {
+        return {
+          passed: false,
+          feedback: `Expected item at \`${path}\` was not found. Make sure your script creates it.`,
+          partial: ["Script executed"],
+        };
+      }
+      const item = { name: resolved.name, node: resolved.node, path: resolved.path };
+      const actual = getItemProperty(item, field);
+      if (actual !== value) {
+        return {
+          passed: false,
+          feedback: `Field \`${field}\` at \`${path}\` has value "${actual}" but expected "${value}".`,
+          partial: ["Script executed", "Item exists"],
+        };
+      }
+    }
+  }
+
   return { passed: true };
 }
 

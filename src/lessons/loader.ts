@@ -25,12 +25,28 @@ import lesson19 from "./19-find-item-intro.yaml?raw";
 import lesson20 from "./20-find-item-filters.yaml?raw";
 import lesson21 from "./21-find-item-advanced.yaml?raw";
 import lesson22 from "./22-find-vs-get.yaml?raw";
+import lesson23 from "./23-playground.yaml?raw";
+import lesson24 from "./24-template-introspection.yaml?raw";
+import lesson25 from "./25-field-deep-dive.yaml?raw";
+import lesson26 from "./26-error-handling.yaml?raw";
+import lesson27 from "./27-publishing.yaml?raw";
+import lesson28 from "./28-real-world-scenarios.yaml?raw";
 
 const rawLessons = [
-  lesson00, lesson01, lesson02, lesson03, lesson04, lesson05,
-  lesson06, lesson07, lesson08, lesson09, lesson10, lesson11,
-  lesson12, lesson13, lesson14, lesson15, lesson16, lesson17, lesson18,
+  // Level 0 – Visual Builder
+  lesson00,
+  // Level 1 – Console Fundamentals
+  lesson01, lesson02, lesson03, lesson04, lesson05,
+  // Level 2 – Scripting Essentials
+  lesson06, lesson07, lesson08,
+  // Level 3 – Content Management
+  lesson09, lesson10, lesson11, lesson24, lesson25, lesson27,
+  // Level 4 – Advanced Techniques
+  lesson12, lesson13, lesson14, lesson15, lesson16, lesson17, lesson18, lesson26, lesson28,
+  // Level 5 – Content Search
   lesson19, lesson20, lesson21, lesson22,
+  // Playground
+  lesson23,
 ];
 
 export const LESSONS: Lesson[] = rawLessons.map((raw) => yaml.load(raw) as Lesson);

@@ -44,10 +44,28 @@ export function LessonPanel({
   sideBySide,
   nextLabel,
 }: LessonPanelProps) {
-  // Determine which hint tiers are unlocked
+  // Determine which hint tiers are unlocked (3-tier system)
+  // Tier 1: Conceptual nudge (if available) at 2 attempts
+  // Tier 2: Structural clue (auto-generated from validation) at 4 attempts
+  // Tier 3: Full answer at 6 attempts
   const hasNudge = !!task?.nudge;
-  const nudgeUnlocked = attempts >= 2;
-  const answerUnlocked = attempts >= 4;
+  const tier1Unlocked = attempts >= 2;
+  const tier2Unlocked = attempts >= 4;
+  const tier3Unlocked = attempts >= 6;
+
+  // Auto-generate structural hint from validation spec
+  const structuralClue = (() => {
+    if (!task) return null;
+    const v = task.validation;
+    if (v.type === "structural") {
+      return `Your command should start with \`${v.cmdlet.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join("-")}\`${v.requirePath ? " and target the right path" : ""}.`;
+    }
+    if (v.type === "pipeline" && v.stages?.length) {
+      const names = v.stages.map(s => s.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join("-"));
+      return `Your pipeline should include: ${names.map(n => `\`${n}\``).join(" | ")}.`;
+    }
+    return null;
+  })();
 
   // Desktop collapsed state
   if (!isMobile && collapsed) {
@@ -260,12 +278,12 @@ export function LessonPanel({
             {!currentTaskComplete && (
               <div style={{ marginTop: 14 }}>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  {/* Nudge / Hint button */}
-                  {revealedHintLevel < 2 && (
+                  {/* Progressive hint buttons */}
+                  {revealedHintLevel < 3 && (
                     (() => {
-                      // If nudge exists and not yet revealed, show nudge button
+                      // Tier 1: Conceptual nudge
                       if (hasNudge && revealedHintLevel < 1) {
-                        const disabled = !nudgeUnlocked;
+                        const disabled = !tier1Unlocked;
                         return (
                           <button
                             onClick={() => !disabled && onRevealHint(1)}
@@ -288,13 +306,38 @@ export function LessonPanel({
                           </button>
                         );
                       }
-                      // Show answer button (nudge already revealed or no nudge)
-                      const disabled = !answerUnlocked;
+                      // Tier 2: Structural clue
+                      if (structuralClue && revealedHintLevel < 2) {
+                        const disabled = !tier2Unlocked;
+                        return (
+                          <button
+                            onClick={() => !disabled && onRevealHint(2)}
+                            disabled={disabled}
+                            title={disabled ? `Try more (${4 - attempts} more attempt${4 - attempts === 1 ? "" : "s"} needed)` : "Show what cmdlets to use"}
+                            style={{
+                              background: "transparent",
+                              border: `1px solid ${disabled ? colors.borderDim : colors.accentPrimary}`,
+                              color: disabled ? colors.textMuted : colors.accentPrimary,
+                              padding: isMobile ? "10px 16px" : "5px 12px",
+                              borderRadius: 4,
+                              cursor: disabled ? "not-allowed" : "pointer",
+                              fontSize: isMobile ? 14 : fontSizes.base,
+                              fontFamily: "inherit",
+                              minHeight: isMobile ? 44 : undefined,
+                              opacity: disabled ? 0.6 : 1,
+                            }}
+                          >
+                            {hasNudge ? "More Help" : "Show Hint"}
+                          </button>
+                        );
+                      }
+                      // Tier 3: Full answer
+                      const disabled = !tier3Unlocked;
                       return (
                         <button
-                          onClick={() => !disabled && onRevealHint(2)}
+                          onClick={() => !disabled && onRevealHint(3)}
                           disabled={disabled}
-                          title={disabled ? `Try the task first (${4 - attempts} more attempt${4 - attempts === 1 ? "" : "s"} needed)` : "Show the full answer"}
+                          title={disabled ? `Try more (${6 - attempts} more attempt${6 - attempts === 1 ? "" : "s"} needed)` : "Show the full answer"}
                           style={{
                             background: "transparent",
                             border: `1px solid ${disabled ? colors.borderDim : colors.statusHint}`,
@@ -364,8 +407,24 @@ export function LessonPanel({
               </div>
             )}
 
-            {/* Full answer display (Tier 2) */}
-            {revealedHintLevel >= 2 && !currentTaskComplete && (
+            {/* Structural clue display (Tier 2) */}
+            {revealedHintLevel >= 2 && !currentTaskComplete && structuralClue && (
+              <div
+                style={{
+                  marginTop: 12,
+                  padding: "10px 14px",
+                  background: colors.bgOverlay,
+                  borderRadius: 6,
+                  borderLeft: `3px solid ${colors.accentPrimary}`,
+                  fontSize: fontSizes.body,
+                }}
+              >
+                <MarkdownLite text={structuralClue} />
+              </div>
+            )}
+
+            {/* Full answer display (Tier 3) */}
+            {revealedHintLevel >= 3 && !currentTaskComplete && (
               <div
                 style={{
                   marginTop: 12,

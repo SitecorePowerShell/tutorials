@@ -116,10 +116,29 @@ export interface OutputValidation {
   outputNotContains?: string;
 }
 
+export interface SideEffectValidation {
+  type: "side-effect";
+  /** Stages that must appear in the script (like pipeline validation) */
+  stages?: string[];
+  /** After execution, these paths must exist in the tree */
+  requirePaths?: string[];
+  /** After execution, these paths must NOT exist */
+  forbidPaths?: string[];
+  /** After execution, check field values at specific paths */
+  requireFields?: Array<{
+    path: string;
+    field: string;
+    value: string;
+  }>;
+  /** Optional output check */
+  outputContains?: string;
+}
+
 export type TaskValidation =
   | StructuralValidation
   | PipelineValidation
-  | OutputValidation;
+  | OutputValidation
+  | SideEffectValidation;
 
 export interface ValidationResult {
   passed: boolean;

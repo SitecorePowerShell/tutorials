@@ -997,6 +997,107 @@ const FULL_HELP_2: CmdletHelp[] = [
     aliases: ["fi"],
     relatedCmdlets: ["Get-ChildItem", "Where-Object"],
   },
+  {
+    name: "Publish-Item",
+    synopsis: "Publishes a Sitecore item to a publishing target.",
+    description:
+      "The Publish-Item cmdlet publishes one or more Sitecore items to a specified publishing target (default: web). " +
+      "You can specify the publish mode (Smart, Full, or Incremental) and optionally publish child items with -Recurse. " +
+      "Items can be provided via -Path, -Item, or pipeline input.",
+    syntax: [
+      "Publish-Item [-Path] <String> [-PublishMode <String>] [-Target <String>] [-Language <String>] [-Recurse]",
+      "<input> | Publish-Item [-PublishMode <String>] [-Target <String>] [-Recurse]",
+    ],
+    parameters: [
+      {
+        name: "Path",
+        type: "String",
+        description: "The Sitecore drive path to the item to publish.",
+        required: false,
+        position: 0,
+      },
+      {
+        name: "Item",
+        type: "Item",
+        description: "The Sitecore item object to publish.",
+        required: false,
+        position: null,
+      },
+      {
+        name: "PublishMode",
+        type: "String",
+        description: "The publish mode: Smart (default), Full, or Incremental.",
+        required: false,
+        position: null,
+        defaultValue: "Smart",
+      },
+      {
+        name: "Target",
+        type: "String",
+        description: "The publishing target database (default: web).",
+        required: false,
+        position: null,
+        defaultValue: "web",
+      },
+      {
+        name: "Language",
+        type: "String",
+        description: "The language version to publish.",
+        required: false,
+        position: null,
+      },
+      {
+        name: "Recurse",
+        type: "SwitchParameter",
+        description: "When specified, publishes the item and all its descendants.",
+        required: false,
+        position: null,
+      },
+    ],
+    examples: [
+      {
+        title: "Example 1: Publish an item by path",
+        code: 'Publish-Item -Path "master:\\content\\Home"',
+        description: "Publishes the Home item to the default web target using Smart publish mode.",
+      },
+      {
+        title: "Example 2: Publish via pipeline",
+        code: 'Get-Item master:\\content\\Home | Publish-Item -PublishMode Full',
+        description: "Pipes the Home item and publishes it using Full publish mode.",
+      },
+      {
+        title: "Example 3: Publish multiple items",
+        code: 'Get-ChildItem master:\\content\\Home | Publish-Item -Target "web"',
+        description: "Publishes all children of Home to the web target.",
+      },
+    ],
+    aliases: ["pi"],
+    relatedCmdlets: ["Get-Item", "Get-ChildItem"],
+  },
+  {
+    name: "Initialize-Item",
+    synopsis: "Converts search result objects to full Sitecore items.",
+    description:
+      "The Initialize-Item cmdlet converts SearchResultItem objects (returned by Find-Item) into full Sitecore Item objects. " +
+      "This is necessary in real SPE because search results are lightweight proxies that don't support all item operations. " +
+      "In the simulation, Find-Item already returns full items, so Initialize-Item acts as a pass-through.",
+    syntax: ["<input> | Initialize-Item"],
+    parameters: [],
+    examples: [
+      {
+        title: "Example 1: Initialize search results",
+        code: 'Find-Item -Index sitecore_master_index -Criteria @{Filter="Equals"; Field="_templatename"; Value="Sample Item"} | Initialize-Item',
+        description: "Converts Find-Item search results into full Sitecore items for further processing.",
+      },
+      {
+        title: "Example 2: Initialize and select properties",
+        code: 'Find-Item -Index sitecore_master_index -Criteria @{Filter="Equals"; Field="_templatename"; Value="Sample Item"} | Initialize-Item | Select-Object Name, TemplateName',
+        description: "Converts search results to items and selects specific properties.",
+      },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Find-Item", "Get-Item"],
+  },
 ];
 
 // ============================================================================
