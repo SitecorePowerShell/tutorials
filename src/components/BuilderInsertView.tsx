@@ -83,68 +83,65 @@ export function BuilderInsertView({
         minHeight: 0,
       }}
     >
-      {/* Action buttons (top on mobile) */}
-      {isMobile && (
-        <div
+      {/* Command preview + action buttons (top) */}
+      <div
+        style={{
+          padding: isMobile ? "6px 10px" : "8px 12px",
+          borderBottom: `1px solid ${colors.borderBase}`,
+          background: colors.bgDeep,
+          display: "flex",
+          alignItems: "center",
+          gap: isMobile ? 6 : 10,
+          flexShrink: 0,
+        }}
+      >
+        {/* Validation errors inline */}
+        {errors.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4, flex: "none" }}>
+            {errors.map((err, i) => (
+              <span
+                key={i}
+                style={{
+                  fontSize: fontSizes.xs,
+                  fontFamily: fonts.sans,
+                  color: colors.statusError,
+                  background: "rgba(239,83,80,0.1)",
+                  borderRadius: 4,
+                  padding: "2px 6px",
+                }}
+              >
+                {err.cmdlet}: {err.paramName}
+              </span>
+            ))}
+          </div>
+        )}
+        <pre
           style={{
-            padding: "6px 10px",
-            borderBottom: `1px solid ${colors.borderBase}`,
-            background: colors.bgDeep,
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            flexShrink: 0,
+            flex: 1,
+            margin: 0,
+            padding: isMobile ? "4px 8px" : "6px 10px",
+            background: colors.bgBase,
+            border: `1px solid ${colors.borderBase}`,
+            borderRadius: 4,
+            fontFamily: fonts.monoFull,
+            fontSize: isMobile ? fontSizes.xs : fontSizes.sm,
+            color: colors.textPrimary,
+            overflowX: "auto",
+            whiteSpace: "nowrap",
+            minHeight: isMobile ? 24 : 28,
+            lineHeight: 1.5,
+            WebkitOverflowScrolling: "touch",
           }}
         >
-          <pre
-            style={{
-              flex: 1,
-              margin: 0,
-              padding: "4px 8px",
-              background: colors.bgBase,
-              border: `1px solid ${colors.borderBase}`,
-              borderRadius: 4,
-              fontFamily: fonts.monoFull,
-              fontSize: fontSizes.xs,
-              color: colors.textPrimary,
-              overflowX: "auto",
-              whiteSpace: "nowrap",
-              minHeight: 24,
-              lineHeight: 1.5,
-              WebkitOverflowScrolling: "touch",
-            }}
-          >
-            {command ? (
-              <HighlightedCode code={command} />
-            ) : (
-              <span style={{ color: colors.textDimmed, fontStyle: "italic" }}>
-                Build a pipeline...
-              </span>
-            )}
-          </pre>
-          <button
-            onClick={() => { onStagesChange([]); onSelectedStageIdChange(null); }}
-            disabled={stages.length === 0}
-            aria-label="Reset"
-            title="Reset pipeline"
-            style={{
-              background: "transparent",
-              border: `1px solid ${stages.length ? colors.borderMedium : colors.borderDim}`,
-              borderRadius: 6,
-              color: stages.length ? colors.textClear : colors.textMuted,
-              width: 40,
-              height: 32,
-              cursor: stages.length ? "pointer" : "default",
-              opacity: stages.length ? 1 : 0.5,
-              fontSize: 14,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              touchAction: "manipulation",
-            }}
-          >
-            ↺
-          </button>
+          {command ? (
+            <HighlightedCode code={command} />
+          ) : (
+            <span style={{ color: colors.textDimmed, fontStyle: "italic" }}>
+              {isMobile ? "Build a pipeline..." : "Build a pipeline to see the command here..."}
+            </span>
+          )}
+        </pre>
+        <div style={{ display: "flex", gap: isMobile ? 6 : 8, flexShrink: 0 }}>
           <button
             onClick={() => onInsert(command)}
             disabled={!canInsert}
@@ -155,22 +152,50 @@ export function BuilderInsertView({
               border: "none",
               borderRadius: 6,
               color: canInsert ? colors.textWhite : colors.textMuted,
-              width: 40,
-              height: 32,
+              padding: isMobile ? 0 : "5px 16px",
+              width: isMobile ? 40 : undefined,
+              height: isMobile ? 32 : undefined,
               cursor: canInsert ? "pointer" : "default",
               opacity: canInsert ? 1 : 0.5,
-              fontSize: 16,
+              fontSize: isMobile ? 16 : fontSizes.base,
               fontWeight: 600,
+              fontFamily: "inherit",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              touchAction: "manipulation",
+            }}
+          >
+            {isMobile ? "⤓" : insertLabel}
+          </button>
+          <button
+            onClick={() => { onStagesChange([]); onSelectedStageIdChange(null); }}
+            disabled={stages.length === 0}
+            aria-label="Reset"
+            title="Reset pipeline"
+            style={{
+              background: "transparent",
+              border: `1px solid ${stages.length ? colors.borderMedium : colors.borderDim}`,
+              borderRadius: 6,
+              color: stages.length ? colors.textClear : colors.textMuted,
+              padding: isMobile ? 0 : "5px 12px",
+              width: isMobile ? 40 : undefined,
+              height: isMobile ? 32 : undefined,
+              cursor: stages.length ? "pointer" : "default",
+              opacity: stages.length ? 1 : 0.5,
+              fontSize: 14,
+              fontFamily: "inherit",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               touchAction: "manipulation",
             }}
           >
-            ⤓
+            {isMobile ? "↺" : "Reset"}
           </button>
         </div>
-      )}
+      </div>
 
       {/* Scrollable content area */}
       <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>
@@ -199,130 +224,6 @@ export function BuilderInsertView({
         />
       </div>
 
-      {/* Sticky bottom: errors + preview + buttons (desktop only) */}
-      <div style={{ flexShrink: 0, display: isMobile ? "none" : undefined }}>
-        {/* Validation errors */}
-        {errors.length > 0 && (
-          <div
-            style={{
-              padding: "6px 12px",
-              borderTop: `1px solid ${colors.borderBase}`,
-              background: colors.bgDeep,
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 6,
-            }}
-          >
-            {errors.map((err, i) => (
-              <span
-                key={i}
-                style={{
-                  fontSize: fontSizes.xs,
-                  fontFamily: fonts.sans,
-                  color: colors.statusError,
-                  background: "rgba(239,83,80,0.1)",
-                  borderRadius: 4,
-                  padding: "2px 8px",
-                }}
-              >
-                {err.cmdlet}: {err.paramName} required
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Command preview + insert button */}
-        <div
-          style={{
-            padding: isMobile ? "6px 10px" : "8px 12px",
-            borderTop: `1px solid ${colors.borderBase}`,
-            background: colors.bgDeep,
-            display: "flex",
-            flexDirection: isMobile ? "column" : "row",
-            alignItems: isMobile ? "stretch" : "center",
-            gap: isMobile ? 8 : 10,
-          }}
-        >
-          <pre
-            style={{
-              flex: isMobile ? undefined : 1,
-              margin: 0,
-              padding: "6px 10px",
-              background: colors.bgBase,
-              border: `1px solid ${colors.borderBase}`,
-              borderRadius: 4,
-              fontFamily: fonts.monoFull,
-              fontSize: fontSizes.sm,
-              color: colors.textPrimary,
-              overflow: "hidden",
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-all",
-              minHeight: 28,
-              maxHeight: isMobile ? 48 : undefined,
-              lineHeight: 1.5,
-            }}
-          >
-            {command ? (
-              <HighlightedCode code={command} />
-            ) : (
-              <span style={{ color: colors.textDimmed, fontStyle: "italic" }}>
-                Build a pipeline to see the command here...
-              </span>
-            )}
-          </pre>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              onClick={() => {
-                onStagesChange([]);
-                onSelectedStageIdChange(null);
-              }}
-              disabled={stages.length === 0}
-              style={{
-                background: "transparent",
-                border: `1px solid ${stages.length ? colors.borderMedium : colors.borderDim}`,
-                borderRadius: 4,
-                color: stages.length ? colors.textClear : colors.textMuted,
-                fontFamily: "inherit",
-                fontSize: isMobile ? 14 : fontSizes.base,
-                padding: isMobile ? "8px 14px" : "5px 12px",
-                cursor: stages.length ? "pointer" : "default",
-                whiteSpace: "nowrap",
-                opacity: stages.length ? 1 : 0.5,
-                minHeight: isMobile ? 44 : undefined,
-                flex: isMobile ? 1 : undefined,
-              }}
-            >
-              Reset
-            </button>
-            <button
-              onClick={() => onInsert(command)}
-              disabled={!canInsert}
-              title={errors.length > 0 ? errors.map((e) => `${e.cmdlet}: ${e.paramName} required`).join(", ") : undefined}
-              style={{
-                background: canInsert ? gradients.accent : colors.borderDim,
-                border: "none",
-                borderRadius: 4,
-                color: canInsert ? colors.textWhite : colors.textMuted,
-                fontFamily: "inherit",
-                fontSize: isMobile ? 14 : fontSizes.base,
-                fontWeight: 600,
-                padding: isMobile ? "8px 14px" : "5px 16px",
-                cursor: canInsert ? "pointer" : "default",
-                whiteSpace: "nowrap",
-                opacity: canInsert ? 1 : 0.5,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 6,
-                minHeight: isMobile ? 44 : undefined,
-                flex: isMobile ? 1 : undefined,
-              }}
-            >
-              {insertLabel}
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
