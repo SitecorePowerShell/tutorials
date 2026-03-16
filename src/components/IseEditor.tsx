@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import type { ConsoleEntry, SitecoreNode } from "../types";
 import { OutputPane } from "./OutputPane";
 import { tokenize, renderTokens, renderTokensWithHighlights } from "./HighlightedCode";
@@ -34,7 +34,7 @@ interface IseEditorProps {
   onShowHelp?: (cmdletName: string) => void;
 }
 
-export function IseEditor({
+export const IseEditor = React.memo(function IseEditor({
   code,
   onCodeChange,
   onRun,
@@ -447,13 +447,16 @@ export function IseEditor({
 
   // Render syntax-highlighted overlay content
   const overlayContent = code.endsWith("\n") ? code + " " : code;
-  const overlayTokens = tokenize(overlayContent);
+  const overlayTokens = useMemo(() => tokenize(overlayContent), [overlayContent]);
 
   // Choose rendering: with bracket highlights or plain
-  const renderedOverlay =
-    bracketHighlights.length > 0
-      ? renderTokensWithHighlights(overlayTokens, bracketHighlights)
-      : renderTokens(overlayTokens);
+  const renderedOverlay = useMemo(
+    () =>
+      bracketHighlights.length > 0
+        ? renderTokensWithHighlights(overlayTokens, bracketHighlights)
+        : renderTokens(overlayTokens),
+    [overlayTokens, bracketHighlights]
+  );
 
   return (
     <>
@@ -841,4 +844,4 @@ export function IseEditor({
       </div>
     </>
   );
-}
+});

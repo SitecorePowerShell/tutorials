@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import type { ConsoleEntry, SitecoreNode } from "../types";
 import { OutputPane } from "./OutputPane";
 import { colors, gradients, fonts, fontSizes } from "../theme";
@@ -34,7 +34,7 @@ interface ReplEditorProps {
   onShowHelp?: (cmdletName: string) => void;
 }
 
-export function ReplEditor({
+export const ReplEditor = React.memo(function ReplEditor({
   code,
   onCodeChange,
   onRun,
@@ -831,4 +831,4 @@ export function ReplEditor({
     </div>
     </div>
   );
-}
+});

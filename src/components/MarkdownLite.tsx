@@ -1,4 +1,4 @@
-import type React from "react";
+import React, { useMemo } from "react";
 import type { ReactElement } from "react";
 import { colors, fonts, fontSizes } from "../theme";
 
@@ -127,7 +127,11 @@ function renderTable(rows: string[], keyBase: number): ReactElement {
 }
 
 /** Very simple markdown: **bold**, `code`, ```blocks```, bullet lists, > callouts, tables */
-export function MarkdownLite({ text }: { text: string }) {
+export const MarkdownLite = React.memo(function MarkdownLite({ text }: { text: string }) {
+  return useMemo(() => parseMarkdown(text), [text]);
+});
+
+function parseMarkdown(text: string): React.ReactElement {
   const lines = text.split("\n");
   const elements: ReactElement[] = [];
   let inCodeBlock = false;

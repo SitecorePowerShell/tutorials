@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useMemo } from "react";
 import type { SitecoreNode } from "../types";
 import { colors, fonts, fontSizes } from "../theme";
 import { getItemProperty, getAllPropertyNames } from "../engine/properties";
@@ -41,7 +41,7 @@ function resolveNode(
   return { name: segments[segments.length - 1], node: current, path: builtPath };
 }
 
-function PropertyDetailView({
+const PropertyDetailView = React.memo(function PropertyDetailView({
   item,
   tree,
   onBack,
@@ -56,8 +56,8 @@ function PropertyDetailView({
 }) {
   const [copiedProp, setCopiedProp] = useState<string | null>(null);
 
-  const sitecoreItem = { name: item.name, node: item.node, path: item.path };
-  const propNames = getAllPropertyNames(sitecoreItem);
+  const sitecoreItem = useMemo(() => ({ name: item.name, node: item.node, path: item.path }), [item.name, item.node, item.path]);
+  const propNames = useMemo(() => getAllPropertyNames(sitecoreItem), [sitecoreItem]);
 
   const segments = item.path.split("/").filter(Boolean);
 
@@ -181,9 +181,9 @@ function PropertyDetailView({
       </div>
     </div>
   );
-}
+});
 
-function TreeNode({
+const TreeNode = React.memo(function TreeNode({
   name,
   node,
   depth = 0,
@@ -285,7 +285,7 @@ function TreeNode({
         ))}
     </div>
   );
-}
+});
 
 interface TreePanelProps {
   tree: { sitecore: SitecoreNode };

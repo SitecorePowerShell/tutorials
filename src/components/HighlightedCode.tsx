@@ -1,4 +1,4 @@
-import type React from "react";
+import React, { useMemo } from "react";
 import { colors, fonts, fontSizes } from "../theme";
 import { ALL_CMDLET_NAMES } from "../builder/cmdletRegistry";
 
@@ -156,7 +156,8 @@ export function renderTokensWithHighlights(
 }
 
 /** Syntax highlighter for PowerShell (used in output pane) */
-export function HighlightedCode({ code }: { code: string }) {
+export const HighlightedCode = React.memo(function HighlightedCode({ code }: { code: string }) {
+  const rendered = useMemo(() => renderTokens(tokenize(code)), [code]);
   return (
     <code
       style={{
@@ -164,7 +165,7 @@ export function HighlightedCode({ code }: { code: string }) {
         fontSize: fontSizes.body,
       }}
     >
-      {renderTokens(tokenize(code))}
+      {rendered}
     </code>
   );
-}
+});

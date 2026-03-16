@@ -1,3 +1,4 @@
+import React from "react";
 import type { Lesson, Task } from "../types";
 import { MarkdownLite } from "./MarkdownLite";
 import { HighlightedCode } from "./HighlightedCode";
@@ -24,7 +25,7 @@ interface LessonPanelProps {
   nextLabel?: string;
 }
 
-export function LessonPanel({
+export const LessonPanel = React.memo(function LessonPanel({
   lesson,
   task,
   currentTask,
@@ -494,4 +495,4 @@ export function LessonPanel({
       </div>
     </div>
   );
-}
+});
