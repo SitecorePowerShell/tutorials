@@ -574,6 +574,33 @@ export function IseEditor({
                 {isMobile ? "↺" : "Reset"}
               </button>
             )}
+            {!isMobile && onShowHelp && (
+              <button
+                onClick={() => {
+                  const cmdlet = detectCurrentCmdlet(code, inputRef.current?.selectionStart ?? code.length);
+                  if (cmdlet) onShowHelp(cmdlet);
+                }}
+                aria-label="Help"
+                title="Help for cmdlet at cursor (F1)"
+                style={{
+                  background: "transparent",
+                  border: `1px solid ${colors.borderMedium}`,
+                  color: colors.textClear,
+                  padding: "5px 12px",
+                  borderRadius: 4,
+                  cursor: "pointer",
+                  fontSize: fontSizes.base,
+                  fontWeight: 600,
+                  fontFamily: "inherit",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  touchAction: "manipulation",
+                }}
+              >
+                ?
+              </button>
+            )}
           </div>
         </div>
         <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
