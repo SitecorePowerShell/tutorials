@@ -245,42 +245,35 @@ export function HelpPanel({ cmdletName, onClose, onNavigate, isMobile }: HelpPan
   );
 }
 
-/** Extract the cmdlet name from code at or near the cursor position. */
-export function detectCmdletAtCursor(code: string, cursorPos: number): string | null {
-  // Look at the text around the cursor to find a cmdlet-like token
+/**
+ * Find the pipeline segment containing the cursor, then return
+ * the first cmdlet-like token in that segment.
+ */
+function cmdletInSegmentAtCursor(code: string, cursorPos: number): string | null {
   const before = code.slice(0, cursorPos);
-  const after = code.slice(cursorPos);
 
-  // Find the start of the current token (go back to whitespace or pipe)
-  const tokenStartMatch = before.match(/(?:^|[\s|;(])([A-Za-z][\w-]*)$/);
-  const tokenEndMatch = after.match(/^([\w-]*)/);
+  // Walk backwards to find the start of the current segment (pipe or newline)
+  const lastPipe = before.lastIndexOf("|");
+  const lastNewline = before.lastIndexOf("\n");
+  const segStart = Math.max(lastPipe, lastNewline) + 1;
+  const segment = before.slice(segStart).trimStart();
 
-  if (!tokenStartMatch && !tokenEndMatch) return null;
-
-  const tokenStart = tokenStartMatch ? tokenStartMatch[1] : "";
-  const tokenEnd = tokenEndMatch ? tokenEndMatch[1] : "";
-  const token = tokenStart + tokenEnd;
-
-  if (!token) return null;
-
-  // Check if it's a recognized cmdlet or alias
-  const help = getCmdletHelp(token);
-  if (help) return help.name;
-
-  return null;
-}
-
-/** Extract the first cmdlet name from input text (for syntax bar). */
-export function detectCurrentCmdlet(text: string): string | null {
-  if (!text.trim()) return null;
-
-  // Get the last pipeline segment
-  const lastPipe = text.lastIndexOf("|");
-  const segment = lastPipe >= 0 ? text.slice(lastPipe + 1).trimStart() : text.trimStart();
-
+  // First token in the segment is the cmdlet
   const firstToken = segment.split(/\s/)[0];
   if (!firstToken) return null;
 
   const help = getCmdletHelp(firstToken);
   return help?.name ?? null;
+}
+
+/** Extract the cmdlet name from code at or near the cursor position (ISE F1). */
+export function detectCmdletAtCursor(code: string, cursorPos: number): string | null {
+  return cmdletInSegmentAtCursor(code, cursorPos);
+}
+
+/** Extract the current cmdlet from input text at the cursor (syntax bar / mobile ?). */
+export function detectCurrentCmdlet(text: string, cursorPos?: number): string | null {
+  if (!text.trim()) return null;
+  // Use cursor position if provided, otherwise assume end of text
+  return cmdletInSegmentAtCursor(text, cursorPos ?? text.length);
 }

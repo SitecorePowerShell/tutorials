@@ -166,7 +166,7 @@ export function ReplEditor({
     // F1 — show help for current cmdlet
     if (e.key === "F1") {
       e.preventDefault();
-      const cmdlet = detectCurrentCmdlet(code);
+      const cmdlet = detectCurrentCmdlet(code, inputRef.current?.selectionStart ?? code.length);
       if (cmdlet && onShowHelp) onShowHelp(cmdlet);
       return;
     }
@@ -422,7 +422,7 @@ export function ReplEditor({
       inputRef.current?.focus();
     } else if (action === "help") {
       inputRef.current?.blur();
-      const cmdlet = detectCurrentCmdlet(code);
+      const cmdlet = detectCurrentCmdlet(code, inputRef.current?.selectionStart ?? code.length);
       if (cmdlet && onShowHelp) onShowHelp(cmdlet);
     }
   }, [triggerTabCompletion, code, onShowHelp]);

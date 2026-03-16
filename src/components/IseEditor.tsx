@@ -248,7 +248,7 @@ export function IseEditor({
       inputRef.current?.focus();
     } else if (action === "help") {
       inputRef.current?.blur();
-      const cmdlet = detectCurrentCmdlet(code);
+      const cmdlet = detectCurrentCmdlet(code, inputRef.current?.selectionStart ?? code.length);
       if (cmdlet && onShowHelp) onShowHelp(cmdlet);
     }
   }, [triggerCompletion, code, onShowHelp]);
@@ -669,7 +669,7 @@ export function IseEditor({
           {!isMobile && (
             <>
               {(() => {
-                const cmdlet = detectCurrentCmdlet(code);
+                const cmdlet = detectCurrentCmdlet(code, cursorPos);
                 const help = cmdlet ? getCmdletHelp(cmdlet) : null;
                 if (help?.syntax[0]) {
                   return (
