@@ -251,12 +251,22 @@ export function HelpPanel({ cmdletName, onClose, onNavigate, isMobile }: HelpPan
  */
 function cmdletInSegmentAtCursor(code: string, cursorPos: number): string | null {
   const before = code.slice(0, cursorPos);
+  const after = code.slice(cursorPos);
 
   // Walk backwards to find the start of the current segment (pipe or newline)
   const lastPipe = before.lastIndexOf("|");
   const lastNewline = before.lastIndexOf("\n");
   const segStart = Math.max(lastPipe, lastNewline) + 1;
-  const segment = before.slice(segStart).trimStart();
+
+  // Walk forwards to find the end of the segment
+  const nextPipe = after.indexOf("|");
+  const nextNewline = after.indexOf("\n");
+  const segEndOffsets = [nextPipe, nextNewline].filter((i) => i >= 0);
+  const segEnd = segEndOffsets.length > 0
+    ? cursorPos + Math.min(...segEndOffsets)
+    : code.length;
+
+  const segment = code.slice(segStart, segEnd).trimStart();
 
   // First token in the segment is the cmdlet
   const firstToken = segment.split(/\s/)[0];
