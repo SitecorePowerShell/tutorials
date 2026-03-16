@@ -452,6 +452,68 @@ describe("executeScript", () => {
     expect(result.output).toContain("Count    : 43");
   });
 
+  it("reports error for assignment with missing value expression", () => {
+    const result = executeScript("$items = ");
+    expect(result.error).toContain("You must provide a value expression following the '=' operator.");
+  });
+
+  it("reports error for empty pipe element at start", () => {
+    const result = executeCommandWithContext("| Get-Item", ctx, tree);
+    expect(result.error).toContain("An empty pipe element is not allowed.");
+  });
+
+  it("reports error for empty pipe element at end", () => {
+    const result = executeCommandWithContext("Get-Item |", ctx, tree);
+    expect(result.error).toContain("An empty pipe element is not allowed.");
+  });
+
+  it("reports error for unclosed string", () => {
+    const result = executeCommandWithContext('"unclosed string', ctx, tree);
+    expect(result.error).toContain('The string is missing the terminator: ".');
+  });
+
+  it("returns no output for undefined variable reference", () => {
+    const result = executeCommandWithContext("$undefinedVar", ctx, tree);
+    expect(result.error).toBeNull();
+    expect(result.output).toBe("");
+  });
+
+  it("prints variable value when used as standalone line in script", () => {
+    const result = executeScript('$var = "b"\n$var');
+    expect(result.error).toBeNull();
+    expect(result.output).toBe("b");
+  });
+
+  it("reports error for bare dollar sign", () => {
+    const result = executeScript("$");
+    expect(result.error).toContain("Variable reference is not valid.");
+  });
+
+  it("reports error for assignment without variable", () => {
+    const result = executeScript("= 5");
+    expect(result.error).toContain("The assignment expression is not valid.");
+  });
+
+  it("reports error for incomplete comparison operator", () => {
+    const result = executeScript("$x -eq");
+    expect(result.error).toContain("You must provide a value expression following the '-eq' operator.");
+  });
+
+  it("reports error for empty if condition", () => {
+    const result = executeScript('if () { "yes" }');
+    expect(result.error).toContain("You must provide a value expression following the 'if' keyword.");
+  });
+
+  it("reports error for foreach with missing collection", () => {
+    const result = executeScript("foreach ($x in ) { $x }");
+    expect(result.error).toContain("You must provide a value expression following the 'in' keyword.");
+  });
+
+  it("reports error for missing parameter argument", () => {
+    const result = executeCommandWithContext("Get-Item -Path", ctx, tree);
+    expect(result.error).toContain("Missing an argument for parameter 'Path'.");
+  });
+
   it("handles continuation lines (pipe at end)", () => {
     const result = executeScript(
       'Get-ChildItem -Path "master:\\content\\Home" -Recurse |\nMeasure-Object'

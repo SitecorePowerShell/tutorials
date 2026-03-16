@@ -2,12 +2,30 @@ import type { ParsedCommand, ParsedStage } from "../types";
 
 export function parseCommand(input: string): ParsedCommand {
   const trimmed = input.trim();
+
+  // Check for unclosed strings
+  let quoteCount = 0;
+  let qChar = "";
+  for (let i = 0; i < trimmed.length; i++) {
+    const ch = trimmed[i];
+    if (!quoteCount && (ch === '"' || ch === "'")) {
+      quoteCount = 1;
+      qChar = ch;
+    } else if (quoteCount && ch === qChar) {
+      quoteCount = 0;
+    }
+  }
+  if (quoteCount) {
+    throw new Error(`The string is missing the terminator: ${qChar}.`);
+  }
+
   // Split on pipe, respecting quoted strings AND braces
   const rawStages: string[] = [];
   let current = "";
   let inQuote = false;
   let quoteChar = "";
   let braceDepth = 0;
+  let pipeCount = 0;
   for (let i = 0; i < trimmed.length; i++) {
     const ch = trimmed[i];
     if (inQuote) {
@@ -24,11 +42,19 @@ export function parseCommand(input: string): ParsedCommand {
       braceDepth = Math.max(0, braceDepth - 1);
       current += ch;
     } else if (ch === "|" && braceDepth === 0) {
+      pipeCount++;
+      if (!current.trim()) {
+        throw new Error("An empty pipe element is not allowed.");
+      }
       rawStages.push(current.trim());
       current = "";
     } else {
       current += ch;
     }
+  }
+  // Trailing empty pipe element: "Get-Item |"
+  if (pipeCount > 0 && !current.trim()) {
+    throw new Error("An empty pipe element is not allowed.");
   }
   if (current.trim()) rawStages.push(current.trim());
   return { raw: rawStages, parsed: rawStages.map(parseSingleCommand) };

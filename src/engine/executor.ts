@@ -162,7 +162,32 @@ export function executeScript(script: string, sharedCtx?: ScriptContext): Script
 export function executeLine(line: string, ctx: ScriptContext): void {
   const trimmed = line.trim();
 
+  // Bare dollar sign: $
+  if (trimmed === "$") {
+    ctx.errors.push("Variable reference is not valid. '$' was not followed by a valid variable name character.");
+    return;
+  }
+
+  // Assignment without variable: = 5
+  if (/^=\s/.test(trimmed) || trimmed === "=") {
+    ctx.errors.push("The assignment expression is not valid. The input to an assignment operator must be an object that is able to accept assignments, such as a variable or a property.");
+    return;
+  }
+
   // Variable assignment: $varName = <expression>
+  // Check for missing value expression: $var =
+  if (/^\$\w+\s*=\s*$/.test(trimmed)) {
+    ctx.errors.push("You must provide a value expression following the '=' operator.");
+    return;
+  }
+
+  // Incomplete comparison operator: $x -eq (missing right-hand side)
+  const incompleteOpMatch = trimmed.match(/\s+-(eq|ne|lt|gt|le|ge|like|notlike|match|notmatch|contains|notcontains|in|notin|replace|split|join|is|isnot)\s*$/i);
+  if (incompleteOpMatch) {
+    ctx.errors.push(`You must provide a value expression following the '-${incompleteOpMatch[1]}' operator.`);
+    return;
+  }
+
   const assignMatch = trimmed.match(/^\$(\w+)\s*=\s*(.+)$/);
   if (assignMatch) {
     const [, varName, expr] = assignMatch;
@@ -196,7 +221,12 @@ export function executeLine(line: string, ctx: ScriptContext): void {
     const condEnd = findMatchingDelimiter(trimmed, condStart, "(", ")");
     if (condStart === -1 || condEnd === -1) return;
 
-    const condition = trimmed.slice(condStart + 1, condEnd);
+    const condition = trimmed.slice(condStart + 1, condEnd).trim();
+
+    if (!condition) {
+      ctx.errors.push("You must provide a value expression following the 'if' keyword.");
+      return;
+    }
 
     // Find the if body
     const ifBodyStart = trimmed.indexOf("{", condEnd);
@@ -232,6 +262,14 @@ export function executeLine(line: string, ctx: ScriptContext): void {
   }
 
   // Foreach loop: foreach($var in $collection) { ... }
+  // Check for incomplete foreach (missing collection after 'in')
+  if (/^foreach\s*\(/i.test(trimmed)) {
+    const foreachInMatch = trimmed.match(/^foreach\s*\(\s*\$\w+\s+in\s*\)/i);
+    if (foreachInMatch) {
+      ctx.errors.push("You must provide a value expression following the 'in' keyword.");
+      return;
+    }
+  }
   const foreachMatch = trimmed.match(
     /^foreach\s*\(\s*\$(\w+)\s+in\s+\$(\w+)\s*\)\s*\{(.+)\}$/i
   );
@@ -293,6 +331,21 @@ export function executeLine(line: string, ctx: ScriptContext): void {
     const bodyLines = tryBody.split(";").map(s => s.trim()).filter(Boolean);
     for (const bl of bodyLines) {
       executeLine(bl, ctx);
+    }
+    return;
+  }
+
+  // Bare variable reference: $var — output its value (PowerShell prints to stdout)
+  const bareVarRef = trimmed.match(/^\$(\w+)$/);
+  if (bareVarRef) {
+    const val = ctx.getVar(bareVarRef[1]);
+    if (val !== undefined) {
+      if (Array.isArray(val)) {
+        const result = executeCommandWithContext(trimmed, ctx);
+        if (result.output) ctx.outputs.push(result.output);
+      } else {
+        ctx.outputs.push(String(val));
+      }
     }
     return;
   }
@@ -432,6 +485,8 @@ export function executeCommandWithContext(
       }
       return { output: String(val), error: null, pipelineData: val as string };
     }
+    // Undefined variable returns $null (no output, no error) — matches PowerShell behavior
+    return { output: "", error: null };
   }
 
   // Parse and execute the pipeline
@@ -473,6 +528,34 @@ export function executeCommandWithContext(
         output: "",
         error: `${stage.cmdlet} : Unexpected token '${extras}'. Check your command syntax.`,
       };
+    }
+
+    // Check for switches that should be parameters (e.g. Get-Item -Path with no value)
+    const REQUIRED_PARAMS: Record<string, string[]> = {
+      "get-item": ["path"],
+      "get-childitem": ["path"],
+      "set-location": ["path"],
+      "new-item": ["path", "name", "itemtype", "type"],
+      "remove-item": ["path"],
+      "move-item": ["path", "destination"],
+      "copy-item": ["path", "destination"],
+      "rename-item": ["path", "newname"],
+      "set-itemproperty": ["path", "name", "value"],
+      "find-item": ["index", "criteria", "where", "first", "last", "skip", "orderby"],
+      "write-host": [],
+      "write-error": [],
+      "read-variable": [],
+    };
+    const requiredForCmd = REQUIRED_PARAMS[cmdLower];
+    if (requiredForCmd) {
+      for (const sw of stage.switches) {
+        if (requiredForCmd.includes(sw.toLowerCase())) {
+          return {
+            output: "",
+            error: `Missing an argument for parameter '${sw}'. Specify a parameter of type 'System.String' and try again.`,
+          };
+        }
+      }
     }
 
     // Check if the first stage is a variable reference
