@@ -266,7 +266,10 @@ function cmdletInSegmentAtCursor(code: string, cursorPos: number): string | null
     ? cursorPos + Math.min(...segEndOffsets)
     : code.length;
 
-  const segment = code.slice(segStart, segEnd).trimStart();
+  let segment = code.slice(segStart, segEnd).trimStart();
+
+  // Strip variable assignment prefix (e.g. "$var = " or "$var=")
+  segment = segment.replace(/^\$[\w]+\s*=\s*/, "");
 
   // First token in the segment is the cmdlet
   const firstToken = segment.split(/\s/)[0];
