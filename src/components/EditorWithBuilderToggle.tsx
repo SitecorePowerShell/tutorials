@@ -14,6 +14,7 @@ interface EditorWithBuilderToggleProps {
   onBuilderStagesChange: (stages: PipelineStage[]) => void;
   builderSelectedStageId: string | null;
   onBuilderSelectedStageIdChange: (id: string | null) => void;
+  onShowHelp?: (cmdletName: string) => void;
 }
 
 export function EditorWithBuilderToggle({
@@ -27,6 +28,7 @@ export function EditorWithBuilderToggle({
   onBuilderStagesChange,
   builderSelectedStageId,
   onBuilderSelectedStageIdChange,
+  onShowHelp,
 }: EditorWithBuilderToggleProps) {
   const textLabel = mode === "repl" ? "Console" : "Script Editor";
   const insertLabel = mode === "repl" ? "Insert into Console" : "Insert into Editor";
@@ -82,6 +84,7 @@ export function EditorWithBuilderToggle({
           onInsert={onInsertCode}
           isMobile={isMobile}
           insertLabel={insertLabel}
+          onShowHelp={onShowHelp}
         />
       ) : (
         editorElement

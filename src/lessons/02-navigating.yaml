@@ -7,6 +7,8 @@ description: |
   Now that you can retrieve a single item, let's explore the tree. `Get-ChildItem` returns the direct children of an item — just like `dir` or `ls` in a filesystem.
 
   In Sitecore terms, if Home has child pages like About, Products, News, and Data, `Get-ChildItem` will return those four items.
+
+  > **Tip:** Run `Get-Help Get-ChildItem` to see the full syntax and examples for this cmdlet. Press **F1** while typing a cmdlet to open its help panel.
 tasks:
   - instruction: |
       Use `Get-ChildItem` to list the children of the Home item.

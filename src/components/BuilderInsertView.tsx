@@ -14,6 +14,7 @@ interface BuilderInsertViewProps {
   onInsert: (command: string) => void;
   isMobile?: boolean;
   insertLabel: string;
+  onShowHelp?: (cmdletName: string) => void;
 }
 
 export function BuilderInsertView({
@@ -24,6 +25,7 @@ export function BuilderInsertView({
   onInsert,
   isMobile,
   insertLabel,
+  onShowHelp,
 }: BuilderInsertViewProps) {
   const command = assembleCommand(stages);
   const errors = getValidationErrors(stages);
@@ -104,6 +106,7 @@ export function BuilderInsertView({
           stageIndex={selectedStageIndex}
           stageCount={stages.length}
           onReorderStage={isMobile ? reorderStage : undefined}
+          onShowHelp={onShowHelp}
         />
       </div>
 

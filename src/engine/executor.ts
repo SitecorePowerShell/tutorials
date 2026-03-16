@@ -26,6 +26,7 @@ import {
   entriesToItems,
   parseCriteriaHashtables,
 } from "./searchIndex";
+import { getCmdletHelp, formatHelpText, formatCmdletList } from "./cmdletHelp";
 
 /** Expand a wildcard `*` in a -Property list to all properties of the first item */
 function expandPropertyWildcard(specs: PropertySpec[], pipelineData: SitecoreItem[]): PropertySpec[] {
@@ -57,6 +58,7 @@ const ALIAS_MAP: Record<string, string> = {
   gal: "get-alias",
   cd: "set-location", sl: "set-location", chdir: "set-location",
   fi: "find-item",
+  help: "get-help",
 };
 
 /** Cmdlet-like tokens that should be executed as commands, not expressions */
@@ -1135,6 +1137,34 @@ export function executeCommandWithContext(
         const results = executeSearch(searchIndex, criteria, options, tree);
         pipelineData = entriesToItems(results, tree);
 
+      } else if (cmdLower === "get-help") {
+        // Get-Help [Name] [-Examples] [-Full] [-Parameter <name>]
+        const targetName = stage.params.Name || stage.params.name ||
+          (stage.params._positional && stage.params._positional[0]) || "";
+
+        if (!targetName) {
+          return { output: formatCmdletList(), error: null };
+        }
+
+        const help = getCmdletHelp(targetName);
+        if (!help) {
+          return {
+            output: "",
+            error: `Get-Help : No help found for '${targetName}'. Run Get-Help with no arguments to list available cmdlets.`,
+          };
+        }
+
+        const hasExamples = stage.switches.some((s) => s.toLowerCase() === "examples");
+        const hasFull = stage.switches.some((s) => s.toLowerCase() === "full");
+        const paramSwitch = stage.params.Parameter || stage.params.parameter || "";
+
+        let section: "examples" | "full" | "parameter" | undefined;
+        if (hasExamples) section = "examples";
+        else if (hasFull) section = "full";
+        else if (paramSwitch) section = "parameter";
+
+        return { output: formatHelpText(help, section, paramSwitch), error: null };
+
       } else if (cmdLower === "get-alias") {
         const entries = Object.entries(ALIAS_MAP)
           .map(([alias, cmdlet]) => ({ alias, cmdlet }))
@@ -1149,7 +1179,7 @@ export function executeCommandWithContext(
       } else {
         return {
           output: "",
-          error: `${stage.cmdlet} : The term '${stage.cmdlet}' is not recognized. Supported commands: Get-Item, Get-ChildItem, Set-Location, Where-Object, ForEach-Object, Select-Object, Sort-Object, Group-Object, Measure-Object, Get-Member, Get-Alias, Show-ListView, New-Item, Remove-Item, Move-Item, Copy-Item, Rename-Item, Set-ItemProperty, Format-Table, ConvertTo-Json, Write-Host, Show-Alert, Read-Variable, Find-Item`,
+          error: `${stage.cmdlet} : The term '${stage.cmdlet}' is not recognized. Supported commands: Get-Item, Get-ChildItem, Set-Location, Where-Object, ForEach-Object, Select-Object, Sort-Object, Group-Object, Measure-Object, Get-Member, Get-Alias, Get-Help, Show-ListView, New-Item, Remove-Item, Move-Item, Copy-Item, Rename-Item, Set-ItemProperty, Format-Table, ConvertTo-Json, Write-Host, Show-Alert, Read-Variable, Find-Item`,
         };
       }
     } catch (err) {

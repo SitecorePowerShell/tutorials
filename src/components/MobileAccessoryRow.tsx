@@ -9,6 +9,7 @@ interface KeyDef {
 
 const KEYS: KeyDef[] = [
   { label: "Tab", action: "tab" },
+  { label: "?", action: "help" },
   { label: "|", char: "|" },
   { label: "$", char: "$" },
   { label: "-", char: "-" },

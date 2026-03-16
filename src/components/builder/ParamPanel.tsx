@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import type { PipelineStage } from "../../builder/assembleCommand";
 import { CMDLET_REGISTRY, COMMON_PROPERTIES, FILTER_OPERATORS, FOREACH_OPERATORS, CRITERIA_FILTER_TYPES, INDEX_FIELDS, getCmdletColor } from "../../builder/cmdletRegistry";
 import { colors, fonts, fontSizes } from "../../theme";
+import { getCmdletHelp } from "../../engine/cmdletHelp";
 
 interface ParamPanelProps {
   stage: PipelineStage | null;
@@ -12,6 +13,7 @@ interface ParamPanelProps {
   stageIndex?: number;
   stageCount?: number;
   onReorderStage?: (fromIndex: number, toIndex: number) => void;
+  onShowHelp?: (cmdletName: string) => void;
 }
 
 interface WhereConditionRow {
@@ -22,7 +24,7 @@ interface WhereConditionRow {
 
 type ForEachOpType = "property" | "interpolation" | "operator" | "writehost";
 
-export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile, collapsible, stageIndex, stageCount, onReorderStage }: ParamPanelProps) {
+export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile, collapsible, stageIndex, stageCount, onReorderStage, onShowHelp }: ParamPanelProps) {
   const [expanded, setExpanded] = useState(true);
   // Where-Object multi-row state
   const [whereRows, setWhereRows] = useState<WhereConditionRow[]>([{ property: "", operator: "-eq", value: "" }]);
@@ -599,6 +601,24 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile, 
       >
         <span>{def.icon}</span>
         <span>{def.name} Parameters</span>
+        {onShowHelp && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onShowHelp(def.name); }}
+            title={`Help for ${def.name}`}
+            style={{
+              background: "none",
+              border: "none",
+              color: colors.textDimmed,
+              fontSize: fontSizes.xs,
+              cursor: "pointer",
+              padding: "0 4px",
+              fontFamily: fonts.sans,
+              lineHeight: 1,
+            }}
+          >
+            ?
+          </button>
+        )}
         {stage.locked && (
           <span style={{ fontSize: fontSizes.xs, color: colors.textMuted, fontWeight: 400 }}>
             (locked)
@@ -915,6 +935,18 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile, 
               placeholder={paramDef.placeholder}
               style={inputStyle}
             />
+            {(() => {
+              const help = getCmdletHelp(stage.cmdlet);
+              const paramHelp = help?.parameters.find(
+                (p) => p.name.toLowerCase() === paramDef.name.toLowerCase()
+              );
+              if (!paramHelp) return null;
+              return (
+                <div style={{ fontSize: 11, color: colors.textDimmed, fontFamily: fonts.sans, marginTop: 2 }}>
+                  {paramHelp.description}
+                </div>
+              );
+            })()}
             {isExpression && (isFilterScript || isProcess) && !useStructured && switchToStructuredButton(paramDef.name)}
           </div>
         );

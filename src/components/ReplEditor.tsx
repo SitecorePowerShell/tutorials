@@ -8,6 +8,8 @@ import { useGhostText } from "../hooks/useGhostText";
 import { needsContinuation } from "../engine/needsContinuation";
 import { useReverseSearch } from "../hooks/useReverseSearch";
 import { MobileAccessoryRow } from "./MobileAccessoryRow";
+import { getCmdletHelp } from "../engine/cmdletHelp";
+import { detectCurrentCmdlet } from "./HelpPanel";
 
 interface CompletionState {
   result: CompletionResult;
@@ -29,6 +31,7 @@ interface ReplEditorProps {
   userVariables?: string[];
   isMobile?: boolean;
   cwd?: string;
+  onShowHelp?: (cmdletName: string) => void;
 }
 
 export function ReplEditor({
@@ -44,6 +47,7 @@ export function ReplEditor({
   onHistoryIndexChange,
   isMobile,
   cwd = "/sitecore/content/Home",
+  onShowHelp,
 }: ReplEditorProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -156,6 +160,14 @@ export function ReplEditor({
       } else {
         reverseSearch.activate();
       }
+      return;
+    }
+
+    // F1 — show help for current cmdlet
+    if (e.key === "F1") {
+      e.preventDefault();
+      const cmdlet = detectCurrentCmdlet(code);
+      if (cmdlet && onShowHelp) onShowHelp(cmdlet);
       return;
     }
 
@@ -407,12 +419,22 @@ export function ReplEditor({
   const handleAccessoryAction = useCallback((action: string) => {
     if (action === "tab") {
       triggerTabCompletion();
+      inputRef.current?.focus();
+    } else if (action === "help") {
+      inputRef.current?.blur();
+      const cmdlet = detectCurrentCmdlet(code);
+      if (cmdlet && onShowHelp) onShowHelp(cmdlet);
     }
-    inputRef.current?.focus();
-  }, [triggerTabCompletion]);
+  }, [triggerTabCompletion, code, onShowHelp]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+    {isMobile && (
+      <MobileAccessoryRow
+        onInsert={handleAccessoryInsert}
+        onAction={handleAccessoryAction}
+      />
+    )}
     <div
       style={{
         flex: 1,
@@ -457,6 +479,53 @@ export function ReplEditor({
       )}
 
       <OutputPane entries={consoleOutput} isISE={false} />
+
+      {/* Syntax hint bar */}
+      {(() => {
+        const cmdlet = detectCurrentCmdlet(code);
+        const help = cmdlet ? getCmdletHelp(cmdlet) : null;
+        if (!help || !help.syntax[0]) return null;
+        return (
+          <div
+            style={{
+              fontSize: 11,
+              fontFamily: fonts.mono,
+              color: colors.textDimmed,
+              background: colors.bgPanel,
+              padding: "2px 8px",
+              borderRadius: 3,
+              marginBottom: 4,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {help.syntax[0]}
+            </span>
+            {onShowHelp && !isMobile && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onShowHelp(cmdlet!);
+                }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: colors.textDimmed,
+                  fontSize: 11,
+                  cursor: "pointer",
+                  padding: "0 2px",
+                  fontFamily: fonts.mono,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                F1 help
+              </button>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Continuation lines */}
       {continuationLines.map((line, i) => (
@@ -729,12 +798,6 @@ export function ReplEditor({
           Clear
         </button>
       </div>
-    )}
-    {isMobile && (
-      <MobileAccessoryRow
-        onInsert={handleAccessoryInsert}
-        onAction={handleAccessoryAction}
-      />
     )}
     </div>
   );

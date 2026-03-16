@@ -24,6 +24,7 @@ import { GlobalA11yStyles } from "./components/GlobalA11yStyles";
 import { LandingPage } from "./components/LandingPage";
 import { VirtualTour, DESKTOP_STEPS, MOBILE_STEPS } from "./components/VirtualTour";
 import { useTourState } from "./hooks/useTourState";
+import { HelpPanel } from "./components/HelpPanel";
 
 const initialProgress = loadProgress();
 const initialPrefs = loadUIPreferences();
@@ -57,6 +58,7 @@ export default function SPETutorial() {
   const [themeMode, setThemeMode] = useState<ThemeMode>(initialTheme);
   const [activeQuiz, setActiveQuiz] = useState<string | null>(null);
   const [quizResults, setQuizResults] = useState<Record<string, QuizResult>>(initialProgress.quizResults);
+  const [helpPanelCmdlet, setHelpPanelCmdlet] = useState<string | null>(null);
   const tour = useTourState();
   const sessionCtxRef = useRef(new ScriptContext());
   const lessonPanelRef = useRef<HTMLDivElement>(null);
@@ -611,6 +613,7 @@ export default function SPETutorial() {
                 consoleOutput={consoleOutput}
                 isMobile={true}
                 builderConfig={task?.builderConfig}
+                onShowHelp={setHelpPanelCmdlet}
               />
             ) : (
               <EditorWithBuilderToggle
@@ -623,6 +626,7 @@ export default function SPETutorial() {
                 builderSelectedStageId={builderSelectedStageId}
                 onBuilderSelectedStageIdChange={setBuilderSelectedStageId}
                 isMobile={true}
+                onShowHelp={setHelpPanelCmdlet}
                 editorElement={isISE ? (
                   <IseEditor
                     code={code}
@@ -634,6 +638,7 @@ export default function SPETutorial() {
                     commandHistory={commandHistory}
                     tree={VIRTUAL_TREE}
                     isMobile={true}
+                    onShowHelp={setHelpPanelCmdlet}
                   />
                 ) : (
                   <ReplEditor
@@ -648,6 +653,7 @@ export default function SPETutorial() {
                     tree={VIRTUAL_TREE}
                     isMobile={true}
                     cwd={cwd}
+                    onShowHelp={setHelpPanelCmdlet}
                   />
                 )}
               />
@@ -666,6 +672,24 @@ export default function SPETutorial() {
             showTreeTab={true}
           />
         </div>
+
+        {/* Help panel overlay */}
+        {helpPanelCmdlet && (
+          <div style={{ position: "fixed", inset: 0, zIndex: 90 }}>
+            <div
+              onClick={() => setHelpPanelCmdlet(null)}
+              style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }}
+            />
+            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, maxHeight: "70vh", display: "flex", flexDirection: "column", background: colors.bgPanel, borderTop: `1px solid ${colors.borderBase}`, borderRadius: "12px 12px 0 0" }}>
+              <HelpPanel
+                cmdletName={helpPanelCmdlet}
+                onClose={() => setHelpPanelCmdlet(null)}
+                onNavigate={setHelpPanelCmdlet}
+                isMobile={true}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Virtual tour */}
         <VirtualTour
@@ -961,6 +985,7 @@ export default function SPETutorial() {
                   onClear={() => setConsoleOutput([])}
                   consoleOutput={consoleOutput}
                   builderConfig={task?.builderConfig}
+                  onShowHelp={setHelpPanelCmdlet}
                 />
               ) : (
                 <EditorWithBuilderToggle
@@ -972,6 +997,7 @@ export default function SPETutorial() {
                   onBuilderStagesChange={setBuilderStages}
                   builderSelectedStageId={builderSelectedStageId}
                   onBuilderSelectedStageIdChange={setBuilderSelectedStageId}
+                  onShowHelp={setHelpPanelCmdlet}
                   editorElement={isISE ? (
                     <IseEditor
                       code={code}
@@ -995,6 +1021,7 @@ export default function SPETutorial() {
                           lessonPanelCollapsed,
                         });
                       }}
+                      onShowHelp={setHelpPanelCmdlet}
                     />
                   ) : (
                     <ReplEditor
@@ -1008,6 +1035,7 @@ export default function SPETutorial() {
                       onHistoryIndexChange={setHistoryIndex}
                       tree={VIRTUAL_TREE}
                       cwd={cwd}
+                      onShowHelp={setHelpPanelCmdlet}
                     />
                   )}
                 />
@@ -1141,6 +1169,7 @@ export default function SPETutorial() {
                   onClear={() => setConsoleOutput([])}
                   consoleOutput={consoleOutput}
                   builderConfig={task?.builderConfig}
+                  onShowHelp={setHelpPanelCmdlet}
                 />
               ) : (
                 <EditorWithBuilderToggle
@@ -1152,6 +1181,7 @@ export default function SPETutorial() {
                   onBuilderStagesChange={setBuilderStages}
                   builderSelectedStageId={builderSelectedStageId}
                   onBuilderSelectedStageIdChange={setBuilderSelectedStageId}
+                  onShowHelp={setHelpPanelCmdlet}
                   editorElement={isISE ? (
                     <IseEditor
                       code={code}
@@ -1174,6 +1204,7 @@ export default function SPETutorial() {
                           lessonPanelCollapsed,
                         });
                       }}
+                      onShowHelp={setHelpPanelCmdlet}
                     />
                   ) : (
                     <ReplEditor
@@ -1187,6 +1218,7 @@ export default function SPETutorial() {
                       onHistoryIndexChange={setHistoryIndex}
                       tree={VIRTUAL_TREE}
                       cwd={cwd}
+                      onShowHelp={setHelpPanelCmdlet}
                     />
                   )}
                 />
@@ -1195,6 +1227,17 @@ export default function SPETutorial() {
           </div>
         )}
       </div>
+
+      {/* Help panel overlay (desktop) */}
+      {helpPanelCmdlet && (
+        <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: 350, zIndex: 90 }}>
+          <HelpPanel
+            cmdletName={helpPanelCmdlet}
+            onClose={() => setHelpPanelCmdlet(null)}
+            onNavigate={setHelpPanelCmdlet}
+          />
+        </div>
+      )}
 
       {/* Virtual tour */}
       <VirtualTour

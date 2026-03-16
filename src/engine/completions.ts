@@ -32,6 +32,7 @@ export const CMDLET_NAMES = [
   "Write-Host",
   "Write-Output",
   "Get-Alias",
+  "Get-Help",
 ];
 
 /** Cmdlet aliases */
@@ -57,6 +58,7 @@ export const CMDLET_ALIASES: Record<string, string> = {
   sp: "Set-ItemProperty",
   cd: "Set-Location", sl: "Set-Location", chdir: "Set-Location",
   gal: "Get-Alias",
+  help: "Get-Help",
 };
 
 /** All completable cmdlet tokens (names + aliases) */
@@ -93,6 +95,7 @@ const CMDLET_PARAMS: Record<string, string[]> = {
   "Read-Variable": ["-Title", "-Description"],
   "Close-Window": [],
   "Get-Alias": [],
+  "Get-Help": ["-Name", "-Examples", "-Full", "-Parameter"],
 };
 
 /** Built-in variables */

@@ -277,6 +277,19 @@ export const CMDLET_REGISTRY: Record<string, CmdletRegistration> = {
   "close-window": { sets: [] },
 
   "get-alias": { sets: [] },
+
+  "get-help": {
+    sets: [
+      {
+        name: "Default",
+        params: {
+          Name: { type: "string", positional: 0 },
+          Parameter: { type: "string" },
+        },
+      },
+    ],
+    switches: ["Examples", "Full"],
+  },
 };
 
 // ============================================================================

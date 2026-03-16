@@ -8,6 +8,8 @@ import { createBracketAutoCloseHandler } from "../hooks/useBracketAutoClose";
 import { useBracketMatching } from "../hooks/useBracketMatching";
 import { useGhostText } from "../hooks/useGhostText";
 import { MobileAccessoryRow } from "./MobileAccessoryRow";
+import { getCmdletHelp } from "../engine/cmdletHelp";
+import { detectCmdletAtCursor, detectCurrentCmdlet } from "./HelpPanel";
 
 interface CompletionState {
   result: CompletionResult;
@@ -29,6 +31,7 @@ interface IseEditorProps {
   isMobile?: boolean;
   initialEditorHeight?: number;
   onEditorHeightChange?: (height: number) => void;
+  onShowHelp?: (cmdletName: string) => void;
 }
 
 export function IseEditor({
@@ -44,6 +47,7 @@ export function IseEditor({
   isMobile,
   initialEditorHeight,
   onEditorHeightChange,
+  onShowHelp,
 }: IseEditorProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const overlayRef = useRef<HTMLPreElement>(null);
@@ -241,9 +245,13 @@ export function IseEditor({
   const handleAccessoryAction = useCallback((action: string) => {
     if (action === "tab") {
       triggerCompletion();
+      inputRef.current?.focus();
+    } else if (action === "help") {
+      inputRef.current?.blur();
+      const cmdlet = detectCurrentCmdlet(code);
+      if (cmdlet && onShowHelp) onShowHelp(cmdlet);
     }
-    inputRef.current?.focus();
-  }, [triggerCompletion]);
+  }, [triggerCompletion, code, onShowHelp]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -316,6 +324,14 @@ export function IseEditor({
         requestAnimationFrame(() => {
           ta.selectionStart = ta.selectionEnd = cursor;
         });
+        return;
+      }
+
+      // F1 — show help for cmdlet at cursor
+      if (e.key === "F1") {
+        e.preventDefault();
+        const cmdlet = detectCmdletAtCursor(code, ta.selectionStart);
+        if (cmdlet && onShowHelp) onShowHelp(cmdlet);
         return;
       }
 
@@ -426,7 +442,7 @@ export function IseEditor({
         return;
       }
     },
-    [onRun, onClear, onCodeChange, completion, dismissCompletion, code, tree, userVariables, autoCloseHandler, showGhost, ghostText, cursorPos]
+    [onRun, onClear, onCodeChange, completion, dismissCompletion, code, tree, userVariables, autoCloseHandler, showGhost, ghostText, cursorPos, onShowHelp]
   );
 
   // Render syntax-highlighted overlay content
@@ -441,6 +457,14 @@ export function IseEditor({
 
   return (
     <>
+      {/* Mobile accessory row — top so keyboard doesn't cover it */}
+      {isMobile && (
+        <MobileAccessoryRow
+          onInsert={handleAccessoryInsert}
+          onAction={handleAccessoryAction}
+        />
+      )}
+
       {/* Script editor pane */}
       <div
         ref={editorPaneRef}
@@ -644,11 +668,30 @@ export function IseEditor({
         >
           {!isMobile && (
             <>
-              <span>Ctrl+Enter run</span>
-              <span>Ctrl+Space complete</span>
-              <span>Tab indent</span>
-              <span>Ctrl+/ comment</span>
-              <span>Ctrl+L clear</span>
+              {(() => {
+                const cmdlet = detectCurrentCmdlet(code);
+                const help = cmdlet ? getCmdletHelp(cmdlet) : null;
+                if (help?.syntax[0]) {
+                  return (
+                    <span
+                      style={{ color: colors.textDimmed, cursor: onShowHelp ? "pointer" : undefined }}
+                      onClick={onShowHelp ? () => onShowHelp(cmdlet!) : undefined}
+                      title="Press F1 for help"
+                    >
+                      {help.syntax[0]}
+                    </span>
+                  );
+                }
+                return (
+                  <>
+                    <span>Ctrl+Enter run</span>
+                    <span>Ctrl+Space complete</span>
+                    <span>Tab indent</span>
+                    <span>Ctrl+/ comment</span>
+                    <span>Ctrl+L clear</span>
+                  </>
+                );
+              })()}
             </>
           )}
           {completion && (
@@ -681,12 +724,6 @@ export function IseEditor({
             Tab →
           </button>
         </div>
-        {isMobile && (
-          <MobileAccessoryRow
-            onInsert={handleAccessoryInsert}
-            onAction={handleAccessoryAction}
-          />
-        )}
       </div>
 
       {/* Resize handle */}

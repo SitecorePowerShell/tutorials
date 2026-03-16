@@ -12,6 +12,8 @@ description: |
   • `-match` — regex match
 
   These operators let you build powerful content queries without writing Sitecore Query or LINQ.
+
+  > **Tip:** Run `Get-Help Where-Object -Examples` to see filtering examples.
 tasks:
   - instruction: |
       Find all items under Home whose Name contains "Sitecore" using the `-like` operator with wildcards.

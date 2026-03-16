@@ -16,6 +16,7 @@ interface BuilderEditorProps {
   consoleOutput: ConsoleEntry[];
   isMobile?: boolean;
   builderConfig?: BuilderConfig;
+  onShowHelp?: (cmdletName: string) => void;
 }
 
 export function BuilderEditor({
@@ -26,6 +27,7 @@ export function BuilderEditor({
   consoleOutput,
   isMobile,
   builderConfig,
+  onShowHelp,
 }: BuilderEditorProps) {
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [selectedStageId, setSelectedStageId] = useState<string | null>(null);
@@ -167,6 +169,7 @@ export function BuilderEditor({
           stageIndex={selectedStageIndex}
           stageCount={stages.length}
           onReorderStage={isMobile ? reorderStage : undefined}
+          onShowHelp={onShowHelp}
         />
 
         {/* Output */}

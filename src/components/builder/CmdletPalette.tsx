@@ -1,5 +1,6 @@
 import { CMDLET_REGISTRY, ALL_CMDLET_NAMES, getCmdletColor } from "../../builder/cmdletRegistry";
 import { colors, fonts, fontSizes } from "../../theme";
+import { getSynopsis } from "../../engine/cmdletHelp";
 
 interface CmdletPaletteProps {
   availableCmdlets?: string[];
@@ -72,7 +73,7 @@ export function CmdletPalette({ availableCmdlets, usedCmdlets, onAddStage, isMob
               whiteSpace: "nowrap",
               userSelect: "none",
             }}
-            title={isMobile ? `Tap to add ${name}` : `Drag to add ${name}`}
+            title={isMobile ? `Tap to add ${name}` : (getSynopsis(name) || `Drag to add ${name}`)}
           >
             {!isMobile && <span>{def.icon}</span>}
             <span>{def.shortLabel}</span>
