@@ -149,6 +149,11 @@ export function getCompletions(
   // Extract the token to the left of the cursor
   const beforeCursor = text.slice(0, cursorPos);
 
+  // No completions inside comments
+  const lastNewline = beforeCursor.lastIndexOf("\n");
+  const currentLine = beforeCursor.slice(lastNewline + 1);
+  if (/^\s*#/.test(currentLine)) return null;
+
   // Try static member completion ([TypeName]::...)
   const memberMatch = beforeCursor.match(/\[([A-Za-z][\w.]*)\]::(\w*)$/);
   if (memberMatch) {

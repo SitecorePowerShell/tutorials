@@ -18,6 +18,11 @@ export function useGhostText(
     // Only show ghost text when cursor is at the end
     if (!code || cursorPos !== code.length) return null;
 
+    // Don't show ghost text inside comments
+    const lastNewline = code.lastIndexOf("\n");
+    const currentLine = code.slice(lastNewline + 1);
+    if (/^\s*#/.test(currentLine)) return null;
+
     const codeLower = code.toLowerCase();
 
     // Primary: scan history in reverse for a prefix match
