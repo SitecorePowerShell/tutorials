@@ -75,9 +75,14 @@ export class SpeRemotingProvider implements ExecutionProvider {
         return { connected: false, error: response.error };
       }
       const parsed = JSON.parse(response.output);
+      // SPEVersion may be a Version object {Major, Minor, Build, Revision}
+      let version = parsed.version;
+      if (version && typeof version === "object") {
+        version = `${version.Major}.${version.Minor}.${version.Build}`;
+      }
       return {
         connected: !!parsed.connected,
-        version: parsed.version || undefined,
+        version: version ? String(version) : undefined,
         user: parsed.user || undefined,
       };
     } catch (err) {
