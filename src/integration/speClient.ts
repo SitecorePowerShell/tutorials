@@ -269,11 +269,13 @@ export function createSpeClient(config: SpeClientConfig) {
     // When raw=false, wrap in a scriptblock so Out-String applies ps1xml
     // formatting rules. Set stream preference variables to "Continue" so
     // Write-Verbose, Write-Warning, Write-Debug, and Write-Information
-    // output is captured (matches Invoke-RemoteScript.ps1 behavior).
+    // are emitted. Use *>&1 to redirect ALL streams (error=2, warning=3,
+    // verbose=4, debug=5, information=6) to stdout before piping to
+    // Out-String, otherwise non-output streams are silently discarded.
     // When raw=true, send as-is (for JSON responses).
     const finalScript = raw
       ? script
-      : `& { $VerbosePreference = "Continue"; $WarningPreference = "Continue"; $DebugPreference = "Continue"; $InformationPreference = "Continue"; ${script} } | Out-String`;
+      : `& { $VerbosePreference = "Continue"; $WarningPreference = "Continue"; $DebugPreference = "Continue"; $InformationPreference = "Continue"; ${script} } *>&1 | Out-String`;
     const body = `${finalScript}<#${sessionId}#>`;
 
     let authorization: string;
