@@ -1,0 +1,50 @@
+import type { ConsoleEntry, SitecoreNode } from "../types";
+
+/** Result of executing a script or command via any provider */
+export interface ProviderExecutionResult {
+  /** Console entries to append (output, errors, dialogs, etc.) */
+  entries: ConsoleEntry[];
+  /** Updated working directory (if changed by the script) */
+  cwd?: string;
+}
+
+/** Completion suggestion for tab-complete */
+export interface CompletionItem {
+  text: string;
+  /** Display label (may differ from inserted text) */
+  label?: string;
+}
+
+/** Connection configuration for remote providers */
+export interface ConnectionConfig {
+  url: string;
+  username: string;
+  password?: string;
+  sharedSecret?: string;
+}
+
+/**
+ * Abstracts where and how scripts are executed.
+ *
+ * LocalProvider uses the in-memory engine and virtual tree.
+ * SpeRemotingProvider sends scripts to a real Sitecore instance.
+ */
+export interface ExecutionProvider {
+  readonly name: string;
+  readonly isRemote: boolean;
+
+  /** Execute a script (multi-line, ISE mode) */
+  executeScript(script: string): Promise<ProviderExecutionResult>;
+
+  /** Execute a single command (REPL mode) */
+  executeCommand(command: string): Promise<ProviderExecutionResult>;
+
+  /** Get the current working directory */
+  getCwd(): string;
+
+  /** Reset state (variables, cwd) */
+  reset(): void;
+
+  /** Get the content tree root for the TreePanel */
+  getTree(): SitecoreNode;
+}

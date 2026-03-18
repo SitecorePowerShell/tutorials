@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import type { ConsoleEntry, QuizResult } from "./types";
 import type { PipelineStage } from "./builder/assembleCommand";
 import { LESSONS } from "./lessons/loader";
 import { QUIZZES, getQuizForModule } from "./quizzes/loader";
-import { VIRTUAL_TREE } from "./engine/virtualTree";
-import { executeScript, executeCommand } from "./engine/executor";
-import { ScriptContext } from "./engine/scriptContext";
 import { validateTask } from "./validation/validator";
+import { LocalProvider } from "./providers/LocalProvider";
+import { SpeRemotingProvider } from "./providers/SpeRemotingProvider";
+import type { ExecutionProvider, ConnectionConfig } from "./providers/types";
 import { loadProgress, saveProgress, clearProgress } from "./hooks/useSessionProgress";
 import { loadUIPreferences, saveUIPreferences, type ActivePanel } from "./hooks/useUIPreferences";
 import { useMediaQuery } from "./hooks/useMediaQuery";
@@ -26,6 +26,7 @@ import { VirtualTour, DESKTOP_STEPS, MOBILE_STEPS } from "./components/VirtualTo
 import { useTourState } from "./hooks/useTourState";
 import { HelpPanel } from "./components/HelpPanel";
 import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
+import { ConnectionManager } from "./components/ConnectionManager";
 
 const initialProgress = loadProgress();
 const initialPrefs = loadUIPreferences();
@@ -61,8 +62,10 @@ export default function SPETutorial() {
   const [quizResults, setQuizResults] = useState<Record<string, QuizResult>>(initialProgress.quizResults);
   const [helpPanelCmdlet, setHelpPanelCmdlet] = useState<string | null>(null);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [connectionConfig, setConnectionConfig] = useState<ConnectionConfig | null>(null);
   const tour = useTourState();
-  const sessionCtxRef = useRef(new ScriptContext());
+  const providerRef = useRef<ExecutionProvider>(new LocalProvider());
   const lessonPanelRef = useRef<HTMLDivElement>(null);
   const isDraggingLessonPanel = useRef(false);
   const editorHeightRef = useRef(initialPrefs.editorHeight);
@@ -76,6 +79,12 @@ export default function SPETutorial() {
   const task = lesson?.tasks?.[currentTask];
   const isISE = lesson?.mode === "ise";
   const isBuilder = lesson?.mode === "builder";
+
+  // Provide tree for TreePanel — wraps provider's tree in expected shape
+  const treeForPanel = useMemo(
+    () => ({ sitecore: providerRef.current.getTree() }),
+    [connectionConfig]
+  );
   const totalTasks = LESSONS.reduce((sum, l) => sum + l.tasks.length, 0);
   const completedCount = Object.keys(completedTasks).length;
   const showLanding = currentLesson === -1;
@@ -171,10 +180,20 @@ export default function SPETutorial() {
     setBuilderToggleActive(false);
   }, [isISE]);
 
+  // Switch provider when connection config changes
+  useEffect(() => {
+    if (connectionConfig) {
+      providerRef.current = new SpeRemotingProvider(connectionConfig);
+    } else {
+      providerRef.current = new LocalProvider();
+    }
+    setCwd(providerRef.current.getCwd());
+  }, [connectionConfig]);
+
   const handleReset = useCallback(() => {
     setConsoleOutput([]);
-    sessionCtxRef.current = new ScriptContext();
-    setCwd("/sitecore/content/Home");
+    providerRef.current.reset();
+    setCwd(providerRef.current.getCwd());
     const t = LESSONS[currentLesson]?.tasks?.[currentTask];
     setCode(t?.starterCode || "# Write your script here\n");
   }, [currentLesson, currentTask]);
@@ -186,9 +205,9 @@ export default function SPETutorial() {
     setBuilderToggleActive(false);
     setBuilderStages([]);
     setBuilderSelectedStageId(null);
-    // Reset session context (cwd, variables) on lesson/task change
-    sessionCtxRef.current = new ScriptContext();
-    setCwd("/sitecore/content/Home");
+    // Reset provider state (cwd, variables) on lesson/task change
+    providerRef.current.reset();
+    setCwd(providerRef.current.getCwd());
     if (isBuilder) {
       setCode(""); // Builder drives code via onCodeChange
     } else if (isISE && task?.starterCode) {
@@ -203,6 +222,7 @@ export default function SPETutorial() {
   const handleRun = useCallback((codeOverride?: string) => {
     const effective = typeof codeOverride === "string" ? codeOverride : code;
     if (!effective.trim()) return;
+    if (isExecuting) return;
     const taskKey = `${currentLesson}-${currentTask}`;
 
     // Handle clear commands in console mode
@@ -216,124 +236,110 @@ export default function SPETutorial() {
       return;
     }
 
-    const currentCwd = sessionCtxRef.current.cwd;
+    const provider = providerRef.current;
+    const currentCwd = provider.getCwd();
     const cwdDisplay = `master:\\${currentCwd.replace(/^\/sitecore\//, "").replace(/\//g, "\\")}`;
-    let newOutput: ConsoleEntry[] = (isISE || isBuilder)
-      ? [...consoleOutput]
-      : [...consoleOutput, { type: "command", text: effective.trim(), cwd: cwdDisplay }];
 
-    if (isISE) {
-      newOutput.push({ type: "script", text: effective.trim() });
-    }
-
-    // Execute using persistent session context (preserves cwd across commands)
-    const ctx = sessionCtxRef.current;
-    // Reset per-execution state but keep cwd
-    ctx.outputs = [];
-    ctx.errors = [];
-    ctx.dialogRequests = [];
-    ctx.variables = {};
-
-    let result;
-    if (isISE) {
-      result = executeScript(effective, ctx);
-    } else {
-      const normalized = effective
-        .split("\n")
-        .map((l) => l.trim())
-        .filter((l) => l && !l.startsWith("#"))
-        .join(" ");
-      result = executeCommand(normalized, ctx);
-    }
-
-    // Sync cwd from context to React state (for prompt display)
-    if (ctx.cwd !== cwd) {
-      setCwd(ctx.cwd);
-    }
-
-    // Convert dialog requests into styled console entries
-    const dialogTypes = new Set(ctx.dialogRequests.map((d) => d.type));
-
-    if (result.output) {
-      if (dialogTypes.has("listview")) {
-        // Replace plain output with styled listview dialog
-        const lv = ctx.dialogRequests.find((d) => d.type === "listview")!;
-        newOutput.push({
-          type: "dialog-listview",
-          text: result.output,
-          title: lv.title || "List View",
-          itemCount: lv.itemCount ?? 0,
-          columns: lv.columns || [],
-          rows: lv.rows || [],
-        });
-      } else if (!dialogTypes.has("alert") && !dialogTypes.has("read-variable")) {
-        newOutput.push({ type: "output", text: result.output });
-      }
-    }
-
-    for (const dr of ctx.dialogRequests) {
-      if (dr.type === "alert") {
-        newOutput.push({
-          type: "dialog-alert",
-          text: dr.message || "",
-          message: dr.message || "",
-        });
-      } else if (dr.type === "read-variable") {
-        newOutput.push({
-          type: "dialog-read-variable",
-          text: `${dr.title}${dr.description ? " — " + dr.description : ""}`,
-          title: dr.title || "Input",
-          description: dr.description || "",
-        });
-      }
-    }
-
-    if (result.error) {
-      newOutput.push({ type: "error", text: result.error });
-    }
-
-    // Validate against current task
-    if (task) {
-      const validation = validateTask(effective.trim(), task);
-      if (validation.passed) {
-        newOutput.push({
-          type: "success",
-          text: `✓ ${task.successMessage || "Correct!"}`,
-        });
-        setCompletedTasks((prev) => ({ ...prev, [taskKey]: true }));
-        setA11yAnnouncement(`Task completed: ${task.successMessage || "Correct!"}`);
-        setTimeout(() => setA11yAnnouncement(""), 3000);
-      } else {
-        setTaskAttempts((prev) => ({
-          ...prev,
-          [taskKey]: (prev[taskKey] || 0) + 1,
-        }));
-        newOutput.push({
-          type: "hint",
-          text: validation.feedback || "",
-        });
-        if (validation.partial) {
-          newOutput.push({
-            type: "partial",
-            text: validation.partial.join(" → "),
-          });
-        }
-      }
-    }
-
-    // Prune old entries to prevent unbounded growth
-    const MAX_ENTRIES = 500;
-    if (newOutput.length > MAX_ENTRIES) {
-      newOutput = newOutput.slice(newOutput.length - MAX_ENTRIES);
-    }
-    setConsoleOutput(newOutput);
+    // Build command echo entries synchronously
+    const echoEntries: ConsoleEntry[] = [];
     if (!isISE && !isBuilder) {
-      const historyEntry = effective.trim().split("\n").map((l) => l.trim()).filter(Boolean).join(" ");
-      setCommandHistory((prev) => [...prev, historyEntry]);
-      setHistoryIndex(-1);
-      setCode("");
+      echoEntries.push({ type: "command", text: effective.trim(), cwd: cwdDisplay });
     }
-  }, [code, consoleOutput, currentLesson, currentTask, task, isISE, isBuilder]);
+    if (isISE) {
+      echoEntries.push({ type: "script", text: effective.trim() });
+    }
+
+    // Normalize for REPL mode
+    const scriptToRun = isISE
+      ? effective
+      : effective
+          .split("\n")
+          .map((l) => l.trim())
+          .filter((l) => l && !l.startsWith("#"))
+          .join(" ");
+
+    // Execute via provider (async — supports both local and remote)
+    setIsExecuting(true);
+    const executePromise = isISE
+      ? provider.executeScript(scriptToRun)
+      : provider.executeCommand(scriptToRun);
+
+    executePromise
+      .then((providerResult) => {
+        let newOutput: ConsoleEntry[] = [
+          ...consoleOutput,
+          ...echoEntries,
+          ...providerResult.entries,
+        ];
+
+        // Sync cwd from provider
+        if (providerResult.cwd && providerResult.cwd !== cwd) {
+          setCwd(providerResult.cwd);
+        }
+
+        // Validate against current task (always uses local engine)
+        if (task) {
+          const validation = validateTask(effective.trim(), task);
+          if (validation.passed) {
+            newOutput.push({
+              type: "success",
+              text: `✓ ${task.successMessage || "Correct!"}`,
+            });
+            setCompletedTasks((prev) => ({ ...prev, [taskKey]: true }));
+            setA11yAnnouncement(
+              `Task completed: ${task.successMessage || "Correct!"}`
+            );
+            setTimeout(() => setA11yAnnouncement(""), 3000);
+          } else {
+            setTaskAttempts((prev) => ({
+              ...prev,
+              [taskKey]: (prev[taskKey] || 0) + 1,
+            }));
+            newOutput.push({
+              type: "hint",
+              text: validation.feedback || "",
+            });
+            if (validation.partial) {
+              newOutput.push({
+                type: "partial",
+                text: validation.partial.join(" → "),
+              });
+            }
+          }
+        }
+
+        // Prune old entries to prevent unbounded growth
+        const MAX_ENTRIES = 500;
+        if (newOutput.length > MAX_ENTRIES) {
+          newOutput = newOutput.slice(newOutput.length - MAX_ENTRIES);
+        }
+        setConsoleOutput(newOutput);
+        if (!isISE && !isBuilder) {
+          const historyEntry = effective
+            .trim()
+            .split("\n")
+            .map((l) => l.trim())
+            .filter(Boolean)
+            .join(" ");
+          setCommandHistory((prev) => [...prev, historyEntry]);
+          setHistoryIndex(-1);
+          setCode("");
+        }
+      })
+      .catch((err) => {
+        setConsoleOutput((prev) => [
+          ...prev,
+          ...echoEntries,
+          {
+            type: "error",
+            text: `Execution failed: ${err instanceof Error ? err.message : String(err)}`,
+          },
+        ]);
+      })
+      .finally(() => {
+        setIsExecuting(false);
+      });
+  }, [code, consoleOutput, currentLesson, currentTask, task, isISE, isBuilder, isExecuting, cwd]);
 
   const advanceTask = () => {
     if (currentTask < lesson.tasks.length - 1) {
@@ -578,6 +584,14 @@ export default function SPETutorial() {
               {activeQuizData ? activeQuizData.module : `Task ${currentTask + 1}/${lesson.tasks.length}`}
             </div>
           </div>
+          <div style={{ position: "relative" }}>
+            <ConnectionManager
+              isConnected={!!connectionConfig}
+              onConnect={setConnectionConfig}
+              onDisconnect={() => setConnectionConfig(null)}
+              isExecuting={isExecuting}
+            />
+          </div>
           <div
             style={{
               fontSize: fs.xs,
@@ -692,7 +706,7 @@ export default function SPETutorial() {
                     onReset={handleReset}
                     consoleOutput={consoleOutput}
                     commandHistory={commandHistory}
-                    tree={VIRTUAL_TREE}
+                    tree={treeForPanel}
                     isMobile={true}
                     onShowHelp={setHelpPanelCmdlet}
                   />
@@ -706,7 +720,7 @@ export default function SPETutorial() {
                     commandHistory={commandHistory}
                     historyIndex={historyIndex}
                     onHistoryIndexChange={setHistoryIndex}
-                    tree={VIRTUAL_TREE}
+                    tree={treeForPanel}
                     isMobile={true}
                     cwd={cwd}
                     onShowHelp={setHelpPanelCmdlet}
@@ -716,7 +730,7 @@ export default function SPETutorial() {
             )}
           </div>
           <div style={{ flex: 1, display: mobilePanel === "tree" ? "flex" : "none", flexDirection: "column", overflow: "hidden" }}>
-            <TreePanel tree={VIRTUAL_TREE} isMobile={true} />
+            <TreePanel tree={treeForPanel} isMobile={true} />
           </div>
         </main>
 
@@ -844,6 +858,14 @@ export default function SPETutorial() {
             </span>
           </div>
           <div style={{ flex: 1 }} />
+          <div style={{ position: "relative" }}>
+            <ConnectionManager
+              isConnected={!!connectionConfig}
+              onConnect={setConnectionConfig}
+              onDisconnect={() => setConnectionConfig(null)}
+              isExecuting={isExecuting}
+            />
+          </div>
           {!activeQuizData && (
             <>
               <button
@@ -987,7 +1009,7 @@ export default function SPETutorial() {
                 </div>
               ) : (
                 <div role="tabpanel" id="tabpanel-tree" aria-labelledby="tab-tree" style={{ height: lessonPanelCollapsed ? undefined : lessonPanelHeight, overflow: "auto" }}>
-                  <TreePanel tree={VIRTUAL_TREE} embedded />
+                  <TreePanel tree={treeForPanel} embedded />
                 </div>
               )}
             </div>
@@ -1063,7 +1085,7 @@ export default function SPETutorial() {
                       onReset={handleReset}
                       consoleOutput={consoleOutput}
                       commandHistory={commandHistory}
-                      tree={VIRTUAL_TREE}
+                      tree={treeForPanel}
                       initialEditorHeight={initialPrefs.editorHeight}
                       onEditorHeightChange={(h) => {
                         editorHeightRef.current = h;
@@ -1089,7 +1111,7 @@ export default function SPETutorial() {
                       commandHistory={commandHistory}
                       historyIndex={historyIndex}
                       onHistoryIndexChange={setHistoryIndex}
-                      tree={VIRTUAL_TREE}
+                      tree={treeForPanel}
                       cwd={cwd}
                       onShowHelp={setHelpPanelCmdlet}
                     />
@@ -1180,7 +1202,7 @@ export default function SPETutorial() {
                     </div>
                   ) : (
                     <div role="tabpanel" id="tabpanel-sbs-tree" aria-labelledby="tab-sbs-tree" style={{ height: "100%" }}>
-                      <TreePanel tree={VIRTUAL_TREE} embedded />
+                      <TreePanel tree={treeForPanel} embedded />
                     </div>
                   )}
                 </div>
@@ -1246,7 +1268,7 @@ export default function SPETutorial() {
                       onClear={() => setConsoleOutput([])}
                       onReset={handleReset}
                       consoleOutput={consoleOutput}
-                      tree={VIRTUAL_TREE}
+                      tree={treeForPanel}
                       initialEditorHeight={initialPrefs.editorHeight}
                       onEditorHeightChange={(h) => {
                         editorHeightRef.current = h;
@@ -1272,7 +1294,7 @@ export default function SPETutorial() {
                       commandHistory={commandHistory}
                       historyIndex={historyIndex}
                       onHistoryIndexChange={setHistoryIndex}
-                      tree={VIRTUAL_TREE}
+                      tree={treeForPanel}
                       cwd={cwd}
                       onShowHelp={setHelpPanelCmdlet}
                     />
