@@ -266,16 +266,43 @@ export function createSpeClient(config: SpeClientConfig) {
     const sessionId = crypto.randomUUID();
     const endpoint = `${baseUrl}${scriptEndpoint}?sessionId=${sessionId}&rawOutput=true&persistentSession=false`;
 
-    // When raw=false, wrap in a scriptblock so Out-String applies ps1xml
-    // formatting rules. Set stream preference variables to "Continue" so
-    // Write-Verbose, Write-Warning, Write-Debug, and Write-Information
-    // are emitted. Use *>&1 to redirect ALL streams (error=2, warning=3,
-    // verbose=4, debug=5, information=6) to stdout before piping to
-    // Out-String, otherwise non-output streams are silently discarded.
+    // When raw=false, wrap the user's script to:
+    //   1. Set stream preferences to "Continue" so Write-Verbose/Warning/
+    //      Debug/Information are emitted
+    //   2. Redirect all streams (*>&1) so stream records flow through the
+    //      pipeline instead of being silently discarded
+    //   3. Separate normal output from stream records — normal objects pass
+    //      through to Out-String for ps1xml formatting; stream records
+    //      (ErrorRecord, WarningRecord, etc.) are collected and serialized
+    //      as CLIXML after a <#messages#> delimiter
+    //
+    // This mirrors Invoke-RemoteScript.ps1's approach, allowing the client
+    // to parse each stream type and render with appropriate styling.
     // When raw=true, send as-is (for JSON responses).
     const finalScript = raw
       ? script
-      : `& { $VerbosePreference = "Continue"; $WarningPreference = "Continue"; $DebugPreference = "Continue"; $InformationPreference = "Continue"; ${script} } *>&1 | Out-String`;
+      : [
+          "& {",
+          "  $VerbosePreference = 'Continue';",
+          "  $WarningPreference = 'Continue';",
+          "  $DebugPreference = 'Continue';",
+          "  $InformationPreference = 'Continue';",
+          "  $__speRecords = [System.Collections.ArrayList]::new();",
+          `  & { ${script} } *>&1 | ForEach-Object {`,
+          "    if ($_ -is [System.Management.Automation.ErrorRecord] -or",
+          "        $_ -is [System.Management.Automation.WarningRecord] -or",
+          "        $_ -is [System.Management.Automation.VerboseRecord] -or",
+          "        $_ -is [System.Management.Automation.DebugRecord] -or",
+          "        $_ -is [System.Management.Automation.InformationRecord]) {",
+          "      [void]$__speRecords.Add($_)",
+          "    } else { $_ }",
+          "  } | Out-String;",
+          "  if ($__speRecords.Count -gt 0) {",
+          "    '<#messages#>';",
+          "    [System.Management.Automation.PSSerializer]::Serialize($__speRecords)",
+          "  }",
+          "}",
+        ].join(" ");
     const body = `${finalScript}<#${sessionId}#>`;
 
     let authorization: string;
