@@ -106,27 +106,26 @@ function unescapeXml(text: string): string {
 }
 
 /**
- * Parse a CLIXML response into structured stream entries.
- * CLIXML responses start with `#< CLIXML` followed by XML containing
- * `<S S="StreamName">message</S>` elements inside an `<Objs>` root.
- *
- * Uses regex-based parsing to avoid DOMParser dependency (not available
- * in Node/test environments). The CLIXML format is simple enough for this.
- *
- * Mirrors the parsing approach used by SPE's Invoke-RemoteScript.ps1.
+ * Map PowerShell type names to stream types for serialized record objects.
  */
-export function parseCliXml(text: string): SpeStreamEntry[] | null {
-  // CLIXML responses are prefixed with "#< CLIXML"
-  const cliXmlPrefix = "#< CLIXML";
-  const idx = text.indexOf(cliXmlPrefix);
-  if (idx === -1) return null;
+const CLIXML_TYPE_MAP: Record<string, SpeStreamEntry["stream"]> = {
+  "System.Management.Automation.ErrorRecord": "error",
+  "Deserialized.System.Management.Automation.ErrorRecord": "error",
+  "System.Management.Automation.WarningRecord": "warning",
+  "Deserialized.System.Management.Automation.WarningRecord": "warning",
+  "System.Management.Automation.VerboseRecord": "verbose",
+  "Deserialized.System.Management.Automation.VerboseRecord": "verbose",
+  "System.Management.Automation.DebugRecord": "debug",
+  "Deserialized.System.Management.Automation.DebugRecord": "debug",
+  "System.Management.Automation.InformationRecord": "information",
+  "Deserialized.System.Management.Automation.InformationRecord": "information",
+};
 
-  const xmlPart = text.substring(idx + cliXmlPrefix.length);
-  if (!xmlPart.trim()) return null;
-
+/**
+ * Parse simple CLIXML with `<S S="StreamName">` elements (e.g., `#< CLIXML` prefix format).
+ */
+function parseSimpleCliXml(xmlPart: string): SpeStreamEntry[] {
   const entries: SpeStreamEntry[] = [];
-
-  // Match <S S="StreamName">content</S> elements
   const pattern = /<S\s+S="([^"]+)">([\s\S]*?)<\/S>/g;
   let match;
   while ((match = pattern.exec(xmlPart)) !== null) {
@@ -140,6 +139,115 @@ export function parseCliXml(text: string): SpeStreamEntry[] | null {
     if (message) {
       entries.push({ stream, text: message });
     }
+  }
+  return entries;
+}
+
+/**
+ * Parse full serialized CLIXML objects (ErrorRecord, WarningRecord, etc.).
+ * These contain `<TN>` type-name blocks and `<ToString>` elements with
+ * the human-readable message.
+ *
+ * SPE Remoting uses this format when returning error records via the
+ * `<#messages#>` delimiter, matching Invoke-RemoteScript.ps1 behavior.
+ */
+function parseSerializedCliXml(xmlPart: string): SpeStreamEntry[] {
+  const entries: SpeStreamEntry[] = [];
+
+  // Find each top-level <Obj> that contains a <TN> block with a recognized type
+  // and extract its <ToString> content as the message.
+  const objPattern = /<Obj\b[^>]*>([\s\S]*?)<\/Obj>/g;
+  let objMatch;
+  while ((objMatch = objPattern.exec(xmlPart)) !== null) {
+    const objContent = objMatch[1];
+
+    // Extract type names from <TN> block — look for <T> elements
+    const typePattern = /<T>([^<]+)<\/T>/g;
+    let stream: SpeStreamEntry["stream"] | null = null;
+    let typeMatch;
+    while ((typeMatch = typePattern.exec(objContent)) !== null) {
+      const mapped = CLIXML_TYPE_MAP[typeMatch[1]];
+      if (mapped) {
+        stream = mapped;
+        break;
+      }
+    }
+    if (!stream) continue;
+
+    // Extract the <ToString> element for the human-readable message
+    const toStringMatch = objContent.match(/<ToString>([\s\S]*?)<\/ToString>/);
+    if (!toStringMatch) continue;
+
+    let message = unescapeXml(toStringMatch[1]);
+    message = decodeCliXmlText(message).trim();
+
+    if (message) {
+      entries.push({ stream, text: message });
+    }
+
+    // Don't recurse into nested <Obj> elements (exception details, etc.)
+    // by advancing past this entire match
+  }
+
+  return entries;
+}
+
+/**
+ * Parse a CLIXML response into structured stream entries.
+ *
+ * Handles two CLIXML formats returned by SPE Remoting:
+ *
+ * 1. **Simple format** — `#< CLIXML` prefix with `<S S="Error">message</S>`
+ *    elements. Used by PowerShell's error stream encoding.
+ *
+ * 2. **Serialized format** — `<#messages#>` delimiter followed by full
+ *    serialized objects (`<Obj>` with `<TN>` type names and `<ToString>`).
+ *    Used by SPE Remoting for ErrorRecord, WarningRecord, etc.
+ *    Any text before `<#messages#>` is treated as normal output.
+ *
+ * Uses regex-based parsing to avoid DOMParser dependency (not available
+ * in Node/test environments).
+ *
+ * Mirrors the parsing approach used by SPE's Invoke-RemoteScript.ps1.
+ */
+export function parseCliXml(text: string): SpeStreamEntry[] | null {
+  // Format 2: <#messages#> delimiter separates output from serialized records
+  const messagesIdx = text.indexOf("<#messages#>");
+  if (messagesIdx !== -1) {
+    const outputPart = text.substring(0, messagesIdx).trim();
+    const xmlPart = text.substring(messagesIdx + "<#messages#>".length);
+
+    const entries: SpeStreamEntry[] = [];
+
+    // Any text before the delimiter is normal output
+    if (outputPart) {
+      entries.push({ stream: "output", text: outputPart });
+    }
+
+    // Try serialized format first (full ErrorRecord objects)
+    const serialized = parseSerializedCliXml(xmlPart);
+    if (serialized.length > 0) {
+      entries.push(...serialized);
+    } else {
+      // Fall back to simple <S S="..."> format
+      entries.push(...parseSimpleCliXml(xmlPart));
+    }
+
+    return entries.length > 0 ? entries : null;
+  }
+
+  // Format 1: #< CLIXML prefix with simple <S S="StreamName"> elements
+  const cliXmlPrefix = "#< CLIXML";
+  const idx = text.indexOf(cliXmlPrefix);
+  if (idx === -1) return null;
+
+  const xmlPart = text.substring(idx + cliXmlPrefix.length);
+  if (!xmlPart.trim()) return null;
+
+  // Try simple format first, then serialized as fallback
+  let entries = parseSimpleCliXml(xmlPart);
+  if (entries.length === 0) {
+    entries = parseSerializedCliXml(xmlPart);
   }
 
   return entries.length > 0 ? entries : null;
