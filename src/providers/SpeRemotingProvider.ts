@@ -61,9 +61,26 @@ export class SpeRemotingProvider implements ExecutionProvider {
     return VIRTUAL_TREE.sitecore;
   }
 
+  /**
+   * Check whether a script already ends with a formatting/output cmdlet.
+   * If not, we append `| Format-Table | Out-String` so SPE returns
+   * human-readable text instead of raw .NET type names.
+   */
+  private autoFormat(script: string): string {
+    // Match the last meaningful command in the pipeline — ignore trailing whitespace
+    const trimmed = script.trimEnd();
+    // Cmdlets that already produce text output
+    const formattingPattern =
+      /\|\s*(Format-Table|Format-List|Format-Wide|Format-Custom|Out-String|ConvertTo-Json|ConvertTo-Csv|ConvertTo-Xml|Write-Host|ft|fl|fw)\b/i;
+    if (formattingPattern.test(trimmed)) {
+      return script;
+    }
+    return `${trimmed} | Format-Table | Out-String`;
+  }
+
   private async execute(script: string): Promise<ProviderExecutionResult> {
     try {
-      const response = await this.client.executeScript(script);
+      const response = await this.client.executeScript(this.autoFormat(script));
 
       const entries: ProviderExecutionResult["entries"] = [];
 
