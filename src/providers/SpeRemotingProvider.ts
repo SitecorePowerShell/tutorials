@@ -34,7 +34,7 @@ export class SpeRemotingProvider implements ExecutionProvider {
       username: config.username,
       password: config.password,
       sharedSecret: config.sharedSecret,
-      scriptEndpoint: "/-/script/v2",
+      scriptEndpoint: "/-/script/script/",
       // JWT audience must always be the real Sitecore URL, not the proxy
       audienceOverride: config.useProxy ? config.url : undefined,
     });
