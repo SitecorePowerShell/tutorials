@@ -61,6 +61,58 @@ function base64UrlEncodeBuffer(buffer: Uint8Array): string {
   return btoa(binary).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
+/**
+ * Format the `output` field from an SPE JSON response into display text.
+ * - Arrays of objects → tabular text (aligned columns)
+ * - Primitives / strings → plain text
+ * - Single objects → key: value pairs
+ */
+function formatOutput(output: unknown): string {
+  if (output === null || output === undefined) return "";
+
+  // Plain string
+  if (typeof output === "string") return output;
+
+  // Primitive (number, boolean)
+  if (typeof output !== "object") return String(output);
+
+  // Array of objects → table format
+  if (Array.isArray(output)) {
+    if (output.length === 0) return "";
+
+    // Array of primitives
+    if (typeof output[0] !== "object" || output[0] === null) {
+      return output.map(String).join("\n");
+    }
+
+    // Collect all keys across all objects for column headers
+    const keys = [...new Set(output.flatMap((item) => Object.keys(item)))];
+
+    // Calculate column widths
+    const widths = keys.map((key) =>
+      Math.max(key.length, ...output.map((item) => String(item[key] ?? "").length))
+    );
+
+    // Header row
+    const header = keys.map((key, i) => key.padEnd(widths[i])).join("  ");
+    const separator = widths.map((w) => "-".repeat(w)).join("  ");
+    const rows = output.map((item) =>
+      keys.map((key, i) => String(item[key] ?? "").padEnd(widths[i])).join("  ")
+    );
+
+    return [header, separator, ...rows].join("\n");
+  }
+
+  // Single object → key: value pairs
+  const entries = Object.entries(output as Record<string, unknown>);
+  if (entries.length === 0) return "";
+
+  const maxKeyLen = Math.max(...entries.map(([k]) => k.length));
+  return entries
+    .map(([key, value]) => `${key.padEnd(maxKeyLen)} : ${value ?? ""}`)
+    .join("\n");
+}
+
 export function createSpeClient(config: SpeClientConfig) {
   const { url, username, password, sharedSecret, scriptEndpoint, audienceOverride } = config;
   const baseUrl = url.replace(/\/$/, "");
@@ -73,7 +125,7 @@ export function createSpeClient(config: SpeClientConfig) {
   return {
     async executeScript(script: string): Promise<SpeResponse> {
       const sessionId = crypto.randomUUID();
-      const endpoint = `${baseUrl}${scriptEndpoint}?sessionId=${sessionId}&rawOutput=true&persistentSession=false`;
+      const endpoint = `${baseUrl}${scriptEndpoint}?sessionId=${sessionId}&rawOutput=false&outputFormat=Json&persistentSession=false`;
 
       // Build body matching SPE Remoting format: script<#sessionId#>params
       const body = `${script}<#${sessionId}#>`;
@@ -104,25 +156,35 @@ export function createSpeClient(config: SpeClientConfig) {
         };
       }
 
-      const contentType = response.headers.get("content-type") || "";
+      // SPE Remoting JSON format returns { output: ..., errors: [...] }
+      const text = await response.text();
       let rawJson: unknown = null;
       let output: string;
+      let error: string | null = null;
 
-      if (contentType.includes("application/json")) {
-        rawJson = await response.json();
-        output = JSON.stringify(rawJson, null, 2);
-      } else {
-        output = await response.text();
+      try {
+        const parsed = JSON.parse(text);
+        rawJson = parsed;
+
+        // Extract errors from the structured response
+        if (parsed.errors && Array.isArray(parsed.errors) && parsed.errors.length > 0) {
+          error = parsed.errors.join("\n");
+        }
+
+        // Format the output for display
+        if (parsed.output !== undefined && parsed.output !== null) {
+          output = formatOutput(parsed.output);
+        } else {
+          output = "";
+        }
+      } catch {
+        // Server may not support JSON format — fall back to raw text
+        output = text;
+        const errorMatch = text.match(/^ERROR:\s*(.+)/m);
+        if (errorMatch) error = errorMatch[1];
       }
 
-      // SPE Remoting returns errors in a specific format
-      const errorMatch = output.match(/^ERROR:\s*(.+)/m);
-
-      return {
-        output,
-        error: errorMatch ? errorMatch[1] : null,
-        rawJson,
-      };
+      return { output, error, rawJson };
     },
   };
 }
