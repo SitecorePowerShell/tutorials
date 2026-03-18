@@ -267,8 +267,13 @@ export function createSpeClient(config: SpeClientConfig) {
     const endpoint = `${baseUrl}${scriptEndpoint}?sessionId=${sessionId}&rawOutput=true&persistentSession=false`;
 
     // When raw=false, wrap in a scriptblock so Out-String applies ps1xml
-    // formatting rules. When raw=true, send as-is (for JSON responses).
-    const finalScript = raw ? script : `& { ${script} } | Out-String`;
+    // formatting rules. Set stream preference variables to "Continue" so
+    // Write-Verbose, Write-Warning, Write-Debug, and Write-Information
+    // output is captured (matches Invoke-RemoteScript.ps1 behavior).
+    // When raw=true, send as-is (for JSON responses).
+    const finalScript = raw
+      ? script
+      : `& { $VerbosePreference = "Continue"; $WarningPreference = "Continue"; $DebugPreference = "Continue"; $InformationPreference = "Continue"; ${script} } | Out-String`;
     const body = `${finalScript}<#${sessionId}#>`;
 
     let authorization: string;
