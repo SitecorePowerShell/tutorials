@@ -39,6 +39,10 @@ const darkColors = {
   statusSuccess: "#4caf50",
   statusSuccessLight: "#66bb6a",
   statusError: "#ef5350",
+  statusWarning: "#ffa726",
+  statusVerbose: "#8a8aaa",
+  statusDebug: "#8a8aaa",
+  statusInfo: "#64b5f6",
   statusHint: "#ffab40",
   statusHintDark: "#ff9100",
 
@@ -97,6 +101,10 @@ const lightColors: typeof darkColors = {
   statusSuccess: "#388e3c",
   statusSuccessLight: "#4caf50",
   statusError: "#d32f2f",
+  statusWarning: "#ef6c00",
+  statusVerbose: "#6a6a88",
+  statusDebug: "#6a6a88",
+  statusInfo: "#1565c0",
   statusHint: "#f57c00",
   statusHintDark: "#e65100",
 

@@ -99,12 +99,19 @@ export class SpeRemotingProvider implements ExecutionProvider {
 
       const entries: ProviderExecutionResult["entries"] = [];
 
-      if (response.output) {
-        entries.push({ type: "output", text: response.output });
-      }
+      // When CLIXML streams are available, use them directly instead of raw output
+      if (response.streams) {
+        for (const stream of response.streams) {
+          entries.push({ type: stream.stream, text: stream.text });
+        }
+      } else {
+        if (response.output) {
+          entries.push({ type: "output", text: response.output });
+        }
 
-      if (response.error) {
-        entries.push({ type: "error", text: response.error });
+        if (response.error) {
+          entries.push({ type: "error", text: response.error });
+        }
       }
 
       return { entries, cwd: this.cwd };

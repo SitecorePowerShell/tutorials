@@ -1,7 +1,14 @@
+export interface SpeStreamEntry {
+  stream: "output" | "error" | "warning" | "verbose" | "debug" | "information";
+  text: string;
+}
+
 export interface SpeResponse {
   output: string;
   error: string | null;
   rawJson: unknown;
+  /** Parsed CLIXML stream entries (populated when response contains CLIXML) */
+  streams?: SpeStreamEntry[];
 }
 
 export interface SpeClientConfig {
@@ -61,6 +68,83 @@ function base64UrlEncodeBuffer(buffer: Uint8Array): string {
   return btoa(binary).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
+/**
+ * Map CLIXML `S` attribute values to stream types.
+ * See: https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/export-clixml
+ */
+const CLIXML_STREAM_MAP: Record<string, SpeStreamEntry["stream"]> = {
+  Error: "error",
+  Warning: "warning",
+  Verbose: "verbose",
+  Debug: "debug",
+  Information: "information",
+};
+
+/**
+ * Decode CLIXML escape sequences in text content.
+ * CLIXML encodes special characters as `_xHHHH_` hex sequences.
+ */
+function decodeCliXmlText(text: string): string {
+  return text
+    .replace(/_x000D__x000A_/g, "\n")
+    .replace(/_x000D_/g, "\r")
+    .replace(/_x000A_/g, "\n")
+    .replace(/_x0009_/g, "\t")
+    .replace(/_x005F_/g, "_");
+}
+
+/**
+ * Unescape XML entities in text content.
+ */
+function unescapeXml(text: string): string {
+  return text
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'");
+}
+
+/**
+ * Parse a CLIXML response into structured stream entries.
+ * CLIXML responses start with `#< CLIXML` followed by XML containing
+ * `<S S="StreamName">message</S>` elements inside an `<Objs>` root.
+ *
+ * Uses regex-based parsing to avoid DOMParser dependency (not available
+ * in Node/test environments). The CLIXML format is simple enough for this.
+ *
+ * Mirrors the parsing approach used by SPE's Invoke-RemoteScript.ps1.
+ */
+export function parseCliXml(text: string): SpeStreamEntry[] | null {
+  // CLIXML responses are prefixed with "#< CLIXML"
+  const cliXmlPrefix = "#< CLIXML";
+  const idx = text.indexOf(cliXmlPrefix);
+  if (idx === -1) return null;
+
+  const xmlPart = text.substring(idx + cliXmlPrefix.length);
+  if (!xmlPart.trim()) return null;
+
+  const entries: SpeStreamEntry[] = [];
+
+  // Match <S S="StreamName">content</S> elements
+  const pattern = /<S\s+S="([^"]+)">([\s\S]*?)<\/S>/g;
+  let match;
+  while ((match = pattern.exec(xmlPart)) !== null) {
+    const streamAttr = match[1];
+    const stream = CLIXML_STREAM_MAP[streamAttr];
+    if (!stream) continue;
+
+    let message = unescapeXml(match[2]);
+    message = decodeCliXmlText(message).trim();
+
+    if (message) {
+      entries.push({ stream, text: message });
+    }
+  }
+
+  return entries.length > 0 ? entries : null;
+}
+
 export function createSpeClient(config: SpeClientConfig) {
   const { url, username, password, sharedSecret, scriptEndpoint, audienceOverride } = config;
   const baseUrl = url.replace(/\/$/, "");
@@ -106,6 +190,19 @@ export function createSpeClient(config: SpeClientConfig) {
     }
 
     const output = await response.text();
+
+    // Try to parse CLIXML responses (error/warning/verbose/debug/info streams)
+    const streams = parseCliXml(output);
+    if (streams) {
+      // Extract the first error message for backward-compat `error` field
+      const firstError = streams.find((s) => s.stream === "error");
+      return {
+        output: "",
+        error: firstError?.text ?? null,
+        rawJson: null,
+        streams,
+      };
+    }
 
     // SPE Remoting returns errors prefixed with ERROR:
     const errorMatch = output.match(/^ERROR:\s*(.+)/m);

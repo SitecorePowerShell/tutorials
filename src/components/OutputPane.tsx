@@ -111,6 +111,26 @@ export function OutputPane({ entries, isISE, isBuilder, endRef }: OutputPaneProp
               {entry.text}
             </div>
           )}
+          {entry.type === "warning" && (
+            <div style={{ color: colors.statusWarning, margin: "4px 0" }}>
+              WARNING: {entry.text}
+            </div>
+          )}
+          {entry.type === "verbose" && (
+            <div style={{ color: colors.statusVerbose, margin: "4px 0" }}>
+              VERBOSE: {entry.text}
+            </div>
+          )}
+          {entry.type === "debug" && (
+            <div style={{ color: colors.statusDebug, margin: "4px 0" }}>
+              DEBUG: {entry.text}
+            </div>
+          )}
+          {entry.type === "information" && (
+            <div style={{ color: colors.statusInfo, margin: "4px 0" }}>
+              {entry.text}
+            </div>
+          )}
           {entry.type === "success" && (
             <div
               style={{

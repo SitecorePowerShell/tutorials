@@ -230,7 +230,7 @@ export interface QuizResult {
 // ============================================================================
 
 interface BaseConsoleEntry {
-  type: "command" | "script" | "output" | "error" | "success" | "hint" | "partial";
+  type: "command" | "script" | "output" | "error" | "warning" | "verbose" | "debug" | "information" | "success" | "hint" | "partial";
   text: string;
   cwd?: string;
 }
