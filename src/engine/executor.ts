@@ -1473,7 +1473,7 @@ export function executeCommandWithContext(
         if (!help) {
           return {
             output: "",
-            error: `Get-Help : No help found for '${targetName}'. Run Get-Help with no arguments to list available cmdlets.`,
+            error: `Get-Help : No help found for '${targetName}'. Run Get-Help with no arguments to list available commands.`,
           };
         }
 

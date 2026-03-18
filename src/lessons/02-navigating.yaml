@@ -8,7 +8,7 @@ description: |
 
   In Sitecore terms, if Home has child pages like About, Products, News, and Data, `Get-ChildItem` will return those four items.
 
-  > **Tip:** Run `Get-Help Get-ChildItem` to see the full syntax and examples for this cmdlet. Press **F1** while typing a cmdlet to open its help panel.
+  > **Tip:** Run `Get-Help Get-ChildItem` to see the full syntax and examples for this command. Press **F1** while typing a command to open its help panel.
 tasks:
   - instruction: |
       Use `Get-ChildItem` to list the children of the Home item.

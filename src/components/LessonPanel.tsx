@@ -314,7 +314,7 @@ export const LessonPanel = React.memo(function LessonPanel({
                           <button
                             onClick={() => !disabled && onRevealHint(2)}
                             disabled={disabled}
-                            title={disabled ? `Try more (${4 - attempts} more attempt${4 - attempts === 1 ? "" : "s"} needed)` : "Show what cmdlets to use"}
+                            title={disabled ? `Try more (${4 - attempts} more attempt${4 - attempts === 1 ? "" : "s"} needed)` : "Show what commands to use"}
                             style={{
                               background: "transparent",
                               border: `1px solid ${disabled ? colors.borderDim : colors.accentPrimary}`,

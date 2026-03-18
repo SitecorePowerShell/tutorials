@@ -88,8 +88,8 @@ export function PipelineDropZone({
         }}
       >
         {isMobile
-          ? "Tap a cmdlet above to start building"
-          : "Drag cmdlets here to build your pipeline"}
+          ? "Tap a command above to start building"
+          : "Drag commands here to build your pipeline"}
       </div>
     );
   }

@@ -6,7 +6,7 @@ difficulty: "beginner"
 mode: "builder"
 description: |
   Before we type commands, let's **build** a pipeline visually.
-  Drag cmdlet blocks into the pipeline, configure their parameters,
+  Drag command blocks into the pipeline, configure their parameters,
   and watch the command assemble itself.
 tasks:
   - instruction: |

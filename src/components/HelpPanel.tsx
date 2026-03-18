@@ -269,7 +269,7 @@ export function HelpPanel({ cmdletName, onClose, onNavigate, isMobile }: HelpPan
         {/* Related Cmdlets */}
         {help.relatedCmdlets.length > 0 && (
           <>
-            <div style={sectionHeaderStyle}>Related Cmdlets</div>
+            <div style={sectionHeaderStyle}>Related Commands</div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {help.relatedCmdlets.map((name) => (
                 <button

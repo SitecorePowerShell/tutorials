@@ -3,7 +3,7 @@ module: "Level 3 – Content Management"
 title: "Content Management Quiz"
 questions:
   - type: "multiple-choice"
-    question: "Which cmdlet creates a new Sitecore item?"
+    question: "Which command creates a new Sitecore item?"
     options:
       - "Add-Item"
       - "Set-Item"
@@ -43,7 +43,7 @@ questions:
     explanation: "Select-Object with -Property lets you choose which properties to include in the output, creating a focused view of your data."
 
   - type: "multiple-choice"
-    question: "Which cmdlet removes a Sitecore item?"
+    question: "Which command removes a Sitecore item?"
     options:
       - "Delete-Item"
       - "Clear-Item"

@@ -134,7 +134,7 @@ describe("cmdletHelp", () => {
   describe("formatCmdletList", () => {
     it("lists all cmdlets with synopses", () => {
       const text = formatCmdletList();
-      expect(text).toContain("Available cmdlets:");
+      expect(text).toContain("Available commands:");
       expect(text).toContain("Get-Item");
       expect(text).toContain("Get-ChildItem");
       expect(text).toContain("Get-Help");
@@ -148,7 +148,7 @@ describe("Get-Help executor integration", () => {
     const ctx = new ScriptContext();
     const result = executeCommand("Get-Help", ctx);
     expect(result.error).toBeNull();
-    expect(result.output).toContain("Available cmdlets:");
+    expect(result.output).toContain("Available commands:");
     expect(result.output).toContain("Get-Item");
   });
 

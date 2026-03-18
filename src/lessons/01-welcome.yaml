@@ -50,11 +50,11 @@ tasks:
     successMessage: |
       You just retrieved your first Sitecore item. Notice the output shows the item Name, whether it has Children, the Language, Version number, its ID (a GUID in braces), and its TemplateName.
   - instruction: |
-      Now try `Get-Help` — it lists all available cmdlets. When you need to discover what a command does, this is your go-to tool.
+      Now try `Get-Help` — it lists all available commands. When you need to discover what a command does, this is your go-to tool.
     hint: |
       Type: Get-Help
     validation:
       type: "output"
-      outputContains: "Available cmdlets"
+      outputContains: "Available commands"
     successMessage: |
-      `Get-Help` is your reference guide inside SPE. You can also run `Get-Help <cmdlet-name>` to see detailed help for a specific command, or add `-Examples` to see usage examples.
+      `Get-Help` is your reference guide inside SPE. You can also run `Get-Help <command-name>` to see detailed help for a specific command, or add `-Examples` to see usage examples.

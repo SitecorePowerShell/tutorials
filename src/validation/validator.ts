@@ -120,7 +120,7 @@ function validateStructural(
         passed: false,
         feedback:
           "The path you specified doesn't resolve to a valid item. Check your path.",
-        partial: ["Correct cmdlet"],
+        partial: ["Correct command"],
       };
     }
 
@@ -131,7 +131,7 @@ function validateStructural(
       return {
         passed: false,
         feedback: "Your command resolved to the wrong item. Check your path.",
-        partial: ["Correct cmdlet"],
+        partial: ["Correct command"],
       };
     }
   }
@@ -144,7 +144,7 @@ function validateStructural(
         return {
           passed: false,
           feedback: `Don't forget the \`-${sw.charAt(0).toUpperCase() + sw.slice(1)}\` switch.`,
-          partial: ["Correct cmdlet", "Correct path"],
+          partial: ["Correct command", "Correct path"],
         };
       }
     }
@@ -156,14 +156,14 @@ function validateStructural(
         return {
           passed: false,
           feedback: `Don't forget the \`-${key}\` parameter.`,
-          partial: ["Correct cmdlet", "Correct path"],
+          partial: ["Correct command", "Correct path"],
         };
       }
       if (actualValue !== expectedValue) {
         return {
           passed: false,
           feedback: `The \`-${key}\` parameter value doesn't match what's expected.`,
-          partial: ["Correct cmdlet", "Correct path"],
+          partial: ["Correct command", "Correct path"],
         };
       }
     }
@@ -178,7 +178,7 @@ function validateStructural(
     return {
       passed: false,
       feedback: registryError,
-      partial: ["Correct cmdlet", "Correct path"],
+      partial: ["Correct command", "Correct path"],
     };
   }
 

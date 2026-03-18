@@ -6,24 +6,24 @@ questions:
     question: "What does the Visual Pipeline Builder help you do?"
     options:
       - "Write raw PowerShell scripts"
-      - "Build pipelines by dragging and configuring cmdlets visually"
+      - "Build pipelines by dragging and configuring commands visually"
       - "Debug existing scripts step by step"
       - "Connect to a remote Sitecore instance"
     correctIndex: 1
-    explanation: "The Visual Pipeline Builder lets you construct pipelines by dragging cmdlets into a sequence and configuring their parameters — no typing required."
+    explanation: "The Visual Pipeline Builder lets you construct pipelines by dragging commands into a sequence and configuring their parameters — no typing required."
 
   - type: "multiple-choice"
     question: "In a pipeline, what does the `|` (pipe) operator do?"
     options:
       - "Runs two commands at the same time"
-      - "Passes the output of one cmdlet as input to the next"
+      - "Passes the output of one command as input to the next"
       - "Separates command parameters"
       - "Comments out the rest of the line"
     correctIndex: 1
     explanation: "The pipe operator passes output from one stage to the next, creating a processing chain."
 
   - type: "multiple-choice"
-    question: "Which cmdlet counts the number of items in a pipeline?"
+    question: "Which command counts the number of items in a pipeline?"
     options:
       - "Count-Object"
       - "Get-Count"

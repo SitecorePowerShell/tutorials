@@ -39,7 +39,7 @@ const FULL_HELP: CmdletHelp[] = [
     name: "Get-Item",
     synopsis: "Gets a Sitecore item at the specified path.",
     description:
-      "The Get-Item cmdlet retrieves a Sitecore item from the content tree using a drive-qualified path (e.g. master:\\content\\Home). " +
+      "The Get-Item command retrieves a Sitecore item from the content tree using a drive-qualified path (e.g. master:\\content\\Home). " +
       "It returns a single item with its properties including Name, TemplateName, ID, and all field values.",
     syntax: ["Get-Item [-Path] <String>"],
     parameters: [
@@ -70,7 +70,7 @@ const FULL_HELP: CmdletHelp[] = [
     name: "Get-ChildItem",
     synopsis: "Gets the child items of a Sitecore item.",
     description:
-      "The Get-ChildItem cmdlet returns the direct children of a Sitecore item. " +
+      "The Get-ChildItem command returns the direct children of a Sitecore item. " +
       "Use -Recurse to retrieve all descendants. Commonly aliased as gci, ls, or dir.",
     syntax: [
       "Get-ChildItem [-Path] <String> [-Recurse]",
@@ -105,7 +105,7 @@ const FULL_HELP: CmdletHelp[] = [
       {
         title: "Example 3: Using alias",
         code: 'gci "master:\\content\\Home"',
-        description: "Uses the built-in alias gci instead of the full cmdlet name.",
+        description: "Uses the built-in alias gci instead of the full command name.",
       },
     ],
     aliases: ["gci", "ls", "dir"],
@@ -115,7 +115,7 @@ const FULL_HELP: CmdletHelp[] = [
     name: "Where-Object",
     synopsis: "Filters items from the pipeline based on a condition.",
     description:
-      "The Where-Object cmdlet selects items from a pipeline based on a script block condition. " +
+      "The Where-Object command selects items from a pipeline based on a script block condition. " +
       "Use $_ inside the script block to reference the current pipeline item. " +
       "Supports operators like -eq, -ne, -like, -match, -gt, -lt and compound conditions with -and/-or.",
     syntax: [
@@ -154,7 +154,7 @@ const FULL_HELP: CmdletHelp[] = [
     name: "ForEach-Object",
     synopsis: "Performs an operation on each item in the pipeline.",
     description:
-      "The ForEach-Object cmdlet executes a script block against each item in the pipeline. " +
+      "The ForEach-Object command executes a script block against each item in the pipeline. " +
       "Use $_ to reference the current item. The output of the script block replaces the pipeline data.",
     syntax: [
       "... | ForEach-Object { <script block> }",
@@ -192,7 +192,7 @@ const FULL_HELP: CmdletHelp[] = [
     name: "Select-Object",
     synopsis: "Selects specific properties or a subset of items from the pipeline.",
     description:
-      "The Select-Object cmdlet selects specified properties from items, creating objects with only those properties. " +
+      "The Select-Object command selects specified properties from items, creating objects with only those properties. " +
       "Use -First/-Last to limit items, -Skip/-SkipLast to skip items, -ExpandProperty to unwrap a single property, " +
       "-ExcludeProperty to remove properties from the output, and -Unique to remove duplicates.",
     syntax: [
@@ -286,7 +286,7 @@ const FULL_HELP: CmdletHelp[] = [
     name: "Sort-Object",
     synopsis: "Sorts items in the pipeline by property values.",
     description:
-      "The Sort-Object cmdlet sorts items by one or more property values. " +
+      "The Sort-Object command sorts items by one or more property values. " +
       "By default, sorting is ascending. Use -Descending to reverse the order. " +
       "Use -Unique to remove duplicates from the sorted output.",
     syntax: [
@@ -334,8 +334,8 @@ const FULL_HELP: CmdletHelp[] = [
     name: "Set-Location",
     synopsis: "Sets the current working location to a Sitecore path.",
     description:
-      "The Set-Location cmdlet changes your current working directory in the Sitecore tree. " +
-      "After changing location, you can use relative paths with other cmdlets.",
+      "The Set-Location command changes your current working directory in the Sitecore tree. " +
+      "After changing location, you can use relative paths with other commands.",
     syntax: ["Set-Location [-Path] <String>"],
     parameters: [
       {
@@ -365,7 +365,7 @@ const FULL_HELP: CmdletHelp[] = [
     name: "New-Item",
     synopsis: "Creates a new Sitecore item at the specified path.",
     description:
-      "The New-Item cmdlet creates a new item in the Sitecore content tree. " +
+      "The New-Item command creates a new item in the Sitecore content tree. " +
       "You must specify the parent path and a name for the new item. Optionally specify -ItemType for the template.",
     syntax: ["New-Item [-Path] <String> -Name <String> [-ItemType <String>]"],
     parameters: [
@@ -405,7 +405,7 @@ const FULL_HELP: CmdletHelp[] = [
     name: "Format-Table",
     synopsis: "Formats pipeline output as a table with selected columns.",
     description:
-      "The Format-Table cmdlet formats the output of a pipeline as a table with specified properties as columns. " +
+      "The Format-Table command formats the output of a pipeline as a table with specified properties as columns. " +
       "Use -AutoSize to fit columns to the data width, -HideTableHeaders for header-free output, " +
       "or -GroupBy to break the table into groups by a property value.",
     syntax: [
@@ -455,7 +455,7 @@ const FULL_HELP: CmdletHelp[] = [
     name: "Write-Host",
     synopsis: "Writes text to the console output.",
     description:
-      "The Write-Host cmdlet writes customized output to the console. " +
+      "The Write-Host command writes customized output to the console. " +
       "Unlike Write-Output, it writes directly to the host and does not pass objects through the pipeline. " +
       "Use -ForegroundColor for colored output, -NoNewline to suppress the trailing newline, " +
       "or -Separator to control how multiple objects are joined.",
@@ -518,7 +518,7 @@ const FULL_HELP_2: CmdletHelp[] = [
     name: "Get-Location",
     synopsis: "Gets the current working location.",
     description:
-      "The Get-Location cmdlet returns the current Sitecore drive path. " +
+      "The Get-Location command returns the current Sitecore drive path. " +
       "This is useful for confirming your position in the content tree after navigating with Set-Location.",
     syntax: ["Get-Location"],
     parameters: [],
@@ -541,7 +541,7 @@ const FULL_HELP_2: CmdletHelp[] = [
     name: "Get-Member",
     synopsis: "Gets the properties of pipeline objects.",
     description:
-      "The Get-Member cmdlet displays the properties available on Sitecore items in the pipeline. " +
+      "The Get-Member command displays the properties available on Sitecore items in the pipeline. " +
       "This includes built-in properties like Name, TemplateName, and ID as well as all custom field values. " +
       "Use it to discover what properties you can access on an item.",
     syntax: ["<input> | Get-Member"],
@@ -565,7 +565,7 @@ const FULL_HELP_2: CmdletHelp[] = [
     name: "Group-Object",
     synopsis: "Groups pipeline items by a property value.",
     description:
-      "The Group-Object cmdlet groups pipeline items that share the same value for a specified property. " +
+      "The Group-Object command groups pipeline items that share the same value for a specified property. " +
       "Each group includes a Count, Name (the shared value), and the grouped items. " +
       "Use -NoElement to omit the grouped items and show only the count and name.",
     syntax: ["<input> | Group-Object [-Property] <String> [-NoElement]"],
@@ -604,7 +604,7 @@ const FULL_HELP_2: CmdletHelp[] = [
     name: "Measure-Object",
     synopsis: "Calculates numeric properties or counts items in the pipeline.",
     description:
-      "The Measure-Object cmdlet counts pipeline items and optionally calculates Sum, Average, Maximum, and Minimum " +
+      "The Measure-Object command counts pipeline items and optionally calculates Sum, Average, Maximum, and Minimum " +
       "for a numeric property. Without -Property, it returns only the Count.",
     syntax: [
       "<input> | Measure-Object",
@@ -672,7 +672,7 @@ const FULL_HELP_2: CmdletHelp[] = [
     name: "Remove-Item",
     synopsis: "Removes a Sitecore item.",
     description:
-      "The Remove-Item cmdlet deletes an item from the Sitecore content tree. " +
+      "The Remove-Item command deletes an item from the Sitecore content tree. " +
       "You can specify the item by path or pipe it from the pipeline. " +
       "The item and all its children are removed.",
     syntax: ["Remove-Item [-Path] <String>"],
@@ -704,7 +704,7 @@ const FULL_HELP_2: CmdletHelp[] = [
     name: "Copy-Item",
     synopsis: "Copies a Sitecore item to a new location.",
     description:
-      "The Copy-Item cmdlet creates a duplicate of a Sitecore item at a new destination path. " +
+      "The Copy-Item command creates a duplicate of a Sitecore item at a new destination path. " +
       "The original item remains unchanged. The copy receives a new ID but retains all field values.",
     syntax: ["Copy-Item [-Path] <String> [-Destination] <String>"],
     parameters: [
@@ -742,7 +742,7 @@ const FULL_HELP_2: CmdletHelp[] = [
     name: "Move-Item",
     synopsis: "Moves a Sitecore item to a new location.",
     description:
-      "The Move-Item cmdlet relocates a Sitecore item from its current position to a new parent. " +
+      "The Move-Item command relocates a Sitecore item from its current position to a new parent. " +
       "The item keeps its name, ID, and field values but changes its position in the content tree.",
     syntax: ["Move-Item [-Path] <String> [-Destination] <String>"],
     parameters: [
@@ -780,7 +780,7 @@ const FULL_HELP_2: CmdletHelp[] = [
     name: "Rename-Item",
     synopsis: "Renames a Sitecore item.",
     description:
-      "The Rename-Item cmdlet changes the name of an existing Sitecore item. " +
+      "The Rename-Item command changes the name of an existing Sitecore item. " +
       "You can specify the item by path or pipe it from the pipeline. " +
       "The item keeps its ID, fields, and position in the tree.",
     syntax: ["Rename-Item [-Path] <String> [-NewName] <String>"],
@@ -819,7 +819,7 @@ const FULL_HELP_2: CmdletHelp[] = [
     name: "Set-ItemProperty",
     synopsis: "Sets a field value on a Sitecore item.",
     description:
-      "The Set-ItemProperty cmdlet updates the value of a field on a Sitecore item. " +
+      "The Set-ItemProperty command updates the value of a field on a Sitecore item. " +
       "Specify the item by path or pipe it from the pipeline, then provide the field name and new value. " +
       "This is the primary way to edit item field data in SPE.",
     syntax: ["Set-ItemProperty [-Path] <String> -Name <String> [-Value <String>]"],
@@ -865,7 +865,7 @@ const FULL_HELP_2: CmdletHelp[] = [
     name: "ConvertTo-Json",
     synopsis: "Converts pipeline objects to JSON format.",
     description:
-      "The ConvertTo-Json cmdlet serializes pipeline items into a JSON string representation. " +
+      "The ConvertTo-Json command serializes pipeline items into a JSON string representation. " +
       "This is useful for inspecting the full structure of Sitecore items or exporting data for use outside SPE.",
     syntax: ["<input> | ConvertTo-Json"],
     parameters: [],
@@ -888,8 +888,8 @@ const FULL_HELP_2: CmdletHelp[] = [
     name: "Write-Output",
     synopsis: "Sends output to the pipeline.",
     description:
-      "The Write-Output cmdlet sends objects to the success pipeline. " +
-      "Unlike Write-Host, the output can be captured in variables or piped to other cmdlets. " +
+      "The Write-Output command sends objects to the success pipeline. " +
+      "Unlike Write-Host, the output can be captured in variables or piped to other commands. " +
       "Multiple arguments are joined with spaces.",
     syntax: ["Write-Output <Object>"],
     parameters: [
@@ -920,7 +920,7 @@ const FULL_HELP_2: CmdletHelp[] = [
     name: "Show-Alert",
     synopsis: "Displays a Sitecore alert dialog.",
     description:
-      "The Show-Alert cmdlet displays a modal alert dialog in the Sitecore interface. " +
+      "The Show-Alert command displays a modal alert dialog in the Sitecore interface. " +
       "In the simulation, it renders an alert panel with the specified title text.",
     syntax: ["Show-Alert [-Title] <String>"],
     parameters: [
@@ -951,7 +951,7 @@ const FULL_HELP_2: CmdletHelp[] = [
     name: "Show-ListView",
     synopsis: "Displays pipeline items in a list view dialog.",
     description:
-      "The Show-ListView cmdlet presents pipeline items in a Sitecore list view dialog. " +
+      "The Show-ListView command presents pipeline items in a Sitecore list view dialog. " +
       "You can optionally specify which properties to display as columns and a title for the dialog. " +
       "In the simulation, it renders a formatted table view.",
     syntax: ["<input> | Show-ListView [-Property <String[]>] [-Title <String>]"],
@@ -990,7 +990,7 @@ const FULL_HELP_2: CmdletHelp[] = [
     name: "Read-Variable",
     synopsis: "Shows a dialog for user input.",
     description:
-      "The Read-Variable cmdlet displays a Sitecore dialog that prompts the user to enter values for variables. " +
+      "The Read-Variable command displays a Sitecore dialog that prompts the user to enter values for variables. " +
       "In the simulation, it renders a dialog panel with the specified title and description.",
     syntax: ["Read-Variable -Title <String> [-Description <String>]"],
     parameters: [
@@ -1028,7 +1028,7 @@ const FULL_HELP_2: CmdletHelp[] = [
     name: "Close-Window",
     synopsis: "Closes the current Sitecore dialog.",
     description:
-      "The Close-Window cmdlet closes any open SPE dialog window. " +
+      "The Close-Window command closes any open SPE dialog window. " +
       "In the simulation, this is a no-op since dialogs are rendered inline. " +
       "It is included for script compatibility with real SPE.",
     syntax: ["Close-Window"],
@@ -1047,7 +1047,7 @@ const FULL_HELP_2: CmdletHelp[] = [
     name: "Get-Alias",
     synopsis: "Lists available command aliases.",
     description:
-      "The Get-Alias cmdlet displays all supported command aliases and the cmdlets they map to. " +
+      "The Get-Alias command displays all supported command aliases and the commands they map to. " +
       "This is helpful for discovering shortcuts like gci for Get-ChildItem or % for ForEach-Object.",
     syntax: ["Get-Alias"],
     parameters: [],
@@ -1055,7 +1055,7 @@ const FULL_HELP_2: CmdletHelp[] = [
       {
         title: "Example 1: List all aliases",
         code: "Get-Alias",
-        description: "Displays a table of all available aliases and their target cmdlets.",
+        description: "Displays a table of all available aliases and their target commands.",
       },
       {
         title: "Example 2: Using alias",
@@ -1070,7 +1070,7 @@ const FULL_HELP_2: CmdletHelp[] = [
     name: "Find-Item",
     synopsis: "Searches the Sitecore index for items matching criteria.",
     description:
-      "The Find-Item cmdlet uses Sitecore's search index to find items based on field criteria. " +
+      "The Find-Item command uses Sitecore's search index to find items based on field criteria. " +
       "It is faster than tree traversal for large content trees. " +
       "Each criterion is a hashtable with Filter, Field, and Value keys.",
     syntax: ["Find-Item [-Index] <String> -Criteria <Hashtable[]> [-OrderBy <String>] [-First <Int>] [-Last <Int>] [-Skip <Int>]"],
@@ -1142,7 +1142,7 @@ const FULL_HELP_2: CmdletHelp[] = [
     name: "Publish-Item",
     synopsis: "Publishes a Sitecore item to a publishing target.",
     description:
-      "The Publish-Item cmdlet publishes one or more Sitecore items to a specified publishing target (default: web). " +
+      "The Publish-Item command publishes one or more Sitecore items to a specified publishing target (default: web). " +
       "You can specify the publish mode (Smart, Full, or Incremental) and optionally publish child items with -Recurse. " +
       "Items can be provided via -Path, -Item, or pipeline input.",
     syntax: [
@@ -1219,7 +1219,7 @@ const FULL_HELP_2: CmdletHelp[] = [
     name: "Initialize-Item",
     synopsis: "Converts search result objects to full Sitecore items.",
     description:
-      "The Initialize-Item cmdlet converts SearchResultItem objects (returned by Find-Item) into full Sitecore Item objects. " +
+      "The Initialize-Item command converts SearchResultItem objects (returned by Find-Item) into full Sitecore Item objects. " +
       "This is necessary in real SPE because search results are lightweight proxies that don't support all item operations. " +
       "In the simulation, Find-Item already returns full items, so Initialize-Item acts as a pass-through.",
     syntax: ["<input> | Initialize-Item"],
@@ -1254,10 +1254,10 @@ for (const entry of [...FULL_HELP, ...FULL_HELP_2]) {
 // Also add Get-Help itself
 const GET_HELP_ENTRY: CmdletHelp = {
   name: "Get-Help",
-  synopsis: "Displays help information about SPE cmdlets.",
+  synopsis: "Displays help information about SPE commands.",
   description:
-    "The Get-Help cmdlet displays information about cmdlets including synopsis, syntax, parameters, and examples. " +
-    "Run Get-Help with no arguments to list all available cmdlets.",
+    "The Get-Help command displays information about commands including synopsis, syntax, parameters, and examples. " +
+    "Run Get-Help with no arguments to list all available commands.",
   syntax: [
     "Get-Help [[-Name] <String>] [-Examples] [-Full] [-Parameter <String>]",
   ],
@@ -1265,7 +1265,7 @@ const GET_HELP_ENTRY: CmdletHelp = {
     {
       name: "Name",
       type: "String",
-      description: "The name or alias of the cmdlet to get help for.",
+      description: "The name or alias of the command to get help for.",
       required: false,
       position: 0,
     },
@@ -1293,12 +1293,12 @@ const GET_HELP_ENTRY: CmdletHelp = {
   ],
   examples: [
     {
-      title: "Example 1: List all cmdlets",
+      title: "Example 1: List all commands",
       code: "Get-Help",
-      description: "Shows a list of all available cmdlets with their synopses.",
+      description: "Shows a list of all available commands with their synopses.",
     },
     {
-      title: "Example 2: Get help for a specific cmdlet",
+      title: "Example 2: Get help for a specific command",
       code: "Get-Help Get-ChildItem",
       description: "Displays the help article for Get-ChildItem.",
     },
@@ -1371,7 +1371,7 @@ export function formatHelpText(
     lines.push("");
     lines.push("EXAMPLES");
     if (help.examples.length === 0) {
-      lines.push("    No examples available for this cmdlet.");
+      lines.push("    No examples available for this command.");
     } else {
       for (const ex of help.examples) {
         lines.push(`    ${ex.title}`);
@@ -1480,7 +1480,7 @@ export function formatCmdletList(): string {
     (h) => h.name.padEnd(nameWidth) + " " + h.synopsis
   );
   return [
-    "Available cmdlets:",
+    "Available commands:",
     "",
     header,
     sep,

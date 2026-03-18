@@ -17,7 +17,7 @@ description: |
   }
   ```
 
-  **Key cmdlets for error communication:**
+  **Key commands for error communication:**
   - `Write-Error "message"` — Produces a non-terminating error (red text)
   - `Write-Warning "message"` — Produces a warning (yellow WARNING: prefix)
   - `Write-Host "message"` — Outputs plain text (not part of pipeline)

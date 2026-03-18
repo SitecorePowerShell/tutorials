@@ -42,7 +42,7 @@ export function CmdletPalette({ availableCmdlets, usedCmdlets, onAddStage, isMob
             whiteSpace: "nowrap",
           }}
         >
-          Cmdlets:
+          Commands:
         </span>
       )}
       {cmdlets.map((name) => {

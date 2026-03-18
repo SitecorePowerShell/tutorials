@@ -10,15 +10,15 @@ description: |
   There are no wrong answers here. Use this space to:
 
   - Try commands from memory without looking at lesson hints
-  - Combine multiple cmdlets into complex pipelines
+  - Combine multiple commands into complex pipelines
   - Explore the simulated content tree at your own pace
   - Test "what if?" scenarios
 
-  **Available cmdlets:** `Get-Item`, `Get-ChildItem`, `Set-ItemProperty`, `New-Item`, `Remove-Item`, `Move-Item`, `Copy-Item`, `Rename-Item`, `Find-Item`, `Publish-Item`, `Initialize-Item`, `Where-Object`, `ForEach-Object`, `Select-Object`, `Sort-Object`, `Group-Object`, `Measure-Object`, `Format-Table`, `Write-Output`, `Write-Host`, `Write-Warning`, `Write-Error`, `Get-Member`, `Show-Alert`, `Get-Help`
+  **Available commands:** `Get-Item`, `Get-ChildItem`, `Set-ItemProperty`, `New-Item`, `Remove-Item`, `Move-Item`, `Copy-Item`, `Rename-Item`, `Find-Item`, `Publish-Item`, `Initialize-Item`, `Where-Object`, `ForEach-Object`, `Select-Object`, `Sort-Object`, `Group-Object`, `Measure-Object`, `Format-Table`, `Write-Output`, `Write-Host`, `Write-Warning`, `Write-Error`, `Get-Member`, `Show-Alert`, `Get-Help`
 
   **Tips:**
   - Use `Get-ChildItem .` to see the current location's children
-  - Use `Get-Help <cmdlet>` for command documentation
+  - Use `Get-Help <command>` for command documentation
   - Variables persist across runs: `$items = Get-ChildItem .`
   - Try multi-line scripts with `if/else`, `foreach`, and `try/catch`
 

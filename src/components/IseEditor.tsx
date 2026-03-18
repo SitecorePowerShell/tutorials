@@ -584,7 +584,7 @@ export const IseEditor = React.memo(function IseEditor({
                   if (cmdlet) onShowHelp(cmdlet);
                 }}
                 aria-label="Help"
-                title="Help for cmdlet at cursor (F1)"
+                title="Help for command at cursor (F1)"
                 style={{
                   background: "transparent",
                   border: `1px solid ${colors.borderMedium}`,
