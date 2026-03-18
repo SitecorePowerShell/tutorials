@@ -58,6 +58,14 @@ function corsHeaders(origin: string): Record<string, string> {
   };
 }
 
+function timestamp(): string {
+  return new Date().toISOString().replace("T", " ").slice(0, 19);
+}
+
+function log(icon: string, msg: string): void {
+  console.log(`${timestamp()}  ${icon} ${msg}`);
+}
+
 const { target, port } = parseArgs(process.argv.slice(2));
 
 const server = Bun.serve({
@@ -68,41 +76,76 @@ const server = Bun.serve({
 
     // Handle preflight
     if (req.method === "OPTIONS") {
+      log("~", `PREFLIGHT ${req.url}`);
       return new Response(null, { status: 204, headers: cors });
     }
 
     // Build the target URL: take the request path and append to target
     const url = new URL(req.url);
     const targetUrl = `${target}${url.pathname}${url.search}`;
+    const start = performance.now();
+
+    log(">", `${req.method} ${url.pathname}`);
 
     try {
       // Forward the request
       const proxyHeaders = new Headers();
       const auth = req.headers.get("Authorization");
-      if (auth) proxyHeaders.set("Authorization", auth);
+      if (auth) {
+        proxyHeaders.set("Authorization", auth);
+        const authType = auth.startsWith("Bearer") ? "JWT" : "Basic";
+        log(" ", `Auth: ${authType}`);
+      }
       const contentType = req.headers.get("Content-Type");
       if (contentType) proxyHeaders.set("Content-Type", contentType);
+
+      const body = req.method !== "GET" && req.method !== "HEAD" ? await req.text() : undefined;
+      if (body) {
+        // Extract the script from the SPE body format: script<#sessionId#>
+        const scriptMatch = body.match(/^([\s\S]*?)<#/);
+        if (scriptMatch) {
+          const script = scriptMatch[1].trim();
+          const preview = script.length > 120 ? script.slice(0, 120) + "..." : script;
+          log(" ", `Script: ${preview}`);
+        }
+      }
 
       const proxyResponse = await fetch(targetUrl, {
         method: req.method,
         headers: proxyHeaders,
-        body: req.method !== "GET" && req.method !== "HEAD" ? await req.text() : undefined,
+        body,
         // @ts-expect-error -- Bun supports this option to skip TLS verification for self-signed certs
         tls: { rejectUnauthorized: false },
       });
+
+      const elapsed = Math.round(performance.now() - start);
 
       // Build response with CORS headers
       const responseHeaders = new Headers(cors);
       const respContentType = proxyResponse.headers.get("Content-Type");
       if (respContentType) responseHeaders.set("Content-Type", respContentType);
 
-      return new Response(await proxyResponse.text(), {
+      const responseText = await proxyResponse.text();
+
+      if (proxyResponse.ok) {
+        const preview = responseText.length > 200
+          ? responseText.slice(0, 200).replace(/\n/g, "\\n") + "..."
+          : responseText.replace(/\n/g, "\\n");
+        log("<", `${proxyResponse.status} (${elapsed}ms) ${preview}`);
+      } else {
+        log("!", `${proxyResponse.status} ${proxyResponse.statusText} (${elapsed}ms)`);
+        log(" ", responseText.slice(0, 500));
+      }
+
+      return new Response(responseText, {
         status: proxyResponse.status,
         statusText: proxyResponse.statusText,
         headers: responseHeaders,
       });
     } catch (err) {
+      const elapsed = Math.round(performance.now() - start);
       const message = err instanceof Error ? err.message : String(err);
+      log("!", `ERROR (${elapsed}ms) ${message}`);
       return new Response(JSON.stringify({ error: message }), {
         status: 502,
         headers: { ...cors, "Content-Type": "application/json" },
