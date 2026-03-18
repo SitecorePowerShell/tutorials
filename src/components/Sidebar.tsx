@@ -694,6 +694,17 @@ export function Sidebar({
           )}
         </div>
       )}
+      <div
+        style={{
+          padding: "8px 16px",
+          fontSize: 10,
+          color: colors.textMuted,
+          opacity: 0.5,
+          textAlign: "center",
+        }}
+      >
+        v{__APP_VERSION__}
+      </div>
     </div>
   );
 }
