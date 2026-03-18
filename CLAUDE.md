@@ -48,9 +48,19 @@ The codebase has two independent layers: a **pure TypeScript simulation engine**
 
 23 YAML files loaded via `loader.ts` using js-yaml with Vite `?raw` imports. Each lesson has `id`, `module`, `title`, `difficulty`, `mode` (repl/ise), `description` (markdown), and `tasks[]` with instruction, hint, starterCode, and validation spec.
 
+### Providers (`src/providers/`)
+
+**ExecutionProvider** interface abstracts where commands execute. `App.tsx` delegates all execution through the active provider.
+
+**LocalProvider** — wraps the existing engine and virtual tree. Default for tutorials. Exposes `getContext()` and `getFullTree()` for validation.
+
+**SpeRemotingProvider** — sends scripts to a real Sitecore instance via `speClient.ts`. Uses JWT or Basic auth. Tree panel falls back to virtual tree (SPE Remoting has no tree browsing API).
+
+**ConnectionManager** component in the header lets users toggle between local simulation and a live Sitecore connection. URL and username persist to localStorage; credentials are never stored.
+
 ### UI (`src/components/`)
 
-`App.tsx` is the root component holding all state. Key components: Sidebar (lesson navigation), LessonPanel (instructions + TreePanel in tabs), ReplEditor (console with autocomplete/history), IseEditor (multi-line editor), OutputPane (result formatting). Session progress and UI preferences persist to localStorage.
+`App.tsx` is the root component holding all state. Key components: Sidebar (lesson navigation), LessonPanel (instructions + TreePanel in tabs), ReplEditor (console with autocomplete/history), IseEditor (multi-line editor), OutputPane (result formatting), ConnectionManager (live instance toggle). Session progress and UI preferences persist to localStorage.
 
 ## Critical Conventions
 
@@ -61,6 +71,8 @@ The codebase has two independent layers: a **pure TypeScript simulation engine**
 - **`parseCommand().raw`** preserves original strings — required for Where-Object/ForEach-Object to extract brace blocks correctly.
 - **Variable assignment auto-unwraps** single-element arrays to match PowerShell semantics.
 - **Line continuation** — lines ending with `|` or backtick (`` ` ``) are joined before execution.
+- **Execution goes through providers** — `App.tsx` never calls `executeScript()`/`executeCommand()` directly; it delegates to `providerRef.current`. New execution backends implement the `ExecutionProvider` interface.
+- **Validation always runs locally** — `validateTask()` uses the local engine regardless of active provider, so lesson validation works offline.
 
 ## Testing
 
