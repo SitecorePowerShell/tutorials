@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:spe": "NODE_TLS_REJECT_UNAUTHORIZED=0 vitest run --config vitest.integration.config.ts",
-    "deploy": "bun run build && wrangler deploy"
+    "deploy": "bun run build && wrangler deploy",
+    "cors-proxy": "bun run tools/cors-proxy.ts"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.26.1",

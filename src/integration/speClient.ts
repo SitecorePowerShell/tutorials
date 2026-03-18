@@ -10,6 +10,8 @@ export interface SpeClientConfig {
   password?: string;
   sharedSecret?: string;
   scriptEndpoint: string;
+  /** Override the JWT audience (e.g., the real Sitecore URL when going through a proxy) */
+  audienceOverride?: string;
 }
 
 /**
@@ -60,11 +62,13 @@ function base64UrlEncodeBuffer(buffer: Uint8Array): string {
 }
 
 export function createSpeClient(config: SpeClientConfig) {
-  const { url, username, password, sharedSecret, scriptEndpoint } = config;
+  const { url, username, password, sharedSecret, scriptEndpoint, audienceOverride } = config;
   const baseUrl = url.replace(/\/$/, "");
 
-  // Extract origin (scheme + host) for JWT audience, matching SPE's Uri.GetLeftPart(Authority)
-  const audience = new URL(baseUrl).origin;
+  // JWT audience must be the real Sitecore origin, even when requests go through a proxy
+  const audience = audienceOverride
+    ? new URL(audienceOverride).origin
+    : new URL(baseUrl).origin;
 
   return {
     async executeScript(script: string): Promise<SpeResponse> {

@@ -15,8 +15,13 @@ function loadSavedConfig(): Partial<ConnectionConfig> {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Never persist passwords/secrets — only URL and username
-      return { url: parsed.url || "", username: parsed.username || "" };
+      // Never persist passwords/secrets — only URL, username, and proxy prefs
+      return {
+        url: parsed.url || "",
+        username: parsed.username || "",
+        useProxy: parsed.useProxy || false,
+        proxyUrl: parsed.proxyUrl || "",
+      };
     }
   } catch { /* ignore */ }
   return {};
@@ -27,7 +32,12 @@ function saveConfig(config: ConnectionConfig): void {
     // Only persist non-sensitive fields
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ url: config.url, username: config.username })
+      JSON.stringify({
+        url: config.url,
+        username: config.username,
+        useProxy: config.useProxy,
+        proxyUrl: config.proxyUrl,
+      })
     );
   } catch { /* ignore */ }
 }
@@ -45,6 +55,8 @@ export function ConnectionManager({
   const [password, setPassword] = useState("");
   const [sharedSecret, setSharedSecret] = useState("");
   const [authMode, setAuthMode] = useState<"basic" | "jwt">("jwt");
+  const [useProxy, setUseProxy] = useState(saved.useProxy || false);
+  const [proxyUrl, setProxyUrl] = useState(saved.proxyUrl || "");
   const [error, setError] = useState("");
 
   const handleConnect = useCallback(() => {
@@ -58,12 +70,14 @@ export function ConnectionManager({
       ...(authMode === "basic"
         ? { password }
         : { sharedSecret }),
+      useProxy,
+      ...(useProxy && proxyUrl.trim() ? { proxyUrl: proxyUrl.trim() } : {}),
     };
     saveConfig(config);
     setError("");
     onConnect(config);
     setExpanded(false);
-  }, [url, username, password, sharedSecret, authMode, onConnect]);
+  }, [url, username, password, sharedSecret, authMode, useProxy, proxyUrl, onConnect]);
 
   const handleDisconnect = useCallback(() => {
     onDisconnect();
@@ -234,6 +248,38 @@ export function ConnectionManager({
           </label>
         )}
 
+        <label
+          style={{
+            ...labelStyle,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={useProxy}
+            onChange={(e) => setUseProxy(e.target.checked)}
+          />
+          Use CORS proxy
+        </label>
+
+        {useProxy && (
+          <label style={labelStyle}>
+            Proxy URL
+            <input
+              type="url"
+              value={proxyUrl}
+              onChange={(e) => setProxyUrl(e.target.value)}
+              placeholder="http://localhost:3001"
+              style={inputStyle}
+            />
+            <span style={{ fontSize: 10, color: "var(--color-text-muted, #666)", lineHeight: 1.3 }}>
+              Run: bun run cors-proxy -- --target {url || "<sitecore-url>"}
+            </span>
+          </label>
+        )}
+
         {error && (
           <div style={{ color: "#f44336", fontSize: 12 }}>{error}</div>
         )}
@@ -264,6 +310,7 @@ export function ConnectionManager({
         >
           Requires SPE Remoting enabled on your Sitecore instance.
           Credentials are not stored — only URL and username are saved.
+          {" "}Enable the CORS proxy if you get cross-origin errors.
         </div>
       </div>
     </div>

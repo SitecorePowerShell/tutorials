@@ -21,6 +21,10 @@ export interface ConnectionConfig {
   username: string;
   password?: string;
   sharedSecret?: string;
+  /** When true, requests target a local CORS proxy instead of the Sitecore instance directly */
+  useProxy?: boolean;
+  /** Local CORS proxy URL (default: http://localhost:3001) */
+  proxyUrl?: string;
 }
 
 /**
