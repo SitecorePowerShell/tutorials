@@ -16,11 +16,11 @@ export interface SpeClientConfig {
  * Create an HS256 JWT matching SPE Remoting's New-Jwt.ps1 implementation.
  * Claims: iss="SPE Remoting", aud=<base url origin>, name=<username>, exp=<now+30s>
  */
-function createSpeJwt(
+async function createSpeJwt(
   sharedSecret: string,
   audience: string,
   username: string
-): string {
+): Promise<string> {
   const header = { alg: "HS256", typ: "JWT" };
   const payload = {
     iss: "SPE Remoting",
@@ -34,21 +34,29 @@ function createSpeJwt(
   const payloadB64 = encode(payload);
   const toBeSigned = `${headerB64}.${payloadB64}`;
 
-  // Use Node/Bun built-in crypto for HMAC-SHA256
-  const crypto = require("crypto");
-  const signature = crypto
-    .createHmac("sha256", sharedSecret)
-    .update(toBeSigned)
-    .digest("base64")
-    .replace(/=/g, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
+  // Use Web Crypto API (available in browsers, Bun, and Node 18+)
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(sharedSecret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const sigBuffer = await crypto.subtle.sign("HMAC", key, encoder.encode(toBeSigned));
+  const signature = base64UrlEncodeBuffer(new Uint8Array(sigBuffer));
 
   return `${toBeSigned}.${signature}`;
 }
 
 function base64UrlEncode(str: string): string {
   return btoa(str).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+}
+
+function base64UrlEncodeBuffer(buffer: Uint8Array): string {
+  let binary = "";
+  for (const byte of buffer) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
 
 export function createSpeClient(config: SpeClientConfig) {
@@ -68,7 +76,7 @@ export function createSpeClient(config: SpeClientConfig) {
 
       let authorization: string;
       if (sharedSecret) {
-        const token = createSpeJwt(sharedSecret, audience, username);
+        const token = await createSpeJwt(sharedSecret, audience, username);
         authorization = `Bearer ${token}`;
       } else {
         authorization = `Basic ${btoa(`${username}:${password || ""}`)}`;
