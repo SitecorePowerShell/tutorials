@@ -29,13 +29,23 @@ A browser-based interactive tutorial for Sitecore PowerShell Extensions (SPE), d
 │  └──────────────┘  └──────────────────────────────────────┘ │
 │                                                             │
 │  ┌────────────────────────────────────────────────────────┐ │
-│  │ Simulation Engine                                      │ │
+│  │ Execution Provider (pluggable)                         │ │
 │  │                                                        │ │
-│  │  ┌─────────────┐  ┌────────────┐  ┌────────────────┐  │ │
-│  │  │ Command     │  │ Virtual    │  │ Validation     │  │ │
-│  │  │ Parser &    │  │ Content    │  │ Engine         │  │ │
-│  │  │ Executor    │  │ Tree       │  │                │  │ │
-│  │  └─────────────┘  └────────────┘  └────────────────┘  │ │
+│  │  ┌─────────────────┐    ┌────────────────────────────┐ │ │
+│  │  │ LocalProvider    │    │ SpeRemotingProvider        │ │ │
+│  │  │ (default)        │    │ (optional live connection) │ │ │
+│  │  │                  │    │                            │ │ │
+│  │  │ ┌──────────────┐ │    │ ┌────────────────────────┐ │ │ │
+│  │  │ │ Simulation   │ │    │ │ SPE Remoting API       │ │ │ │
+│  │  │ │ Engine       │ │    │ │ (JWT / Basic auth)     │ │ │ │
+│  │  │ │ + Virtual    │ │    │ │ /-/script/v2           │ │ │ │
+│  │  │ │   Tree       │ │    │ └────────────────────────┘ │ │ │
+│  │  │ └──────────────┘ │    └────────────────────────────┘ │ │
+│  │  └─────────────────┘                                    │ │
+│  └────────────────────────────────────────────────────────┘ │
+│                                                             │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │ Validation Engine (always local)                       │ │
 │  └────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -405,6 +415,42 @@ To add a new simulated command:
 - [ ] localStorage progress persistence
 - [ ] Community contribution workflow
 
+### Phase 5 — Execution Provider & Live Connection (In Progress)
+
+An `ExecutionProvider` abstraction decouples _where_ commands run from the UI, enabling the
+tutorial to optionally connect to a real Sitecore instance via SPE Remoting.
+
+**Completed:**
+- [x] `ExecutionProvider` interface (`src/providers/types.ts`) — `executeScript()`, `executeCommand()`, `getTree()`, `getCwd()`, `reset()`
+- [x] `LocalProvider` — wraps existing engine, zero behavior change for tutorials
+- [x] `SpeRemotingProvider` — sends scripts to real Sitecore via `speClient.ts` (JWT + Basic auth)
+- [x] `ConnectionManager` UI component — connect/disconnect toggle, URL, auth fields (JWT/Basic)
+- [x] `App.tsx` refactored to delegate execution through active provider (async)
+- [x] Task validation always runs locally (simulation engine) regardless of active provider
+- [x] `speClient.ts` migrated from Node `require("crypto")` to Web Crypto API
+
+**Future work:**
+
+| Item | Priority | Notes |
+|------|----------|-------|
+| **Connection test/ping** | High | Validate credentials before switching provider; show connection errors inline |
+| **Loading spinner** | High | Visual indicator during remote execution (async latency) |
+| **Live tree browsing** | Medium | Fetch real content tree from SPE Remoting (`Get-ChildItem` on connect); lazy-load children on expand |
+| **GraphQL provider** | Medium | Read-only tree browsing via Sitecore GraphQL (XM Cloud, XP 10+); complements SPE Remoting |
+| **Dual output** | Medium | Show both simulation and remote output side-by-side so students can compare |
+| **REST API provider** | Low | Item CRUD via Sitecore ItemService REST API (no script execution) |
+| **SitecoreAI / XM Cloud provider** | Low | Cloud API integration for XM Cloud instances |
+| **Connection profiles** | Low | Save multiple named connections in localStorage (not just the last one) |
+| **CORS proxy** | Low | Optional proxy for instances that don't allow cross-origin requests from the tutorial domain |
+
+**Extraction roadmap** (if components are packaged for reuse beyond the tutorial):
+
+| Phase | Scope |
+|-------|-------|
+| **Monorepo split** | Extract `@spe/engine`, `@spe/providers`, `@spe/ui`, keep `@spe/tutorial` as consumer |
+| **Web Components** | Wrap console/ISE/builder as `<spe-console>`, `<spe-ise>`, `<spe-builder>` Custom Elements |
+| **Standalone app** | Separate entry point without tutorial chrome — connection manager, tabs, script save/load |
+
 ---
 
 ## Reference Data Sources
@@ -451,6 +497,16 @@ tutorials/
 │   │       ├── filterEval.test.ts
 │   │       ├── dotnetTypes.test.ts
 │   │       └── formatter.test.ts
+│   ├── providers/
+│   │   ├── types.ts              # ExecutionProvider interface, ConnectionConfig
+│   │   ├── LocalProvider.ts      # Wraps engine — default for tutorials
+│   │   ├── SpeRemotingProvider.ts# Remote execution via SPE Remoting API
+│   │   ├── index.ts              # Barrel exports
+│   │   └── __tests__/
+│   │       └── LocalProvider.test.ts
+│   ├── integration/
+│   │   ├── speClient.ts          # SPE Remoting HTTP client (JWT + Basic auth)
+│   │   └── outputNormalizer.ts   # Output structure analysis (text/JSON)
 │   ├── validation/
 │   │   ├── validator.ts          # validateTask (structural + pipeline)
 │   │   └── __tests__/
@@ -462,6 +518,7 @@ tutorials/
 │   │   ├── IseEditor.tsx         # ISE mode editor with drag resize
 │   │   ├── OutputPane.tsx        # Shared output rendering
 │   │   ├── TreePanel.tsx         # Content tree viewer
+│   │   ├── ConnectionManager.tsx  # Connect to Sitecore UI (URL, auth, toggle)
 │   │   ├── MarkdownLite.tsx      # Simple markdown renderer
 │   │   └── HighlightedCode.tsx   # PowerShell syntax highlighter
 │   ├── lessons/
