@@ -70,53 +70,56 @@ export function createSpeClient(config: SpeClientConfig) {
     ? new URL(audienceOverride).origin
     : new URL(baseUrl).origin;
 
-  return {
-    async executeScript(script: string): Promise<SpeResponse> {
-      const sessionId = crypto.randomUUID();
-      const endpoint = `${baseUrl}${scriptEndpoint}?sessionId=${sessionId}&rawOutput=true&persistentSession=false`;
+  async function sendScript(script: string, raw: boolean): Promise<SpeResponse> {
+    const sessionId = crypto.randomUUID();
+    const endpoint = `${baseUrl}${scriptEndpoint}?sessionId=${sessionId}&rawOutput=true&persistentSession=false`;
 
-      // Wrap in a scriptblock so Out-String applies ps1xml formatting rules
-      // to the output. This handles multi-line scripts, if/else, foreach, etc.
-      const wrappedScript = `& { ${script} } | Out-String`;
-      const body = `${wrappedScript}<#${sessionId}#>`;
+    // When raw=false, wrap in a scriptblock so Out-String applies ps1xml
+    // formatting rules. When raw=true, send as-is (for JSON responses).
+    const finalScript = raw ? script : `& { ${script} } | Out-String`;
+    const body = `${finalScript}<#${sessionId}#>`;
 
-      let authorization: string;
-      if (sharedSecret) {
-        const token = await createSpeJwt(sharedSecret, audience, username);
-        authorization = `Bearer ${token}`;
-      } else {
-        authorization = `Basic ${btoa(`${username}:${password || ""}`)}`;
-      }
+    let authorization: string;
+    if (sharedSecret) {
+      const token = await createSpeJwt(sharedSecret, audience, username);
+      authorization = `Bearer ${token}`;
+    } else {
+      authorization = `Basic ${btoa(`${username}:${password || ""}`)}`;
+    }
 
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          Authorization: authorization,
-          "Content-Type": "text/plain",
-        },
-        body,
-      });
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: authorization,
+        "Content-Type": "text/plain",
+      },
+      body,
+    });
 
-      if (!response.ok) {
-        const text = await response.text().catch(() => "");
-        return {
-          output: "",
-          error: `HTTP ${response.status}: ${response.statusText}${text ? ` — ${text}` : ""}`,
-          rawJson: null,
-        };
-      }
-
-      const output = await response.text();
-
-      // SPE Remoting returns errors prefixed with ERROR:
-      const errorMatch = output.match(/^ERROR:\s*(.+)/m);
-
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
       return {
-        output: output.trimEnd(),
-        error: errorMatch ? errorMatch[1] : null,
+        output: "",
+        error: `HTTP ${response.status}: ${response.statusText}${text ? ` — ${text}` : ""}`,
         rawJson: null,
       };
-    },
+    }
+
+    const output = await response.text();
+
+    // SPE Remoting returns errors prefixed with ERROR:
+    const errorMatch = output.match(/^ERROR:\s*(.+)/m);
+
+    return {
+      output: output.trimEnd(),
+      error: errorMatch ? errorMatch[1] : null,
+      rawJson: null,
+    };
+  }
+
+  return {
+    executeScript: (script: string) => sendScript(script, false),
+    executeScriptRaw: (script: string) => sendScript(script, true),
   };
 }
 

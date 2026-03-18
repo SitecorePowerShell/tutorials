@@ -3,6 +3,7 @@ import type {
   ExecutionProvider,
   ProviderExecutionResult,
   ConnectionConfig,
+  ConnectionTestResult,
 } from "./types";
 import { createSpeClient, type SpeClient } from "../integration/speClient";
 import { VIRTUAL_TREE } from "../engine/virtualTree";
@@ -59,6 +60,32 @@ export class SpeRemotingProvider implements ExecutionProvider {
   getTree(): SitecoreNode {
     // SPE Remoting doesn't provide tree browsing — use local tree as fallback
     return VIRTUAL_TREE.sitecore;
+  }
+
+  async testConnection(): Promise<ConnectionTestResult> {
+    const script = `@{
+      connected = $true
+      version = $PSVersionTable.SPEVersion
+      user = [Sitecore.Context]::User.Name
+    } | ConvertTo-Json`;
+
+    try {
+      const response = await this.client.executeScriptRaw(script);
+      if (response.error) {
+        return { connected: false, error: response.error };
+      }
+      const parsed = JSON.parse(response.output);
+      return {
+        connected: !!parsed.connected,
+        version: parsed.version || undefined,
+        user: parsed.user || undefined,
+      };
+    } catch (err) {
+      return {
+        connected: false,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
   }
 
   private async execute(script: string): Promise<ProviderExecutionResult> {

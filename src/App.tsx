@@ -6,7 +6,7 @@ import { QUIZZES, getQuizForModule } from "./quizzes/loader";
 import { validateTask } from "./validation/validator";
 import { LocalProvider } from "./providers/LocalProvider";
 import { SpeRemotingProvider } from "./providers/SpeRemotingProvider";
-import type { ExecutionProvider, ConnectionConfig } from "./providers/types";
+import type { ExecutionProvider, ConnectionConfig, ConnectionTestResult } from "./providers/types";
 import { loadProgress, saveProgress, clearProgress } from "./hooks/useSessionProgress";
 import { loadUIPreferences, saveUIPreferences, type ActivePanel } from "./hooks/useUIPreferences";
 import { useMediaQuery } from "./hooks/useMediaQuery";
@@ -64,6 +64,7 @@ export default function SPETutorial() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const [connectionConfig, setConnectionConfig] = useState<ConnectionConfig | null>(null);
+  const [connectionInfo, setConnectionInfo] = useState<ConnectionTestResult | null>(null);
   const tour = useTourState();
   const providerRef = useRef<ExecutionProvider>(new LocalProvider());
   const lessonPanelRef = useRef<HTMLDivElement>(null);
@@ -186,9 +187,25 @@ export default function SPETutorial() {
       providerRef.current = new SpeRemotingProvider(connectionConfig);
     } else {
       providerRef.current = new LocalProvider();
+      setConnectionInfo(null);
     }
     setCwd(providerRef.current.getCwd());
   }, [connectionConfig]);
+
+  // Async connect handler — tests connection before switching provider
+  const handleConnect = useCallback(async (config: ConnectionConfig): Promise<ConnectionTestResult> => {
+    const provider = new SpeRemotingProvider(config);
+    const result = await provider.testConnection();
+    if (result.connected) {
+      setConnectionConfig(config);
+      setConnectionInfo(result);
+    }
+    return result;
+  }, []);
+
+  const handleDisconnect = useCallback(() => {
+    setConnectionConfig(null);
+  }, []);
 
   const handleReset = useCallback(() => {
     setConsoleOutput([]);
@@ -587,8 +604,9 @@ export default function SPETutorial() {
           <div style={{ position: "relative" }}>
             <ConnectionManager
               isConnected={!!connectionConfig}
-              onConnect={setConnectionConfig}
-              onDisconnect={() => setConnectionConfig(null)}
+              connectionInfo={connectionInfo}
+              onConnect={handleConnect}
+              onDisconnect={handleDisconnect}
               isExecuting={isExecuting}
             />
           </div>
@@ -861,8 +879,9 @@ export default function SPETutorial() {
           <div style={{ position: "relative" }}>
             <ConnectionManager
               isConnected={!!connectionConfig}
-              onConnect={setConnectionConfig}
-              onDisconnect={() => setConnectionConfig(null)}
+              connectionInfo={connectionInfo}
+              onConnect={handleConnect}
+              onDisconnect={handleDisconnect}
               isExecuting={isExecuting}
             />
           </div>

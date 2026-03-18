@@ -15,6 +15,14 @@ export interface CompletionItem {
   label?: string;
 }
 
+/** Result of a connection test */
+export interface ConnectionTestResult {
+  connected: boolean;
+  version?: string;
+  user?: string;
+  error?: string;
+}
+
 /** Connection configuration for remote providers */
 export interface ConnectionConfig {
   url: string;
