@@ -17,6 +17,7 @@ Browser-based interactive tutorial for Sitecore PowerShell Extensions (SPE). Emb
 - `bunx vitest run -t "test name pattern"` — Run tests matching a name
 - `bun run test:spe` — Integration tests against a real SPE instance (separate config, 30s timeout)
 - `bun run deploy` — Build + deploy to Cloudflare Pages via Wrangler
+- `bun run cors-proxy -- --target <url> [--port 3001]` — Local CORS proxy for SPE Remoting
 
 ## Architecture
 
@@ -54,9 +55,13 @@ The codebase has two independent layers: a **pure TypeScript simulation engine**
 
 **LocalProvider** — wraps the existing engine and virtual tree. Default for tutorials. Exposes `getContext()` and `getFullTree()` for validation.
 
-**SpeRemotingProvider** — sends scripts to a real Sitecore instance via `speClient.ts`. Uses JWT or Basic auth. Tree panel falls back to virtual tree (SPE Remoting has no tree browsing API).
+**SpeRemotingProvider** — sends scripts to a real Sitecore instance via `speClient.ts` (`/-/script/script/` endpoint). Uses JWT or Basic auth. Scripts are wrapped in `& { <script> } | Out-String` so PowerShell's ps1xml formatting rules apply server-side. Tree panel falls back to virtual tree (SPE Remoting has no tree browsing API). Supports optional CORS proxy (`useProxy`/`proxyUrl` in `ConnectionConfig`).
 
-**ConnectionManager** component in the header lets users toggle between local simulation and a live Sitecore connection. URL and username persist to localStorage; credentials are never stored.
+**ConnectionManager** component in the header lets users toggle between local simulation and a live Sitecore connection. URL, username, and proxy preferences persist to localStorage; credentials are never stored. Includes a "Use CORS proxy" checkbox for instances that block cross-origin requests.
+
+### CORS Proxy (`tools/`)
+
+**cors-proxy.ts** — Local Bun server that forwards requests to a Sitecore instance and adds CORS headers. Runs on the user's machine, so it can reach internal/VPN-only instances. Usage: `bun run cors-proxy -- --target https://sitecore.example.com`. The user enters `http://localhost:3001` as the proxy URL in ConnectionManager.
 
 ### UI (`src/components/`)
 
@@ -73,6 +78,8 @@ The codebase has two independent layers: a **pure TypeScript simulation engine**
 - **Line continuation** — lines ending with `|` or backtick (`` ` ``) are joined before execution.
 - **Execution goes through providers** — `App.tsx` never calls `executeScript()`/`executeCommand()` directly; it delegates to `providerRef.current`. New execution backends implement the `ExecutionProvider` interface.
 - **Validation always runs locally** — `validateTask()` uses the local engine regardless of active provider, so lesson validation works offline.
+- **SPE Remoting wraps scripts** — `speClient.ts` sends `& { <user script> } | Out-String` with `rawOutput=true` so ps1xml formatting applies server-side. Never send raw scripts without wrapping.
+- **JWT audience uses real URL** — When using the CORS proxy, `audienceOverride` ensures the JWT audience targets the real Sitecore origin, not the proxy URL.
 
 ## Testing
 

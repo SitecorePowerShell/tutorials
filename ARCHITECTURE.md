@@ -423,11 +423,13 @@ tutorial to optionally connect to a real Sitecore instance via SPE Remoting.
 **Completed:**
 - [x] `ExecutionProvider` interface (`src/providers/types.ts`) — `executeScript()`, `executeCommand()`, `getTree()`, `getCwd()`, `reset()`
 - [x] `LocalProvider` — wraps existing engine, zero behavior change for tutorials
-- [x] `SpeRemotingProvider` — sends scripts to real Sitecore via `speClient.ts` (JWT + Basic auth)
-- [x] `ConnectionManager` UI component — connect/disconnect toggle, URL, auth fields (JWT/Basic)
+- [x] `SpeRemotingProvider` — sends scripts to real Sitecore via `speClient.ts` (`/-/script/script/`, JWT + Basic auth)
+- [x] `ConnectionManager` UI component — connect/disconnect toggle, URL, auth fields (JWT/Basic), CORS proxy toggle
 - [x] `App.tsx` refactored to delegate execution through active provider (async)
 - [x] Task validation always runs locally (simulation engine) regardless of active provider
 - [x] `speClient.ts` migrated from Node `require("crypto")` to Web Crypto API
+- [x] Scripts wrapped in `& { <script> } | Out-String` for ps1xml formatting via `rawOutput=true`
+- [x] Local CORS proxy (`tools/cors-proxy.ts`) — Bun server that forwards requests and adds CORS headers; works with internal/VPN instances
 
 **Future work:**
 
@@ -441,7 +443,7 @@ tutorial to optionally connect to a real Sitecore instance via SPE Remoting.
 | **REST API provider** | Low | Item CRUD via Sitecore ItemService REST API (no script execution) |
 | **SitecoreAI / XM Cloud provider** | Low | Cloud API integration for XM Cloud instances |
 | **Connection profiles** | Low | Save multiple named connections in localStorage (not just the last one) |
-| **CORS proxy** | Low | Optional proxy for instances that don't allow cross-origin requests from the tutorial domain |
+| ~~**CORS proxy**~~ | ~~Low~~ | Done — `tools/cors-proxy.ts` with ConnectionManager toggle |
 
 **Extraction roadmap** (if components are packaged for reuse beyond the tutorial):
 
