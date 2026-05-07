@@ -27,6 +27,7 @@ import { useTourState } from "./hooks/useTourState";
 import { HelpPanel } from "./components/HelpPanel";
 import { KeyboardShortcuts } from "./components/KeyboardShortcuts";
 import { ConnectionManager } from "./components/ConnectionManager";
+import { CheatSheetDrawer } from "./components/CheatSheetDrawer";
 
 const initialProgress = loadProgress();
 const initialPrefs = loadUIPreferences();
@@ -62,6 +63,7 @@ export default function SPETutorial() {
   const [quizResults, setQuizResults] = useState<Record<string, QuizResult>>(initialProgress.quizResults);
   const [helpPanelCmdlet, setHelpPanelCmdlet] = useState<string | null>(null);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [cheatSheetOpen, setCheatSheetOpen] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const [connectionConfig, setConnectionConfig] = useState<ConnectionConfig | null>(null);
   const [connectionInfo, setConnectionInfo] = useState<ConnectionTestResult | null>(null);
@@ -610,6 +612,25 @@ export default function SPETutorial() {
               isExecuting={isExecuting}
             />
           </div>
+          <button
+            onClick={() => setCheatSheetOpen(true)}
+            aria-label="Open cheat sheet"
+            style={{
+              background: "none",
+              border: "none",
+              color: colors.textSecondary,
+              fontSize: 18,
+              cursor: "pointer",
+              padding: 8,
+              minWidth: 44,
+              minHeight: 44,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            📋
+          </button>
           <div
             style={{
               fontSize: fs.xs,
@@ -779,6 +800,14 @@ export default function SPETutorial() {
           </div>
         )}
 
+        {/* Cheat sheet drawer (mobile) */}
+        <CheatSheetDrawer
+          open={cheatSheetOpen}
+          onClose={() => setCheatSheetOpen(false)}
+          isMobile={true}
+          lessonId={lesson?.id}
+        />
+
         {/* Virtual tour */}
         <VirtualTour
           phase={tour.phase}
@@ -887,6 +916,24 @@ export default function SPETutorial() {
           </div>
           {!activeQuizData && (
             <>
+              <button
+                onClick={() => setCheatSheetOpen((v) => !v)}
+                aria-label="Toggle cheat sheet"
+                aria-pressed={cheatSheetOpen}
+                title="Cheat sheet (quick reference)"
+                style={{
+                  background: cheatSheetOpen ? colors.bgActive : "transparent",
+                  border: `1px solid ${colors.borderMedium}`,
+                  color: colors.textSecondary,
+                  padding: "5px 12px",
+                  borderRadius: 4,
+                  cursor: "pointer",
+                  fontSize: fontSizes.base,
+                  fontFamily: "inherit",
+                }}
+              >
+                📋 Cheat sheet
+              </button>
               <button
                 onClick={() => setLayoutStacked(!layoutStacked)}
                 aria-label={layoutStacked ? "Switch to side-by-side layout" : "Switch to stacked layout"}
@@ -1349,6 +1396,13 @@ export default function SPETutorial() {
 
       {/* Keyboard shortcuts modal */}
       <KeyboardShortcuts open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+
+      {/* Cheat sheet drawer */}
+      <CheatSheetDrawer
+        open={cheatSheetOpen}
+        onClose={() => setCheatSheetOpen(false)}
+        lessonId={lesson?.id}
+      />
 
       {/* Screen reader announcements */}
       <div
