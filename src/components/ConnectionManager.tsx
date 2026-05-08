@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import type { ConnectionConfig, ConnectionTestResult } from "../providers/types";
+import type { AuthMode, ConnectionConfig, ConnectionTestResult } from "../providers/types";
 
 interface ConnectionManagerProps {
   isConnected: boolean;
@@ -11,36 +11,66 @@ interface ConnectionManagerProps {
 
 const STORAGE_KEY = "spe-connection-config";
 
-function loadSavedConfig(): Partial<ConnectionConfig> {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // Never persist passwords/secrets — only URL, username, and proxy prefs
-      return {
-        url: parsed.url || "",
-        username: parsed.username || "",
-        useProxy: parsed.useProxy || false,
-        proxyUrl: parsed.proxyUrl || "",
-      };
-    }
-  } catch { /* ignore */ }
-  return {};
+type AuthKind = AuthMode["kind"];
+type OAuthProvider = "identity" | "auth0" | "custom";
+
+interface SavedFormState {
+  url?: string;
+  useProxy?: boolean;
+  proxyUrl?: string;
+  authKind?: AuthKind;
+  userSecret?: { username?: string };
+  accessKey?: { accessKeyId?: string };
+  oauthCc?: { clientId?: string; tokenUrl?: string; scope?: string; provider?: OAuthProvider };
 }
 
-function saveConfig(config: ConnectionConfig): void {
+const OAUTH_PROVIDER_DEFAULTS: Record<OAuthProvider, { tokenUrlPlaceholder: string; scope: string }> = {
+  identity: {
+    tokenUrlPlaceholder: "https://id.your-sitecore.com/connect/token",
+    scope: "sitecore.profile openid",
+  },
+  auth0: {
+    tokenUrlPlaceholder: "https://your-tenant.auth0.com/oauth/token",
+    scope: "",
+  },
+  custom: {
+    tokenUrlPlaceholder: "https://idp.example.com/token",
+    scope: "",
+  },
+};
+
+function loadSavedState(): SavedFormState {
   try {
-    // Only persist non-sensitive fields
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        url: config.url,
-        username: config.username,
-        useProxy: config.useProxy,
-        proxyUrl: config.proxyUrl,
-      })
-    );
-  } catch { /* ignore */ }
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return {};
+    const parsed = JSON.parse(saved) as SavedFormState;
+    return {
+      url: parsed.url ?? "",
+      useProxy: !!parsed.useProxy,
+      proxyUrl: parsed.proxyUrl ?? "",
+      authKind: parsed.authKind ?? "user-secret",
+      userSecret: { username: parsed.userSecret?.username ?? "" },
+      accessKey: { accessKeyId: parsed.accessKey?.accessKeyId ?? "" },
+      oauthCc: {
+        clientId: parsed.oauthCc?.clientId ?? "",
+        tokenUrl: parsed.oauthCc?.tokenUrl ?? "",
+        scope: parsed.oauthCc?.scope ?? "",
+        provider: parsed.oauthCc?.provider ?? "identity",
+      },
+    };
+  } catch {
+    return {};
+  }
+}
+
+function saveState(state: SavedFormState): void {
+  try {
+    // Only non-sensitive identifiers are persisted. Shared secrets and client
+    // secrets stay in component state for the session and are never written.
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    /* ignore */
+  }
 }
 
 export function ConnectionManager({
@@ -51,28 +81,79 @@ export function ConnectionManager({
   isExecuting,
 }: ConnectionManagerProps) {
   const [expanded, setExpanded] = useState(false);
-  const saved = loadSavedConfig();
+  const saved = loadSavedState();
+
   const [url, setUrl] = useState(saved.url || "");
-  const [username, setUsername] = useState(saved.username || "");
-  const [password, setPassword] = useState("");
-  const [sharedSecret, setSharedSecret] = useState("");
-  const [authMode, setAuthMode] = useState<"basic" | "jwt">("jwt");
-  const [useProxy, setUseProxy] = useState(saved.useProxy || false);
+  const [useProxy, setUseProxy] = useState(!!saved.useProxy);
   const [proxyUrl, setProxyUrl] = useState(saved.proxyUrl || "");
+  const [authKind, setAuthKind] = useState<AuthKind>(saved.authKind || "user-secret");
+
+  // Per-mode identifier state — preserved across mode switches so the user
+  // doesn't lose what they typed when toggling tabs.
+  const [username, setUsername] = useState(saved.userSecret?.username || "");
+  const [sharedSecretUS, setSharedSecretUS] = useState("");
+
+  const [accessKeyId, setAccessKeyId] = useState(saved.accessKey?.accessKeyId || "");
+  const [sharedSecretAK, setSharedSecretAK] = useState("");
+
+  const [clientId, setClientId] = useState(saved.oauthCc?.clientId || "");
+  const [clientSecret, setClientSecret] = useState("");
+  const [tokenUrl, setTokenUrl] = useState(saved.oauthCc?.tokenUrl || "");
+  const [scope, setScope] = useState(saved.oauthCc?.scope || "");
+  const [oauthProvider, setOauthProvider] = useState<OAuthProvider>(saved.oauthCc?.provider || "identity");
+
   const [error, setError] = useState("");
   const [connecting, setConnecting] = useState(false);
 
+  const handleProviderChange = useCallback((next: OAuthProvider) => {
+    setOauthProvider(next);
+    // Helpful default: only overwrite scope if it's empty or matches another preset
+    const presets = Object.values(OAUTH_PROVIDER_DEFAULTS).map((p) => p.scope);
+    if (!scope || presets.includes(scope)) {
+      setScope(OAUTH_PROVIDER_DEFAULTS[next].scope);
+    }
+  }, [scope]);
+
+  const buildAuth = useCallback((): { auth: AuthMode; missing: string | null } => {
+    if (authKind === "user-secret") {
+      if (!username.trim()) return { auth: null as never, missing: "Username is required" };
+      if (!sharedSecretUS) return { auth: null as never, missing: "Shared secret is required" };
+      return { auth: { kind: "user-secret", username: username.trim(), sharedSecret: sharedSecretUS }, missing: null };
+    }
+    if (authKind === "accesskey") {
+      if (!accessKeyId.trim()) return { auth: null as never, missing: "Access Key ID is required" };
+      if (!sharedSecretAK) return { auth: null as never, missing: "Shared secret is required" };
+      return { auth: { kind: "accesskey", accessKeyId: accessKeyId.trim(), sharedSecret: sharedSecretAK }, missing: null };
+    }
+    if (!clientId.trim()) return { auth: null as never, missing: "Client ID is required" };
+    if (!clientSecret) return { auth: null as never, missing: "Client secret is required" };
+    if (!tokenUrl.trim()) return { auth: null as never, missing: "Token URL is required" };
+    return {
+      auth: {
+        kind: "oauth-cc",
+        clientId: clientId.trim(),
+        clientSecret,
+        tokenUrl: tokenUrl.trim(),
+        scope: scope.trim() || undefined,
+        provider: oauthProvider,
+      },
+      missing: null,
+    };
+  }, [authKind, username, sharedSecretUS, accessKeyId, sharedSecretAK, clientId, clientSecret, tokenUrl, scope, oauthProvider]);
+
   const handleConnect = useCallback(async () => {
-    if (!url.trim() || !username.trim()) {
-      setError("URL and username are required");
+    if (!url.trim()) {
+      setError("Instance URL is required");
+      return;
+    }
+    const { auth, missing } = buildAuth();
+    if (missing) {
+      setError(missing);
       return;
     }
     const config: ConnectionConfig = {
       url: url.trim(),
-      username: username.trim(),
-      ...(authMode === "basic"
-        ? { password }
-        : { sharedSecret }),
+      auth,
       useProxy,
       ...(useProxy && proxyUrl.trim() ? { proxyUrl: proxyUrl.trim() } : {}),
     };
@@ -83,8 +164,20 @@ export function ConnectionManager({
     try {
       const result = await onConnect(config);
       if (result.connected) {
-        saveConfig(config);
-        // Stay expanded briefly to show success, then close
+        saveState({
+          url: config.url,
+          useProxy: config.useProxy,
+          proxyUrl: config.proxyUrl,
+          authKind,
+          userSecret: { username: username.trim() },
+          accessKey: { accessKeyId: accessKeyId.trim() },
+          oauthCc: {
+            clientId: clientId.trim(),
+            tokenUrl: tokenUrl.trim(),
+            scope: scope.trim(),
+            provider: oauthProvider,
+          },
+        });
         setExpanded(false);
       } else {
         setError(result.error || "Connection failed");
@@ -94,15 +187,21 @@ export function ConnectionManager({
     } finally {
       setConnecting(false);
     }
-  }, [url, username, password, sharedSecret, authMode, useProxy, proxyUrl, onConnect]);
+  }, [url, useProxy, proxyUrl, authKind, username, accessKeyId, clientId, tokenUrl, scope, oauthProvider, buildAuth, onConnect]);
 
   const handleDisconnect = useCallback(() => {
     onDisconnect();
-    setPassword("");
-    setSharedSecret("");
+    setSharedSecretUS("");
+    setSharedSecretAK("");
+    setClientSecret("");
   }, [onDisconnect]);
 
-  // Button always opens the dialog
+  // The label shown in the connected pill / details — best-effort identifier
+  // for the active auth mode, with the server-reported user taking priority.
+  const activeIdentifier =
+    connectionInfo?.user ||
+    (authKind === "user-secret" ? username : authKind === "accesskey" ? accessKeyId : clientId);
+
   if (!expanded) {
     return (
       <button
@@ -124,7 +223,7 @@ export function ConnectionManager({
         }}
       >
         <span style={{ fontSize: 8, color: isConnected ? "#4caf50" : "#666" }}>
-          {isConnected ? "\u25CF" : "\u25CB"}
+          {isConnected ? "●" : "○"}
         </span>
         {isConnected ? "Connected" : "Connect"}
       </button>
@@ -142,7 +241,7 @@ export function ConnectionManager({
         border: "1px solid var(--color-border-base, #333)",
         borderRadius: 6,
         padding: 16,
-        width: 320,
+        width: 340,
         zIndex: 1000,
         boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
       }}
@@ -179,7 +278,6 @@ export function ConnectionManager({
         </button>
       </div>
 
-      {/* Connected state — show info + disconnect */}
       {isConnected && connectionInfo && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <div
@@ -194,7 +292,8 @@ export function ConnectionManager({
             }}
           >
             <div><span style={{ color: "var(--color-text-muted, #666)" }}>URL:</span> <span style={{ color: "var(--color-text-primary, #e0e0e0)" }}>{url}</span></div>
-            <div><span style={{ color: "var(--color-text-muted, #666)" }}>User:</span> <span style={{ color: "var(--color-text-primary, #e0e0e0)" }}>{connectionInfo.user || username}</span></div>
+            <div><span style={{ color: "var(--color-text-muted, #666)" }}>User:</span> <span style={{ color: "var(--color-text-primary, #e0e0e0)" }}>{activeIdentifier}</span></div>
+            <div><span style={{ color: "var(--color-text-muted, #666)" }}>Auth:</span> <span style={{ color: "var(--color-text-primary, #e0e0e0)" }}>{authLabel(authKind)}</span></div>
             <div><span style={{ color: "var(--color-text-muted, #666)" }}>SPE Version:</span> <span style={{ color: "var(--color-text-primary, #e0e0e0)" }}>{connectionInfo.version || "unknown"}</span></div>
           </div>
 
@@ -220,7 +319,6 @@ export function ConnectionManager({
         </div>
       )}
 
-      {/* Disconnected state — show connect form */}
       {!isConnected && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <label style={labelStyle}>
@@ -235,78 +333,143 @@ export function ConnectionManager({
             />
           </label>
 
-          <label style={labelStyle}>
-            Username
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="sitecore\\admin"
-              disabled={connecting}
-              style={inputStyle}
-            />
-          </label>
-
-          <div style={{ display: "flex", gap: 8 }}>
-            <label
-              style={{
-                ...labelStyle,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 4,
-              }}
-            >
-              <input
-                type="radio"
-                name="authMode"
-                checked={authMode === "jwt"}
-                onChange={() => setAuthMode("jwt")}
+          {/* 3-way segmented control */}
+          <div style={{ display: "flex", gap: 0, borderRadius: 4, overflow: "hidden", border: "1px solid var(--color-border-base, #333)" }}>
+            {(["user-secret", "accesskey", "oauth-cc"] as AuthKind[]).map((kind) => (
+              <button
+                key={kind}
+                type="button"
+                onClick={() => setAuthKind(kind)}
                 disabled={connecting}
-              />
-              JWT (Shared Secret)
-            </label>
-            <label
-              style={{
-                ...labelStyle,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 4,
-              }}
-            >
-              <input
-                type="radio"
-                name="authMode"
-                checked={authMode === "basic"}
-                onChange={() => setAuthMode("basic")}
-                disabled={connecting}
-              />
-              Basic Auth
-            </label>
+                style={{
+                  flex: 1,
+                  background: authKind === kind ? "var(--color-accent-primary, #00a4ef)" : "transparent",
+                  color: authKind === kind ? "#fff" : "var(--color-text-secondary, #999)",
+                  border: "none",
+                  padding: "6px 4px",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  cursor: connecting ? "not-allowed" : "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                {authShortLabel(kind)}
+              </button>
+            ))}
           </div>
 
-          {authMode === "jwt" ? (
-            <label style={labelStyle}>
-              Shared Secret
-              <input
-                type="password"
-                value={sharedSecret}
-                onChange={(e) => setSharedSecret(e.target.value)}
-                placeholder="SPE Remoting shared secret"
-                disabled={connecting}
-                style={inputStyle}
-              />
-            </label>
-          ) : (
-            <label style={labelStyle}>
-              Password
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={connecting}
-                style={inputStyle}
-              />
-            </label>
+          {authKind === "user-secret" && (
+            <>
+              <label style={labelStyle}>
+                Username
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="sitecore\\admin"
+                  disabled={connecting}
+                  style={inputStyle}
+                />
+              </label>
+              <label style={labelStyle}>
+                Shared Secret
+                <input
+                  type="password"
+                  value={sharedSecretUS}
+                  onChange={(e) => setSharedSecretUS(e.target.value)}
+                  placeholder="SPE Remoting shared secret"
+                  disabled={connecting}
+                  style={inputStyle}
+                />
+              </label>
+            </>
+          )}
+
+          {authKind === "accesskey" && (
+            <>
+              <label style={labelStyle}>
+                Access Key ID
+                <input
+                  type="text"
+                  value={accessKeyId}
+                  onChange={(e) => setAccessKeyId(e.target.value)}
+                  placeholder="registered access key id"
+                  disabled={connecting}
+                  style={inputStyle}
+                />
+              </label>
+              <label style={labelStyle}>
+                Shared Secret
+                <input
+                  type="password"
+                  value={sharedSecretAK}
+                  onChange={(e) => setSharedSecretAK(e.target.value)}
+                  placeholder="secret bound to the access key"
+                  disabled={connecting}
+                  style={inputStyle}
+                />
+              </label>
+            </>
+          )}
+
+          {authKind === "oauth-cc" && (
+            <>
+              <label style={labelStyle}>
+                Identity Provider
+                <select
+                  value={oauthProvider}
+                  onChange={(e) => handleProviderChange(e.target.value as OAuthProvider)}
+                  disabled={connecting}
+                  style={inputStyle}
+                >
+                  <option value="identity">Sitecore Identity</option>
+                  <option value="auth0">Auth0</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </label>
+              <label style={labelStyle}>
+                Token URL
+                <input
+                  type="url"
+                  value={tokenUrl}
+                  onChange={(e) => setTokenUrl(e.target.value)}
+                  placeholder={OAUTH_PROVIDER_DEFAULTS[oauthProvider].tokenUrlPlaceholder}
+                  disabled={connecting}
+                  style={inputStyle}
+                />
+              </label>
+              <label style={labelStyle}>
+                Client ID
+                <input
+                  type="text"
+                  value={clientId}
+                  onChange={(e) => setClientId(e.target.value)}
+                  disabled={connecting}
+                  style={inputStyle}
+                />
+              </label>
+              <label style={labelStyle}>
+                Client Secret
+                <input
+                  type="password"
+                  value={clientSecret}
+                  onChange={(e) => setClientSecret(e.target.value)}
+                  disabled={connecting}
+                  style={inputStyle}
+                />
+              </label>
+              <label style={labelStyle}>
+                Scope <span style={{ color: "var(--color-text-muted, #666)", fontWeight: 400 }}>(optional)</span>
+                <input
+                  type="text"
+                  value={scope}
+                  onChange={(e) => setScope(e.target.value)}
+                  placeholder={OAUTH_PROVIDER_DEFAULTS[oauthProvider].scope || "leave blank if not required"}
+                  disabled={connecting}
+                  style={inputStyle}
+                />
+              </label>
+            </>
           )}
 
           <label
@@ -339,6 +502,12 @@ export function ConnectionManager({
               />
               <span style={{ fontSize: 10, color: "var(--color-text-muted, #666)", lineHeight: 1.3 }}>
                 Run: bun run cors-proxy -- --target {url || "<sitecore-url>"}
+                {authKind === "oauth-cc" && (
+                  <>
+                    <br />
+                    OAuth token requests are forwarded through the same proxy via /__corsproxy/passthrough.
+                  </>
+                )}
               </span>
             </label>
           )}
@@ -375,13 +544,35 @@ export function ConnectionManager({
             }}
           >
             Requires SPE Remoting enabled on your Sitecore instance.
-            Credentials are not stored — only URL and username are saved.
-            {" "}Enable the CORS proxy if you get cross-origin errors.
+            Secrets and client secrets are never persisted — only identifiers and the
+            instance URL are saved.
           </div>
         </div>
       )}
     </div>
   );
+}
+
+function authShortLabel(kind: AuthKind): string {
+  switch (kind) {
+    case "user-secret":
+      return "User";
+    case "accesskey":
+      return "Access Key";
+    case "oauth-cc":
+      return "OAuth";
+  }
+}
+
+function authLabel(kind: AuthKind): string {
+  switch (kind) {
+    case "user-secret":
+      return "Username + Shared Secret";
+    case "accesskey":
+      return "Access Key + Shared Secret";
+    case "oauth-cc":
+      return "OAuth (client credentials)";
+  }
 }
 
 const labelStyle: React.CSSProperties = {

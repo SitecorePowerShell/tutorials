@@ -23,12 +23,33 @@ export interface ConnectionTestResult {
   error?: string;
 }
 
+/**
+ * Authentication mode for SPE Remoting.
+ *
+ *  - `user-secret` — JWT signed with a shared secret, identified by username.
+ *    Mirrors `New-Jwt.ps1` from the SPE Remoting module.
+ *  - `accesskey`   — JWT signed with a shared secret, identified by an Access
+ *    Key ID registered server-side. The server resolves the key to a user.
+ *  - `oauth-cc`    — OAuth 2.0 client_credentials grant. The client exchanges
+ *    a client ID / secret for a Bearer access token at `tokenUrl`.
+ */
+export type AuthMode =
+  | { kind: "user-secret"; username: string; sharedSecret: string }
+  | { kind: "accesskey"; accessKeyId: string; sharedSecret: string }
+  | {
+      kind: "oauth-cc";
+      clientId: string;
+      clientSecret: string;
+      tokenUrl: string;
+      scope?: string;
+      /** UI hint only — affects placeholder/scope defaults, not the wire protocol */
+      provider?: "identity" | "auth0" | "custom";
+    };
+
 /** Connection configuration for remote providers */
 export interface ConnectionConfig {
   url: string;
-  username: string;
-  password?: string;
-  sharedSecret?: string;
+  auth: AuthMode;
   /** When true, requests target a local CORS proxy instead of the Sitecore instance directly */
   useProxy?: boolean;
   /** Local CORS proxy URL (default: http://localhost:3001) */

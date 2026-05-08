@@ -24,20 +24,21 @@ if (existsSync(envPath)) {
 
 const SPE_URL = process.env.SPE_URL;
 const SPE_USERNAME = process.env.SPE_USERNAME || "sitecore\\admin";
-const SPE_PASSWORD = process.env.SPE_PASSWORD;
 const SPE_SHARED_SECRET = process.env.SPE_SHARED_SECRET;
 const SPE_SCRIPT_ENDPOINT =
   process.env.SPE_SCRIPT_ENDPOINT || "/-/script/script/";
 
-describe.skipIf(!SPE_URL)("SPE Remoting Integration Tests", () => {
+describe.skipIf(!SPE_URL || !SPE_SHARED_SECRET)("SPE Remoting Integration Tests", () => {
   let client: SpeClient;
 
   beforeAll(() => {
     client = createSpeClient({
       url: SPE_URL!,
-      username: SPE_USERNAME,
-      password: SPE_PASSWORD,
-      sharedSecret: SPE_SHARED_SECRET,
+      auth: {
+        kind: "user-secret",
+        username: SPE_USERNAME,
+        sharedSecret: SPE_SHARED_SECRET!,
+      },
       scriptEndpoint: SPE_SCRIPT_ENDPOINT,
     });
   });

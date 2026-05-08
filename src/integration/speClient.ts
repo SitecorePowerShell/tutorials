@@ -11,32 +11,59 @@ export interface SpeResponse {
   streams?: SpeStreamEntry[];
 }
 
+/**
+ * Authentication mode for the SPE client. Mirrors `AuthMode` in providers/types.ts.
+ * Kept as a separate type so the integration layer has no dependency on providers/.
+ */
+export type SpeAuthMode =
+  | { kind: "user-secret"; username: string; sharedSecret: string }
+  | { kind: "accesskey"; accessKeyId: string; sharedSecret: string }
+  | {
+      kind: "oauth-cc";
+      clientId: string;
+      clientSecret: string;
+      tokenUrl: string;
+      scope?: string;
+    };
+
 export interface SpeClientConfig {
   url: string;
-  username: string;
-  password?: string;
-  sharedSecret?: string;
+  auth: SpeAuthMode;
   scriptEndpoint: string;
   /** Override the JWT audience (e.g., the real Sitecore URL when going through a proxy) */
   audienceOverride?: string;
+  /**
+   * If set, OAuth client_credentials token requests are sent through this
+   * passthrough proxy instead of the IdP's `tokenUrl` directly. Used when the
+   * IdP doesn't allow CORS from the browser. The proxy must support the
+   * `_target=<tokenUrl>` query convention (see tools/cors-proxy.ts).
+   */
+  oauthProxyUrl?: string;
 }
 
 /**
- * Create an HS256 JWT matching SPE Remoting's New-Jwt.ps1 implementation.
- * Claims: iss="SPE Remoting", aud=<base url origin>, name=<username>, exp=<now+30s>
+ * Create an HS256 JWT for SPE Remoting.
+ *
+ * - For `user-secret`: claims are `iss="SPE Remoting"`, `name=<username>`,
+ *   matching New-Jwt.ps1 in the SPE Remoting module.
+ * - For `accesskey`: `iss=<accessKeyId>`, `name` is omitted. The Sitecore
+ *   server resolves the access key to a registered user.
+ *
+ * Common claims: `aud=<audience>`, `exp=<now+30s>`.
  */
-async function createSpeJwt(
-  sharedSecret: string,
-  audience: string,
-  username: string
-): Promise<string> {
+async function createSpeJwt(opts: {
+  sharedSecret: string;
+  audience: string;
+  issuer: string;
+  name?: string;
+}): Promise<string> {
   const header = { alg: "HS256", typ: "JWT" };
-  const payload = {
-    iss: "SPE Remoting",
+  const payload: Record<string, unknown> = {
+    iss: opts.issuer,
     exp: Math.floor(Date.now() / 1000) + 30,
-    aud: audience,
-    name: username,
+    aud: opts.audience,
   };
+  if (opts.name) payload.name = opts.name;
 
   const encode = (obj: object) => base64UrlEncode(JSON.stringify(obj));
   const headerB64 = encode(header);
@@ -47,7 +74,7 @@ async function createSpeJwt(
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw",
-    encoder.encode(sharedSecret),
+    encoder.encode(opts.sharedSecret),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
@@ -56,6 +83,66 @@ async function createSpeJwt(
   const signature = base64UrlEncodeBuffer(new Uint8Array(sigBuffer));
 
   return `${toBeSigned}.${signature}`;
+}
+
+interface OAuthTokenResponse {
+  access_token: string;
+  expires_in?: number;
+  token_type?: string;
+}
+
+/**
+ * Exchange a client ID/secret for a Bearer access token via the OAuth 2.0
+ * client_credentials grant (RFC 6749 §4.4). Sends the request as
+ * `application/x-www-form-urlencoded` per the spec — works with Sitecore
+ * Identity, Auth0, and any RFC-compliant IdP.
+ *
+ * When `proxyUrl` is set, the request is sent to a passthrough proxy with
+ * `?_target=<tokenUrl>`, then forwarded to the IdP. This sidesteps CORS
+ * restrictions on IdPs that don't expose the token endpoint to browsers.
+ */
+async function fetchOAuthToken(opts: {
+  tokenUrl: string;
+  clientId: string;
+  clientSecret: string;
+  scope?: string;
+  proxyUrl?: string;
+}): Promise<{ accessToken: string; expiresAt: number }> {
+  const params = new URLSearchParams();
+  params.set("grant_type", "client_credentials");
+  params.set("client_id", opts.clientId);
+  params.set("client_secret", opts.clientSecret);
+  if (opts.scope) params.set("scope", opts.scope);
+
+  const endpoint = opts.proxyUrl
+    ? `${opts.proxyUrl.replace(/\/$/, "")}/__corsproxy/passthrough?_target=${encodeURIComponent(opts.tokenUrl)}`
+    : opts.tokenUrl;
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "application/json",
+    },
+    body: params.toString(),
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(`OAuth token request failed: HTTP ${response.status}${text ? ` — ${text}` : ""}`);
+  }
+
+  const data = (await response.json()) as OAuthTokenResponse;
+  if (!data.access_token) {
+    throw new Error("OAuth token response missing access_token");
+  }
+
+  // Default to a short-lived token if the IdP doesn't return expires_in
+  const ttl = typeof data.expires_in === "number" ? data.expires_in : 60;
+  return {
+    accessToken: data.access_token,
+    expiresAt: Date.now() + ttl * 1000,
+  };
 }
 
 function base64UrlEncode(str: string): string {
@@ -254,13 +341,52 @@ export function parseCliXml(text: string): SpeStreamEntry[] | null {
 }
 
 export function createSpeClient(config: SpeClientConfig) {
-  const { url, username, password, sharedSecret, scriptEndpoint, audienceOverride } = config;
+  const { url, auth, scriptEndpoint, audienceOverride, oauthProxyUrl } = config;
   const baseUrl = url.replace(/\/$/, "");
 
   // JWT audience must be the real Sitecore origin, even when requests go through a proxy
   const audience = audienceOverride
     ? new URL(audienceOverride).origin
     : new URL(baseUrl).origin;
+
+  // OAuth token cache — refreshed when within 30s of expiry to avoid races
+  // between two near-simultaneous requests both deciding to refresh.
+  let cachedToken: { accessToken: string; expiresAt: number } | null = null;
+  const TOKEN_REFRESH_BUFFER_MS = 30_000;
+
+  async function getAuthorizationHeader(): Promise<string> {
+    switch (auth.kind) {
+      case "user-secret": {
+        const token = await createSpeJwt({
+          sharedSecret: auth.sharedSecret,
+          audience,
+          issuer: "SPE Remoting",
+          name: auth.username,
+        });
+        return `Bearer ${token}`;
+      }
+      case "accesskey": {
+        const token = await createSpeJwt({
+          sharedSecret: auth.sharedSecret,
+          audience,
+          issuer: auth.accessKeyId,
+        });
+        return `Bearer ${token}`;
+      }
+      case "oauth-cc": {
+        if (!cachedToken || cachedToken.expiresAt - Date.now() < TOKEN_REFRESH_BUFFER_MS) {
+          cachedToken = await fetchOAuthToken({
+            tokenUrl: auth.tokenUrl,
+            clientId: auth.clientId,
+            clientSecret: auth.clientSecret,
+            scope: auth.scope,
+            proxyUrl: oauthProxyUrl,
+          });
+        }
+        return `Bearer ${cachedToken.accessToken}`;
+      }
+    }
+  }
 
   async function sendScript(script: string, raw: boolean): Promise<SpeResponse> {
     const sessionId = crypto.randomUUID();
@@ -305,13 +431,7 @@ export function createSpeClient(config: SpeClientConfig) {
         ].join(" ");
     const body = `${finalScript}<#${sessionId}#>`;
 
-    let authorization: string;
-    if (sharedSecret) {
-      const token = await createSpeJwt(sharedSecret, audience, username);
-      authorization = `Bearer ${token}`;
-    } else {
-      authorization = `Basic ${btoa(`${username}:${password || ""}`)}`;
-    }
+    const authorization = await getAuthorizationHeader();
 
     const response = await fetch(endpoint, {
       method: "POST",

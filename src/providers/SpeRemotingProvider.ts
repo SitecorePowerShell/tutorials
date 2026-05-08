@@ -26,18 +26,18 @@ export class SpeRemotingProvider implements ExecutionProvider {
   constructor(config: ConnectionConfig) {
     // When using the CORS proxy, send requests to the proxy URL instead of
     // the Sitecore instance directly. The proxy forwards to the real target.
-    const effectiveUrl = config.useProxy
-      ? (config.proxyUrl || "http://localhost:3001")
-      : config.url;
+    const proxyUrl = config.proxyUrl || "http://localhost:3001";
+    const effectiveUrl = config.useProxy ? proxyUrl : config.url;
 
     this.client = createSpeClient({
       url: effectiveUrl,
-      username: config.username,
-      password: config.password,
-      sharedSecret: config.sharedSecret,
+      auth: config.auth,
       scriptEndpoint: "/-/script/script/",
       // JWT audience must always be the real Sitecore URL, not the proxy
       audienceOverride: config.useProxy ? config.url : undefined,
+      // OAuth token requests go through the proxy too — most IdPs don't allow
+      // CORS on /token endpoints since client_credentials is server-to-server
+      oauthProxyUrl: config.useProxy ? proxyUrl : undefined,
     });
   }
 

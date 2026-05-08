@@ -80,12 +80,35 @@ const server = Bun.serve({
       return new Response(null, { status: 204, headers: cors });
     }
 
-    // Build the target URL: take the request path and append to target
     const url = new URL(req.url);
-    const targetUrl = `${target}${url.pathname}${url.search}`;
     const start = performance.now();
 
-    log(">", `${req.method} ${url.pathname}`);
+    // Passthrough mode: /__corsproxy/passthrough?_target=<absolute-url> forwards
+    // to an arbitrary URL. Used for OAuth token requests against an IdP that's
+    // a different origin from the Sitecore target. The original query is
+    // preserved on the target URL; only the proxy-internal `_target` param is
+    // stripped before forwarding.
+    let targetUrl: string;
+    if (url.pathname === "/__corsproxy/passthrough") {
+      const passthroughTarget = url.searchParams.get("_target");
+      if (!passthroughTarget) {
+        return new Response("passthrough requires ?_target=<url>", {
+          status: 400,
+          headers: cors,
+        });
+      }
+      try {
+        new URL(passthroughTarget);
+      } catch {
+        return new Response("invalid _target URL", { status: 400, headers: cors });
+      }
+      targetUrl = passthroughTarget;
+      log(">", `${req.method} → passthrough ${passthroughTarget}`);
+    } else {
+      // Default: take the request path and append to the configured target
+      targetUrl = `${target}${url.pathname}${url.search}`;
+      log(">", `${req.method} ${url.pathname}`);
+    }
 
     try {
       // Forward the request
