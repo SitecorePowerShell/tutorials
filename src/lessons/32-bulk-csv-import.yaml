@@ -9,7 +9,7 @@ description: |
 
   ```powershell
   Import-Csv -Path "$SitecoreDataFolder\contributors.csv" | ForEach-Object {
-      New-Item -Path "master:\content\Home\Contributors" `
+      New-Item -Path "master:\content\Home\About\Contributors" `
                -Name $_.Name `
                -ItemType "Sample/Sample Item"
   }
@@ -40,7 +40,7 @@ description: |
   > Because each row flows through the pipeline as a separate object, errors on one row don't stop the rest. Wrap risky parts in `try/catch` if you need transactional behavior.
 
 tasks:
-  - instruction: "Read the contributors CSV. Use `Import-Csv -Path \"data\\contributors.csv\"` to load every row."
+  - instruction: "Read the contributors CSV. Use `Import-Csv -Path \"$SitecoreDataFolder\\contributors.csv\"` to load every row."
     hint: 'Import-Csv -Path "$SitecoreDataFolder\contributors.csv"'
     nudge: "`Import-Csv -Path <file>` returns one object per CSV row, with the header as property names."
     starterCode: |
@@ -72,25 +72,25 @@ tasks:
       outputContains: "alice@example.com"
     successMessage: "Same pattern works for Sitecore items, search results, and CSV rows. The pipeline doesn't care about the source — only that each item has the property you ask for."
 
-  - instruction: "Create a Sitecore item for every CSV row. Pipe `Import-Csv` into `ForEach-Object` and call `New-Item -Path \"master:\\content\\Home\" -Name $_.Name -ItemType \"Sample/Sample Item\"`."
+  - instruction: "Create a Sitecore item for every CSV row. Pipe `Import-Csv` into `ForEach-Object` and call `New-Item -Path \"master:\\content\\Home\\About\\Contributors\" -Name $_.Name -ItemType \"Sample/Sample Item\"`."
     hint: |
       Import-Csv -Path "$SitecoreDataFolder\contributors.csv" | ForEach-Object {
-          New-Item -Path "master:\content\Home" -Name $_.Name -ItemType "Sample/Sample Item"
+          New-Item -Path "master:\content\Home\About\Contributors" -Name $_.Name -ItemType "Sample/Sample Item"
       }
     nudge: "Wrap `New-Item -Path <parent> -Name $_.Name -ItemType <template>` in `ForEach-Object { }`. The Path stays the same; the Name varies per row."
     starterCode: |
-      # Create one item per CSV row under master:\content\Home
+      # Create one item per CSV row under master:\content\Home\About\Contributors
     validation:
       type: "output"
       outputContains: "Alice"
-    successMessage: "Four rows in the CSV → four new items under /content/Home. This four-line script is the workhorse of real-world content migrations."
+    successMessage: "Four rows in the CSV → four new contributor items under /content/Home/About/Contributors. This four-line script is the workhorse of real-world content migrations."
 
-  - instruction: "Verify the items were created. Run `Get-ChildItem -Path \"master:\\content\\Home\"` and confirm the new items appear."
-    hint: 'Get-ChildItem -Path "master:\content\Home"'
+  - instruction: "Verify the items were created. Run `Get-ChildItem -Path \"master:\\content\\Home\\About\\Contributors\"` and confirm the new items appear."
+    hint: 'Get-ChildItem -Path "master:\content\Home\About\Contributors"'
     nudge: "`Get-ChildItem -Path <parent>` lists immediate children of the path. The new contributor items should appear alongside any pre-existing children."
     starterCode: |
       Import-Csv -Path "$SitecoreDataFolder\contributors.csv" | ForEach-Object {
-          New-Item -Path "master:\content\Home" -Name $_.Name -ItemType "Sample/Sample Item"
+          New-Item -Path "master:\content\Home\About\Contributors" -Name $_.Name -ItemType "Sample/Sample Item"
       }
 
       # Verify the new items exist

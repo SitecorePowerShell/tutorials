@@ -12,10 +12,10 @@ description: |
 
   Paths work like filesystem paths: `master:\content\Home\About` points to the About item under Home in the master database.
 
-  > [!TIP] The `/sitecore` prefix in paths is optional. These are equivalent:
+  > [!TIP] Drive-qualified and absolute paths are interchangeable. These are equivalent:
   ```
   master:\content\Home
-  master:\sitecore\content\Home
+  /sitecore/content/Home
   ```
 
   In this simulation, all paths resolve against the master database.
