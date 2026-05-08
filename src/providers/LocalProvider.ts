@@ -52,6 +52,11 @@ export class LocalProvider implements ExecutionProvider {
     return this.ctx;
   }
 
+  /** Snapshot of script-scope variables (for the Variables panel). */
+  getVariables(): Record<string, unknown> | null {
+    return this.ctx.variables;
+  }
+
   /** Expose the full tree object for validation (tutorial needs this) */
   getFullTree(): { sitecore: SitecoreNode } {
     return this.tree;

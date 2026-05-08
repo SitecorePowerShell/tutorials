@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import type { ConsoleEntry, SitecoreNode } from "../types";
 import { OutputPane } from "./OutputPane";
+import { VariablesPanel } from "./VariablesPanel";
 import { tokenize, renderTokens, renderTokensWithHighlights } from "./HighlightedCode";
 import { colors, gradients, fonts, fontSizes } from "../theme";
 import { getCompletions, type CompletionResult } from "../engine/completions";
@@ -28,6 +29,12 @@ interface IseEditorProps {
   commandHistory?: string[];
   tree?: { sitecore: SitecoreNode };
   userVariables?: string[];
+  /** Live snapshot of script-scope variables for the Variables tab. */
+  variablesSnapshot?: Record<string, unknown> | null;
+  /** Current working directory (rendered as $pwd in the Variables tab). */
+  cwd?: string;
+  /** Latest error message (rendered as $error in the Variables tab). */
+  latestError?: string;
   isMobile?: boolean;
   initialEditorHeight?: number;
   onEditorHeightChange?: (height: number) => void;
@@ -44,11 +51,16 @@ export const IseEditor = React.memo(function IseEditor({
   commandHistory = [],
   tree,
   userVariables,
+  variablesSnapshot,
+  cwd,
+  latestError,
   isMobile,
   initialEditorHeight,
   onEditorHeightChange,
   onShowHelp,
 }: IseEditorProps) {
+  const [bottomTab, setBottomTab] = useState<"output" | "variables">("output");
+  const userVarCount = variablesSnapshot ? Object.keys(variablesSnapshot).length : 0;
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const overlayRef = useRef<HTMLPreElement>(null);
   const lineNumRef = useRef<HTMLDivElement>(null);
@@ -824,23 +836,78 @@ export const IseEditor = React.memo(function IseEditor({
         />
       </div>
 
-      {/* Output pane */}
+      {/* Bottom tab strip — Output / Variables */}
+      <div
+        role="tablist"
+        aria-label="Script output panels"
+        style={{
+          display: "flex",
+          background: colors.bgPanel,
+          borderBottom: `1px solid ${colors.borderBase}`,
+          flexShrink: 0,
+          height: 32,
+        }}
+      >
+        {(["output", "variables"] as const).map((tab) => {
+          const active = bottomTab === tab;
+          const label = tab === "output" ? "Output" : "Variables";
+          const badge = tab === "variables" && userVarCount > 0 ? ` (${userVarCount})` : "";
+          return (
+            <button
+              key={tab}
+              role="tab"
+              aria-selected={active}
+              onClick={() => setBottomTab(tab)}
+              style={{
+                background: "transparent",
+                border: "none",
+                borderBottom: active
+                  ? `2px solid ${colors.accentPrimary}`
+                  : "2px solid transparent",
+                color: active ? colors.textPrimary : colors.textSecondary,
+                fontWeight: active ? 600 : 400,
+                fontSize: fontSizes.sm,
+                fontFamily: "inherit",
+                cursor: "pointer",
+                padding: "0 16px",
+                transition: "color 0.15s, border-color 0.15s",
+              }}
+            >
+              <span aria-hidden="true">{tab === "output" ? "📜 " : "🔣 "}</span>
+              {label}
+              {badge}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Bottom panel — Output OR Variables (tab-toggled) */}
       <div
         style={{
           flex: 1,
           overflow: "auto",
-          padding: "16px 20px",
           background: colors.bgDeep,
-          fontFamily: fonts.mono,
+          fontFamily: bottomTab === "output" ? fonts.mono : fonts.sans,
           fontSize: fontSizes.body,
           lineHeight: 1.6,
         }}
       >
-        <OutputPane
-          entries={consoleOutput}
-          isISE={true}
-          endRef={consoleEndRef}
-        />
+        {bottomTab === "output" ? (
+          <div style={{ padding: "16px 20px" }}>
+            <OutputPane
+              entries={consoleOutput}
+              isISE={true}
+              endRef={consoleEndRef}
+            />
+          </div>
+        ) : (
+          <VariablesPanel
+            variables={variablesSnapshot ?? null}
+            cwd={cwd ?? ""}
+            latestError={latestError}
+            isMobile={isMobile}
+          />
+        )}
       </div>
     </>
   );

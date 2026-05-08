@@ -65,6 +65,8 @@ export default function SPETutorial() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [cheatSheetOpen, setCheatSheetOpen] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
+  const [variablesSnapshot, setVariablesSnapshot] = useState<Record<string, unknown> | null>(null);
+  const [latestError, setLatestError] = useState<string | undefined>(undefined);
   const [connectionConfig, setConnectionConfig] = useState<ConnectionConfig | null>(null);
   const [connectionInfo, setConnectionInfo] = useState<ConnectionTestResult | null>(null);
   const tour = useTourState();
@@ -295,6 +297,16 @@ export default function SPETutorial() {
         if (providerResult.cwd && providerResult.cwd !== cwd) {
           setCwd(providerResult.cwd);
         }
+
+        // Snapshot variables for the Variables panel (LocalProvider only;
+        // remote providers don't expose runspace state). Shallow-clone so
+        // resetPerExecution on the next run doesn't mutate this React state.
+        if (typeof provider.getVariables === "function") {
+          const vars = provider.getVariables();
+          setVariablesSnapshot(vars ? { ...vars } : null);
+        }
+        const errEntry = providerResult.entries.find((e) => e.type === "error");
+        setLatestError(errEntry ? errEntry.text : undefined);
 
         // Validate against current task (always uses local engine)
         if (task) {
@@ -746,6 +758,9 @@ export default function SPETutorial() {
                     consoleOutput={consoleOutput}
                     commandHistory={commandHistory}
                     tree={treeForPanel}
+                    variablesSnapshot={variablesSnapshot}
+                    cwd={cwd}
+                    latestError={latestError}
                     isMobile={true}
                     onShowHelp={setHelpPanelCmdlet}
                   />
@@ -1152,6 +1167,9 @@ export default function SPETutorial() {
                       consoleOutput={consoleOutput}
                       commandHistory={commandHistory}
                       tree={treeForPanel}
+                      variablesSnapshot={variablesSnapshot}
+                      cwd={cwd}
+                      latestError={latestError}
                       initialEditorHeight={initialPrefs.editorHeight}
                       onEditorHeightChange={(h) => {
                         editorHeightRef.current = h;
@@ -1335,6 +1353,9 @@ export default function SPETutorial() {
                       onReset={handleReset}
                       consoleOutput={consoleOutput}
                       tree={treeForPanel}
+                      variablesSnapshot={variablesSnapshot}
+                      cwd={cwd}
+                      latestError={latestError}
                       initialEditorHeight={initialPrefs.editorHeight}
                       onEditorHeightChange={(h) => {
                         editorHeightRef.current = h;

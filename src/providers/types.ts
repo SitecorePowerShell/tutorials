@@ -59,4 +59,12 @@ export interface ExecutionProvider {
 
   /** Get the content tree root for the TreePanel */
   getTree(): SitecoreNode;
+
+  /**
+   * Snapshot of variables currently in scope (after the most recent execute).
+   * LocalProvider exposes the simulator's ScriptContext.variables; remote
+   * providers can return null since SPE Remoting doesn't surface the
+   * server-side runspace state.
+   */
+  getVariables?(): Record<string, unknown> | null;
 }
