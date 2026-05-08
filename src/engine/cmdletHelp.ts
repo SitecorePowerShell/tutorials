@@ -2025,6 +2025,40 @@ const FULL_HELP_3: CmdletHelp[] = [
     relatedCmdlets: ["Get-User", "Get-Role"],
   },
   {
+    name: "Import-Csv",
+    synopsis: "Reads a CSV file and emits one object per row.",
+    description:
+      "Loads a CSV file from disk and turns each row into an object whose properties are the CSV's column headers. The simulator ships with a few mock files under data\\ — list them by running Import-Csv with a bogus path to see the error.",
+    syntax: ["Import-Csv [-Path] <String> [-Delimiter <String>] [-Header <String[]>]"],
+    parameters: [
+      { name: "Path", type: "String", description: "Path to the CSV file.", required: true, position: 0 },
+      { name: "Delimiter", type: "String", description: "Column separator (default: comma).", required: false, position: null },
+      { name: "Header", type: "String[]", description: "Custom column names; overrides the first row.", required: false, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Read contributors", code: 'Import-Csv -Path "data\\contributors.csv"', description: "Shows each row as an item with Name/Email/Country columns." },
+      { title: "Example 2: Bulk-create from CSV", code: 'Import-Csv -Path "data\\contributors.csv" | ForEach-Object { New-Item -Path "master:\\content\\Home" -Name $_.Name -ItemType "Sample/Sample Item" }', description: "Most common real-world use of Import-Csv." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["ConvertFrom-Csv", "ForEach-Object", "New-Item"],
+  },
+  {
+    name: "ConvertFrom-Csv",
+    synopsis: "Parses CSV text from the pipeline into objects.",
+    description:
+      "Like Import-Csv but reads from a pipeline string instead of a file. Useful when the CSV content is embedded in a script (here-string) or fetched from a web service.",
+    syntax: ["<input> | ConvertFrom-Csv [-Delimiter <String>] [-Header <String[]>]"],
+    parameters: [
+      { name: "Delimiter", type: "String", description: "Column separator (default: comma).", required: false, position: null },
+      { name: "Header", type: "String[]", description: "Custom column names; overrides the first row.", required: false, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Parse here-string CSV", code: '@"\nName,Country\nAlice,US\nBob,UK\n"@ | ConvertFrom-Csv', description: "Row objects with Name/Country properties." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Import-Csv"],
+  },
+  {
     name: "Test-Account",
     synopsis: "Tests whether a user or role identity exists.",
     description: "Returns True if the given identity matches an existing user or role; False otherwise.",

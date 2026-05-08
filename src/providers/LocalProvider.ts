@@ -24,13 +24,17 @@ export class LocalProvider implements ExecutionProvider {
   }
 
   async executeScript(script: string): Promise<ProviderExecutionResult> {
-    this.resetPerExecution();
+    // ISE-style runs are isolated — every Run starts from a clean variable
+    // scope, matching the "press F8 from a fresh state" mental model.
+    this.resetPerExecution({ keepVariables: false });
     const result = executeScript(script, this.ctx);
     return this.buildResult(result.output, result.error);
   }
 
   async executeCommand(command: string): Promise<ProviderExecutionResult> {
-    this.resetPerExecution();
+    // REPL-style runs accumulate state — `$x = 5` in one command must still
+    // be visible to the next, like a real PowerShell console session.
+    this.resetPerExecution({ keepVariables: true });
     const result = executeCommand(command, this.ctx);
     return this.buildResult(result.output, result.error);
   }
@@ -62,11 +66,13 @@ export class LocalProvider implements ExecutionProvider {
     return this.tree;
   }
 
-  private resetPerExecution(): void {
+  private resetPerExecution(opts: { keepVariables: boolean }): void {
     this.ctx.outputs = [];
     this.ctx.errors = [];
     this.ctx.dialogRequests = [];
-    this.ctx.variables = {};
+    if (!opts.keepVariables) {
+      this.ctx.variables = {};
+    }
   }
 
   private buildResult(

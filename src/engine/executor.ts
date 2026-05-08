@@ -25,8 +25,34 @@ import {
   executeSearch,
   entriesToItems,
   parseCriteriaHashtables,
+  levenshtein,
 } from "./searchIndex";
 import { getCmdletHelp, formatHelpText, formatCmdletList } from "./cmdletHelp";
+import { CMDLET_NAMES, CMDLET_ALIASES as ALIAS_TO_CANONICAL } from "./completions";
+
+/**
+ * Suggest the closest known cmdlet name for a typo. Returns the suggestion
+ * (canonical form) or null if nothing is close enough.
+ */
+function suggestCmdlet(typed: string): string | null {
+  const t = typed.toLowerCase();
+  // Aliases first — exact-alias match returns the canonical name
+  if (ALIAS_TO_CANONICAL[t]) return ALIAS_TO_CANONICAL[t];
+
+  let best: { name: string; dist: number } | null = null;
+  for (const name of CMDLET_NAMES) {
+    const dist = levenshtein(t, name.toLowerCase());
+    if (!best || dist < best.dist) {
+      best = { name, dist };
+    }
+  }
+  // Cap to ~25% of the typed string's length, with a floor of 2 and ceiling of 4 —
+  // tight enough that "Get-Childitem" → Get-ChildItem matches but
+  // "Banana" doesn't suggest a random cmdlet.
+  const threshold = Math.min(4, Math.max(2, Math.floor(typed.length / 4)));
+  if (best && best.dist <= threshold && best.dist > 0) return best.name;
+  return null;
+}
 import {
   findUser,
   filterUsers,
@@ -39,6 +65,33 @@ import {
   testAccount,
   testItemAcl,
 } from "./securityStore";
+import { readMockFile, parseCsv, listMockFiles } from "./mockFiles";
+
+/**
+ * Wrap a parsed CSV row in a SitecoreItem-shaped object so it flows naturally
+ * through Where-Object / ForEach-Object / Format-Table. The columns become
+ * fields accessible via $_.<column>.
+ */
+function csvRowToItem(
+  row: Record<string, string>,
+  idx: number,
+  sourcePath: string
+): SitecoreItem {
+  const firstKey = Object.keys(row)[0];
+  return {
+    name: row[firstKey] || `Row${idx}`,
+    path: `${sourcePath}:row${idx}`,
+    node: {
+      _id: `csv-${idx}`,
+      _template: "Csv Row",
+      _templateFullName: "csv/Csv Row",
+      _version: 1,
+      _fields: { ...row },
+      _children: {},
+    },
+    _isCsvRow: true,
+  } as SitecoreItem;
+}
 
 /** Expand a wildcard `*` in a -Property list to all properties of the first item */
 function expandPropertyWildcard(specs: PropertySpec[], pipelineData: SitecoreItem[]): PropertySpec[] {
@@ -2164,6 +2217,38 @@ export function executeCommandWithContext(
           output: testAccount(identity) ? "True" : "False",
           error: null,
         };
+      } else if (cmdLower === "import-csv") {
+        const path = String(
+          stage.params.Path ||
+            stage.params.path ||
+            (stage.params._positional && stage.params._positional[0]) ||
+            ""
+        );
+        if (!path) {
+          return { output: "", error: "Import-Csv : -Path is required." };
+        }
+        const content = readMockFile(path);
+        if (content === null) {
+          return {
+            output: "",
+            error: `Import-Csv : Cannot find file '${path}'. Available mock files: ${listMockFiles().join(", ")}`,
+          };
+        }
+        const rows = parseCsv(content);
+        pipelineData = rows.map((row, i) =>
+          csvRowToItem(row, i, path.replace(/^["']|["']$/g, ""))
+        ) as unknown as SitecoreItemArray;
+      } else if (cmdLower === "convertfrom-csv") {
+        if (!pipelineData || !Array.isArray(pipelineData) || pipelineData.length === 0) {
+          return { output: "", error: "ConvertFrom-Csv : No pipeline input." };
+        }
+        const text = pipelineData
+          .map((p) => (typeof p === "string" ? p : (p as SitecoreItem).name ?? ""))
+          .join("\n");
+        const rows = parseCsv(text);
+        pipelineData = rows.map((row, i) =>
+          csvRowToItem(row, i, "<pipeline>")
+        ) as unknown as SitecoreItemArray;
       } else if (cmdLower === "get-searchfilter") {
         return {
           output:
@@ -2174,9 +2259,13 @@ export function executeCommandWithContext(
           error: null,
         };
       } else {
+        const suggestion = suggestCmdlet(stage.cmdlet);
+        const suggestionHint = suggestion
+          ? ` Did you mean ${suggestion}?`
+          : " Run Get-Help with no arguments to list all available commands.";
         return {
           output: "",
-          error: `${stage.cmdlet} : The term '${stage.cmdlet}' is not recognized. Supported commands: Get-Item, Get-ChildItem, Set-Location, Where-Object, ForEach-Object, Select-Object, Sort-Object, Group-Object, Measure-Object, Get-Member, Get-Alias, Get-Help, Show-ListView, New-Item, Remove-Item, Move-Item, Copy-Item, Rename-Item, Set-ItemProperty, Format-Table, ConvertTo-Json, Write-Host, Write-Error, Write-Warning, Show-Alert, Read-Variable, Show-Confirm, Show-Input, Show-YesNoCancel, Show-FieldEditor, Show-ModalDialog, Find-Item, Publish-Item, Initialize-Item, Import-Function, New-DialogBuilder, Add-TextField, Add-Checkbox, Add-Dropdown, Invoke-Dialog, New-SearchBuilder, Add-TemplateFilter, Add-FieldContains, Add-FieldEquals, Add-DateRangeFilter, Add-SearchFilter, Invoke-Search, Get-User, Get-Role, Get-RoleMember, New-User, New-Role, Add-RoleMember, Remove-RoleMember, Test-ItemAcl, Test-Account`,
+          error: `${stage.cmdlet} : The term '${stage.cmdlet}' is not recognized.${suggestionHint}`,
         };
       }
     } catch (err) {
@@ -2247,5 +2336,13 @@ export function removeFromTree(
 /** Backward-compatible wrapper — single command execution without context */
 export function executeCommand(input: string, sharedCtx?: ScriptContext): ExecutionResult {
   const ctx = sharedCtx ?? new ScriptContext();
-  return executeCommandWithContext(input, ctx);
+  // Route through executeLine so REPL commands handle assignments
+  // (`$x = 5`), foreach loops, if/else, etc. — same behavior as a one-line
+  // script. Returning the accumulated ctx state keeps the public shape
+  // consistent with executeScript-flavored callers.
+  executeLine(input, ctx);
+  return {
+    output: ctx.outputs.join("\n\n"),
+    error: ctx.errors.length > 0 ? ctx.errors.join("\n") : null,
+  };
 }

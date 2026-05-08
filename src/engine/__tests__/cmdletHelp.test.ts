@@ -224,7 +224,7 @@ describe("Get-Help executor integration", () => {
         "Set-Location", "Show-Alert", "Show-Confirm", "Show-FieldEditor", "Show-Input",
         "Show-ListView", "Show-ModalDialog", "Show-YesNoCancel", "Sort-Object",
         "Test-Account", "Test-ItemAcl", "Where-Object", "Write-Error", "Write-Host",
-        "Write-Output", "Write-Warning",
+        "Write-Output", "Write-Warning", "Import-Csv", "ConvertFrom-Csv",
       ];
       const missing = executorCmdlets.filter((name) => !getCmdletHelp(name));
       expect(missing).toEqual([]);

@@ -195,7 +195,7 @@ function matchesCriterion(
 }
 
 /** Simple Levenshtein distance for fuzzy matching */
-function levenshtein(a: string, b: string): number {
+export function levenshtein(a: string, b: string): number {
   const m = a.length;
   const n = b.length;
   if (m === 0) return n;

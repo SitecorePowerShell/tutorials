@@ -33,6 +33,7 @@ import lesson28 from "./28-real-world-scenarios.yaml";
 import lesson29 from "./29-dialog-builder.yaml";
 import lesson30 from "./30-search-builder.yaml";
 import lesson31 from "./31-security.yaml";
+import lesson32 from "./32-bulk-csv-import.yaml";
 
 export const LESSONS: Lesson[] = [
   // Level 0 – Visual Builder
@@ -44,7 +45,7 @@ export const LESSONS: Lesson[] = [
   // Level 3 – Content Management
   lesson09, lesson10, lesson11, lesson24, lesson25, lesson27,
   // Level 4 – Advanced Techniques
-  lesson12, lesson13, lesson14, lesson15, lesson16, lesson17, lesson18, lesson26, lesson28,
+  lesson12, lesson13, lesson14, lesson15, lesson16, lesson17, lesson18, lesson32, lesson26, lesson28,
   // Level 5 – Content Search
   lesson19, lesson20, lesson21, lesson22,
   // Level 6 – Interactive Scripts

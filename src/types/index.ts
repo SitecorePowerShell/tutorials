@@ -22,6 +22,8 @@ export interface SitecoreItem {
   path?: string;
   /** True when returned by Find-Item (SearchResultItem), cleared by Initialize-Item */
   _isSearchResult?: boolean;
+  /** True when returned by Import-Csv / ConvertFrom-Csv */
+  _isCsvRow?: boolean;
 }
 
 /** A property specifier — either a plain name or a calculated @{} expression */

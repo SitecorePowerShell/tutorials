@@ -78,4 +78,22 @@ describe("LocalProvider", () => {
     );
     expect(result.cwd).toBe("/sitecore/content/Home");
   });
+
+  it("preserves variables across REPL commands (executeCommand)", async () => {
+    await provider.executeCommand('$greeting = "hello"');
+    expect(provider.getVariables()?.greeting).toBe("hello");
+
+    // A second REPL command should still see $greeting
+    await provider.executeCommand("Get-Location");
+    expect(provider.getVariables()?.greeting).toBe("hello");
+  });
+
+  it("clears variables between ISE script runs (executeScript)", async () => {
+    await provider.executeScript('$temp = "first run"');
+    expect(provider.getVariables()?.temp).toBe("first run");
+
+    // A fresh script run starts from a clean scope
+    await provider.executeScript("Get-Location");
+    expect(provider.getVariables()?.temp).toBeUndefined();
+  });
 });

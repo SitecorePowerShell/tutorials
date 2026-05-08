@@ -61,6 +61,7 @@ const LESSON_SECTIONS: Record<string, string[]> = {
   "dialog-builder": ["dialog", "pipeline", "automatics"],
   "search-builder": ["search", "find", "pipeline"],
   "security": ["security", "pipeline"],
+  "bulk-csv-import": ["bulk", "items", "pipeline", "automatics"],
 };
 
 interface Row {
@@ -174,6 +175,24 @@ const SECTIONS: Section[] = [
       { left: '-OrderBy "_name"', right: "sort results" },
       { left: "-First 10  /  -Last 10", right: "paginate" },
       { left: '-Where "TemplateName = @0" -WhereValues "Article"', right: "Dynamic LINQ" },
+    ],
+  },
+  {
+    id: "bulk",
+    title: "Bulk CSV import",
+    rows: [
+      { left: 'Import-Csv -Path "data\\contributors.csv"', right: "read every row as an object" },
+      { left: 'Import-Csv … | Where-Object Country -eq "US"', right: "filter rows" },
+      { left: "Import-Csv … | Select-Object Name, Email", right: "pick columns" },
+      {
+        left: 'Import-Csv … | ForEach-Object { New-Item -Path … -Name $_.Name -ItemType … }',
+        right: "bulk create one item per row",
+      },
+      {
+        left: 'Import-Csv … | ForEach-Object { Set-ItemProperty -Path … -Name "Email" -Value $_.Email }',
+        right: "bulk update existing items",
+      },
+      { left: '@" … "@ | ConvertFrom-Csv', right: "parse a here-string instead of a file" },
     ],
   },
   {

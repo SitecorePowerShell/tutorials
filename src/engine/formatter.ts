@@ -52,6 +52,19 @@ export function formatItemTable(items: SitecoreItem[]): string {
     return formatColumns(headers, rows);
   }
 
+  // CSV rows (from Import-Csv / ConvertFrom-Csv) — render the row's actual
+  // columns so users see the same headers the file had.
+  if (items[0]._isCsvRow) {
+    const fields = items[0].node._fields ?? {};
+    const headers = Object.keys(fields);
+    if (headers.length > 0) {
+      const rows = items.map((item) =>
+        headers.map((h) => String(item.node._fields?.[h] ?? ""))
+      );
+      return formatColumns(headers, rows);
+    }
+  }
+
   // SearchResultItem (from Find-Item) shows a reduced column set
   if (items[0]._isSearchResult) {
     const headers = ["Name", "Language", "Id", "TemplateName", "Path"];

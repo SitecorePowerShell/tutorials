@@ -56,6 +56,8 @@ export const CMDLET_NAMES = [
   "Remove-RoleMember",
   "Test-ItemAcl",
   "Test-Account",
+  "Import-Csv",
+  "ConvertFrom-Csv",
 ];
 
 /** Cmdlet aliases */
@@ -143,6 +145,8 @@ const CMDLET_PARAMS: Record<string, string[]> = {
   "Remove-RoleMember": ["-Identity", "-Members"],
   "Test-ItemAcl": ["-Path", "-Item", "-Id", "-AccessRight", "-Identity"],
   "Test-Account": ["-Identity"],
+  "Import-Csv": ["-Path", "-Delimiter", "-Header"],
+  "ConvertFrom-Csv": ["-Delimiter", "-Header"],
 };
 
 /** .NET type names — short and fully-qualified forms */
