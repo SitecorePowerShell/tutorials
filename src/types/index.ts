@@ -75,14 +75,26 @@ export interface ExecutionResult {
   dialogRequests?: DialogRequest[];
 }
 
+export interface DialogField {
+  /** Friendly control name — "TextField", "Checkbox", "Dropdown", etc. */
+  kind: string;
+  /** Variable name (without `$`) that this field would bind to in real SPE */
+  name: string;
+  /** User-facing label */
+  title: string;
+  mandatory?: boolean;
+}
+
 export interface DialogRequest {
-  type: "alert" | "read-variable" | "listview";
+  type: "alert" | "read-variable" | "listview" | "dialog-builder";
   message?: string;
   title?: string;
   description?: string;
   itemCount?: number;
   columns?: string[];
   rows?: string[][];
+  /** Populated for type === "dialog-builder" */
+  fields?: DialogField[];
 }
 
 export interface ScriptResult {
@@ -257,8 +269,16 @@ interface DialogListViewEntry {
   rows: string[][];
 }
 
+interface DialogBuilderEntry {
+  type: "dialog-builder";
+  text: string;
+  title: string;
+  fields: DialogField[];
+}
+
 export type ConsoleEntry =
   | BaseConsoleEntry
   | DialogAlertEntry
   | DialogReadVarEntry
-  | DialogListViewEntry;
+  | DialogListViewEntry
+  | DialogBuilderEntry;

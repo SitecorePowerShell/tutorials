@@ -1,0 +1,136 @@
+id: "dialog-builder"
+module: "Level 6 – Interactive Scripts"
+order: 29
+title: "Building Interactive Dialogs"
+difficulty: "advanced"
+mode: "ise"
+description: |
+  SPE scripts often need to ask the user for input — a path to operate on, a flag to publish, a value to write to a field. The classic way is `Read-Variable` with a hashtable of parameters, but SPE 9.0+ ships a much nicer fluent API: **DialogBuilder**.
+
+  DialogBuilder is a pipeline-based extension library. You create a builder, pipe it through `Add-*` field commands, and finish with `Invoke-Dialog`:
+
+  ```powershell
+  Import-Function -Name DialogBuilder
+
+  $dialog = New-DialogBuilder -Title "Content Editor" -ShowHints
+  $dialog | Add-TextField -Name "userName" -Title "User Name" -Mandatory
+  $dialog | Add-Checkbox -Name "publish" -Title "Publish after save"
+
+  $result = $dialog | Invoke-Dialog
+  if ($result.Result -eq "ok") {
+      Write-Host "User: $userName, Publish: $publish"
+  }
+  ```
+
+  Field commands accept the builder from the pipeline and add a control. After `Invoke-Dialog`, the field variables (`$userName`, `$publish`) are bound automatically in script scope.
+
+  > [!NOTE] Why DialogBuilder over `Read-Variable`?
+  > - **Type inference** — `Add-Checkbox`, `Add-DateTimePicker`, `Add-ItemPicker` pick the right editor for you.
+  > - **Readable composition** — one field per line, no nested hashtables.
+  > - **Validation, tabs, conditional visibility, JSON export** — all built in.
+  >
+  > See the [DialogBuilder documentation](https://doc.sitecorepowershell.com/modules/dialog-builder) for the full command reference.
+
+  Common field commands:
+
+  | Command | Adds |
+  | :--- | :--- |
+  | `Add-TextField` | Single-line input (supports `-IsPassword`, `-IsEmail`, `-IsNumber`) |
+  | `Add-MultiLineTextField` | Text area (`-Lines N`) |
+  | `Add-Checkbox` | Boolean checkbox |
+  | `Add-Dropdown` / `Add-RadioButtons` / `Add-Checklist` | Selection from `-Options` hashtable |
+  | `Add-DateTimePicker` | Date/time picker (`-DateOnly`) |
+  | `Add-ItemPicker` / `Add-Droptree` / `Add-TreeList` | Sitecore item pickers |
+  | `Add-UserPicker` / `Add-RolePicker` | Security pickers |
+
+tasks:
+  - instruction: "Load the DialogBuilder library so its commands become available in your script."
+    hint: "Import-Function -Name DialogBuilder"
+    nudge: "Use `Import-Function` with `-Name DialogBuilder`."
+    starterCode: |
+      # Load the DialogBuilder extension library
+    validation:
+      type: "output"
+      outputContains: "Loaded function library: DialogBuilder"
+    successMessage: "The DialogBuilder commands are now available. In real SPE this loads a script library item from /sitecore/system/Modules/PowerShell."
+
+  - instruction: "Create a new dialog builder with the title `Content Editor` and store it in a variable named `$dialog`."
+    hint: |
+      $dialog = New-DialogBuilder -Title "Content Editor"
+    nudge: "Use `New-DialogBuilder -Title \"...\"` and assign the result to `$dialog`."
+    starterCode: |
+      Import-Function -Name DialogBuilder
+
+      # Create the builder
+    validation:
+      type: "output"
+      outputContains: 'DialogBuilder created: "Content Editor"'
+    successMessage: "`$dialog` now holds a builder. The next step is to pipe it through Add-* commands to attach fields."
+
+  - instruction: "Pipe `$dialog` into `Add-TextField` to add a mandatory text field. Use `-Name userName` and `-Title \"User Name\"`."
+    hint: |
+      $dialog | Add-TextField -Name "userName" -Title "User Name" -Mandatory
+    nudge: "Pipe `$dialog | Add-TextField -Name <var> -Title <label> -Mandatory`. The `-Name` value becomes the script variable populated from this field."
+    starterCode: |
+      Import-Function -Name DialogBuilder
+      $dialog = New-DialogBuilder -Title "Content Editor"
+
+      # Add a mandatory text field for the user name
+    validation:
+      type: "output"
+      outputContains: "TextField 'userName' — User Name *"
+    successMessage: "Field commands mutate the builder in place. After Invoke-Dialog, `$userName` will hold whatever the user typed."
+
+  - instruction: "Add a checkbox field. Use `-Name publish` and `-Title \"Publish after save\"`."
+    hint: |
+      $dialog | Add-Checkbox -Name "publish" -Title "Publish after save"
+    nudge: "Use `Add-Checkbox` with `-Name` and `-Title`. The bound variable will be `$true` or `$false`."
+    starterCode: |
+      Import-Function -Name DialogBuilder
+      $dialog = New-DialogBuilder -Title "Content Editor"
+      $dialog | Add-TextField -Name "userName" -Title "User Name" -Mandatory
+
+      # Add the publish checkbox
+    validation:
+      type: "output"
+      outputContains: "Checkbox 'publish' — Publish after save"
+    successMessage: "DialogBuilder picked the checkbox editor automatically because of the cmdlet — no `-Editor` parameter needed."
+
+  - instruction: "Add a dropdown for language selection. Use `-Name language`, `-Title \"Language\"`, and an `-Options` hashtable with `en` mapping to `English` and `fr-FR` mapping to `French`."
+    hint: |
+      $dialog | Add-Dropdown -Name "language" -Title "Language" -Options @{
+          "en"    = "English"
+          "fr-FR" = "French"
+      }
+    nudge: "`Add-Dropdown` takes `-Options @{key = label; ...}`. The user sees the labels; the bound variable holds the key."
+    starterCode: |
+      Import-Function -Name DialogBuilder
+      $dialog = New-DialogBuilder -Title "Content Editor"
+      $dialog | Add-TextField -Name "userName" -Title "User Name" -Mandatory
+      $dialog | Add-Checkbox -Name "publish" -Title "Publish after save"
+
+      # Add the language dropdown
+    validation:
+      type: "output"
+      outputContains: "Dropdown 'language' — Language"
+    successMessage: "Selection controls share the same `-Options` shape — swap `Add-Dropdown` for `Add-RadioButtons` or `Add-Checklist` and the rest of your code stays the same."
+
+  - instruction: "Show the dialog and capture its result. Pipe `$dialog` into `Invoke-Dialog` and assign the result to `$result`."
+    hint: |
+      $result = $dialog | Invoke-Dialog
+    nudge: "Use `$result = $dialog | Invoke-Dialog`. The result has `.Result` (\"ok\" or \"cancel\"), `.Title`, and `.FieldCount`."
+    starterCode: |
+      Import-Function -Name DialogBuilder
+      $dialog = New-DialogBuilder -Title "Content Editor"
+      $dialog | Add-TextField -Name "userName" -Title "User Name" -Mandatory
+      $dialog | Add-Checkbox -Name "publish" -Title "Publish after save"
+      $dialog | Add-Dropdown -Name "language" -Title "Language" -Options @{
+          "en"    = "English"
+          "fr-FR" = "French"
+      }
+
+      # Show the dialog and capture the result
+    validation:
+      type: "output"
+      outputContains: 'Dialog "Content Editor" shown with 3 field(s)'
+    successMessage: "After Invoke-Dialog returns, $userName, $publish, and $language are bound automatically — no manual unpacking. From here you'd guard on `$result.Result -eq \"ok\"` and run the action."

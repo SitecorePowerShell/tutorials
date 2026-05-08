@@ -105,6 +105,13 @@ export class LocalProvider implements ExecutionProvider {
           title: dr.title || "Input",
           description: dr.description || "",
         });
+      } else if (dr.type === "dialog-builder") {
+        entries.push({
+          type: "dialog-builder",
+          text: `Dialog: ${dr.title || "Untitled"}`,
+          title: dr.title || "Dialog",
+          fields: dr.fields || [],
+        });
       }
     }
 

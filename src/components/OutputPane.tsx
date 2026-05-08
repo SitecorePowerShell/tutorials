@@ -165,7 +165,7 @@ export function OutputPane({ entries, isISE, isBuilder, endRef }: OutputPaneProp
               {entry.text}
             </div>
           )}
-          {(entry.type === "dialog-alert" || entry.type === "dialog-read-variable" || entry.type === "dialog-listview") && (
+          {(entry.type === "dialog-alert" || entry.type === "dialog-read-variable" || entry.type === "dialog-listview" || entry.type === "dialog-builder") && (
             <DialogEntry entry={entry} />
           )}
         </div>

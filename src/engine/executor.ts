@@ -571,6 +571,14 @@ export function executeCommandWithContext(
       ) {
         pipelineData = [varVal as SitecoreItem];
         continue;
+      } else if (
+        varVal &&
+        typeof varVal === "object" &&
+        "_dialogBuilder" in (varVal as object)
+      ) {
+        // DialogBuilder marker — flow through pipeline so Add-* cmdlets receive it
+        pipelineData = [varVal as unknown as SitecoreItem];
+        continue;
       }
     }
 
@@ -1578,10 +1586,142 @@ export function executeCommandWithContext(
           output: `Show-ModalDialog\n   (In real SPE, this opens a custom XAML modal dialog)`,
           error: null,
         };
+      } else if (cmdLower === "import-function") {
+        const name =
+          stage.params.Name || stage.params.name ||
+          (stage.params._positional && stage.params._positional[0]) || "";
+        return {
+          output: name
+            ? `Loaded function library: ${name}`
+            : `Loaded function library`,
+          error: null,
+        };
+      } else if (cmdLower === "new-dialogbuilder") {
+        const title =
+          stage.params.Title || stage.params.title ||
+          (stage.params._positional && stage.params._positional[0]) || "Untitled";
+        const builder = {
+          _dialogBuilder: true,
+          title: String(title),
+          fields: [] as import("../types").DialogField[],
+        };
+        // Push to ctx.outputs directly so the message stays visible when the
+        // result is captured via `$dialog = New-DialogBuilder ...` (assignment
+        // would otherwise swallow the output field).
+        ctx.outputs.push(`📋 DialogBuilder created: "${title}"`);
+        return {
+          output: "",
+          error: null,
+          // Wrap in array so variable assignment auto-unwraps to the builder object
+          pipelineData: [builder] as unknown as SitecoreItemArray,
+        };
+      } else if (
+        cmdLower === "add-textfield" ||
+        cmdLower === "add-multilinetextfield" ||
+        cmdLower === "add-linkfield" ||
+        cmdLower === "add-checkbox" ||
+        cmdLower === "add-tristatecheckbox" ||
+        cmdLower === "add-radiobuttons" ||
+        cmdLower === "add-dropdown" ||
+        cmdLower === "add-checklist" ||
+        cmdLower === "add-datetimepicker" ||
+        cmdLower === "add-itempicker" ||
+        cmdLower === "add-droplink" ||
+        cmdLower === "add-droptree" ||
+        cmdLower === "add-treelist" ||
+        cmdLower === "add-multilist" ||
+        cmdLower === "add-userpicker" ||
+        cmdLower === "add-rolepicker" ||
+        cmdLower === "add-infotext" ||
+        cmdLower === "add-dialogfield"
+      ) {
+        const name = stage.params.Name || stage.params.name || "";
+        const title = stage.params.Title || stage.params.title || "";
+        const mandatory =
+          stage.switches.some((s) => s.toLowerCase() === "mandatory")
+            ? " *"
+            : "";
+        // Map cmdlet to a friendly control label
+        const labelMap: Record<string, string> = {
+          "add-textfield": "TextField",
+          "add-multilinetextfield": "MultiLineTextField",
+          "add-linkfield": "LinkField",
+          "add-checkbox": "Checkbox",
+          "add-tristatecheckbox": "TristateCheckbox",
+          "add-radiobuttons": "RadioButtons",
+          "add-dropdown": "Dropdown",
+          "add-checklist": "Checklist",
+          "add-datetimepicker": "DateTimePicker",
+          "add-itempicker": "ItemPicker",
+          "add-droplink": "Droplink",
+          "add-droptree": "Droptree",
+          "add-treelist": "TreeList",
+          "add-multilist": "MultiList",
+          "add-userpicker": "UserPicker",
+          "add-rolepicker": "RolePicker",
+          "add-infotext": "InfoText",
+          "add-dialogfield": "Field",
+        };
+        const label = labelMap[cmdLower] || "Field";
+        const line = `  + ${label} '${name}' — ${title}${mandatory}`;
+
+        // Mutate the upstream builder so $dialog accumulates fields for the
+        // eventual Invoke-Dialog. Don't flow the builder forward — the marker
+        // is not a SitecoreItem and would confuse the default formatter.
+        const builder =
+          pipelineData &&
+          Array.isArray(pipelineData) &&
+          pipelineData.length > 0 &&
+          (pipelineData[0] as unknown as { _dialogBuilder?: boolean })._dialogBuilder
+            ? (pipelineData[0] as unknown as { fields: import("../types").DialogField[] })
+            : null;
+        if (builder) {
+          builder.fields.push({
+            kind: label,
+            name: String(name),
+            title: String(title),
+            mandatory: !!mandatory,
+          });
+        }
+
+        return { output: line, error: null };
+      } else if (cmdLower === "invoke-dialog") {
+        const builder =
+          pipelineData &&
+          Array.isArray(pipelineData) &&
+          pipelineData.length > 0 &&
+          (pipelineData[0] as unknown as { _dialogBuilder?: boolean })._dialogBuilder
+            ? (pipelineData[0] as unknown as {
+                title: string;
+                fields: import("../types").DialogField[];
+              })
+            : null;
+        if (!builder) {
+          return {
+            output: "",
+            error:
+              "Invoke-Dialog : Pipeline input is not a DialogBuilder. Pipe a value created by New-DialogBuilder.",
+          };
+        }
+        const summary =
+          `🪟 Dialog "${builder.title}" shown with ${builder.fields.length} field(s)\n` +
+          `   Result: ok`;
+        // Push to outputs directly so the summary is visible even when the
+        // statement is `$result = $dialog | Invoke-Dialog` (assignment would
+        // otherwise swallow the cmdlet's output text).
+        ctx.outputs.push(summary);
+        // Also push a structured dialog request so the UI can render a visual
+        // mock of the dialog with its fields.
+        ctx.dialogRequests.push({
+          type: "dialog-builder",
+          title: builder.title,
+          fields: builder.fields,
+        });
+        return { output: "", error: null };
       } else {
         return {
           output: "",
-          error: `${stage.cmdlet} : The term '${stage.cmdlet}' is not recognized. Supported commands: Get-Item, Get-ChildItem, Set-Location, Where-Object, ForEach-Object, Select-Object, Sort-Object, Group-Object, Measure-Object, Get-Member, Get-Alias, Get-Help, Show-ListView, New-Item, Remove-Item, Move-Item, Copy-Item, Rename-Item, Set-ItemProperty, Format-Table, ConvertTo-Json, Write-Host, Write-Error, Write-Warning, Show-Alert, Read-Variable, Show-Confirm, Show-Input, Show-YesNoCancel, Show-FieldEditor, Show-ModalDialog, Find-Item, Publish-Item, Initialize-Item`,
+          error: `${stage.cmdlet} : The term '${stage.cmdlet}' is not recognized. Supported commands: Get-Item, Get-ChildItem, Set-Location, Where-Object, ForEach-Object, Select-Object, Sort-Object, Group-Object, Measure-Object, Get-Member, Get-Alias, Get-Help, Show-ListView, New-Item, Remove-Item, Move-Item, Copy-Item, Rename-Item, Set-ItemProperty, Format-Table, ConvertTo-Json, Write-Host, Write-Error, Write-Warning, Show-Alert, Read-Variable, Show-Confirm, Show-Input, Show-YesNoCancel, Show-FieldEditor, Show-ModalDialog, Find-Item, Publish-Item, Initialize-Item, Import-Function, New-DialogBuilder, Add-TextField, Add-Checkbox, Add-Dropdown, Invoke-Dialog`,
         };
       }
     } catch (err) {

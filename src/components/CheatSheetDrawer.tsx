@@ -58,6 +58,7 @@ const LESSON_SECTIONS: Record<string, string[]> = {
   "error-handling": ["automatics"],
   "publishing": ["items"],
   "real-world-scenarios": [],
+  "dialog-builder": ["dialog", "pipeline", "automatics"],
 };
 
 interface Row {
@@ -182,6 +183,43 @@ const SECTIONS: Section[] = [
       { left: "[Math]::Round($x, 2)", right: "round to 2 decimals" },
       { left: "[guid]::NewGuid()", right: "new GUID" },
       { left: "[string]::IsNullOrEmpty($s)", right: "blank check" },
+    ],
+  },
+  {
+    id: "dialog",
+    title: "DialogBuilder",
+    rows: [
+      { left: "Import-Function -Name DialogBuilder", right: "load the library (once)" },
+      {
+        left: '$dialog = New-DialogBuilder -Title "..." -ShowHints',
+        right: "create a builder",
+      },
+      {
+        left: '$dialog | Add-TextField -Name "x" -Title "X" -Mandatory',
+        right: "text input (use -IsPassword/-IsEmail/-IsNumber)",
+      },
+      {
+        left: '$dialog | Add-MultiLineTextField -Name "x" -Title "X" -Lines 5',
+        right: "text area",
+      },
+      { left: '$dialog | Add-Checkbox -Name "x" -Title "X"', right: "boolean checkbox" },
+      {
+        left: '$dialog | Add-Dropdown -Name "x" -Title "X" -Options @{...}',
+        right: "single select (also Add-RadioButtons, Add-Checklist)",
+      },
+      {
+        left: '$dialog | Add-DateTimePicker -Name "x" -Title "X" -DateOnly',
+        right: "date / datetime",
+      },
+      {
+        left: '$dialog | Add-ItemPicker -Name "x" -Title "X" -Root "/sitecore/content"',
+        right: "Sitecore item picker (also Add-Droptree, Add-TreeList)",
+      },
+      { left: "$result = $dialog | Invoke-Dialog", right: "show; bind $-vars to scope" },
+      {
+        left: "Layout: -Tab \"Foo\"  /  -Columns N  /  -ParentGroupId N",
+        right: "tabs, 12-col grid, conditional show/hide",
+      },
     ],
   },
 ];

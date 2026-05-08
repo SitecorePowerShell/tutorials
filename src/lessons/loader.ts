@@ -30,6 +30,7 @@ import lesson25 from "./25-field-deep-dive.yaml";
 import lesson26 from "./26-error-handling.yaml";
 import lesson27 from "./27-publishing.yaml";
 import lesson28 from "./28-real-world-scenarios.yaml";
+import lesson29 from "./29-dialog-builder.yaml";
 
 export const LESSONS: Lesson[] = [
   // Level 0 – Visual Builder
@@ -44,6 +45,8 @@ export const LESSONS: Lesson[] = [
   lesson12, lesson13, lesson14, lesson15, lesson16, lesson17, lesson18, lesson26, lesson28,
   // Level 5 – Content Search
   lesson19, lesson20, lesson21, lesson22,
+  // Level 6 – Interactive Scripts
+  lesson29,
   // Playground
   lesson23,
 ] as Lesson[];

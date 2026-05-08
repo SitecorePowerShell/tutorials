@@ -4,7 +4,7 @@ import { colors, fontSizes } from "../theme";
 
 type DialogConsoleEntry = Extract<
   ConsoleEntry,
-  { type: "dialog-alert" | "dialog-read-variable" | "dialog-listview" }
+  { type: "dialog-alert" | "dialog-read-variable" | "dialog-listview" | "dialog-builder" }
 >;
 
 const titleBarStyle: React.CSSProperties = {
@@ -199,6 +199,130 @@ function ListViewDialog({ entry }: { entry: Extract<ConsoleEntry, { type: "dialo
   );
 }
 
+function FormDialog({ entry }: { entry: Extract<ConsoleEntry, { type: "dialog-builder" }> }) {
+  const mockInputStyle: React.CSSProperties = {
+    width: "100%",
+    background: colors.bgPanel,
+    border: `1px solid ${colors.borderDim}`,
+    borderRadius: 3,
+    padding: "5px 8px",
+    color: colors.textDimmed,
+    fontSize: fontSizes.sm,
+    fontFamily: "inherit",
+    boxSizing: "border-box",
+    display: "flex",
+    alignItems: "center",
+    minHeight: 26,
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: "block",
+    fontSize: fontSizes.xs,
+    color: colors.textSecondary,
+    marginBottom: 4,
+  };
+
+  const renderControl = (kind: string) => {
+    const placeholder = (text: string) => (
+      <span style={{ color: colors.textMuted, fontStyle: "italic" }}>{text}</span>
+    );
+    switch (kind) {
+      case "Checkbox":
+      case "TristateCheckbox":
+        return (
+          <span style={{ ...mockInputStyle, gap: 8 }}>
+            <span aria-hidden="true">☐</span>
+            {placeholder("(unchecked)")}
+          </span>
+        );
+      case "Dropdown":
+      case "Droplink":
+      case "Droptree":
+      case "RadioButtons":
+      case "Checklist":
+        return (
+          <span style={{ ...mockInputStyle, justifyContent: "space-between" }}>
+            {placeholder("Select…")}
+            <span aria-hidden="true">▾</span>
+          </span>
+        );
+      case "DateTimePicker":
+        return (
+          <span style={{ ...mockInputStyle, justifyContent: "space-between" }}>
+            {placeholder("yyyy-mm-dd")}
+            <span aria-hidden="true">📅</span>
+          </span>
+        );
+      case "ItemPicker":
+      case "TreeList":
+      case "MultiList":
+        return (
+          <span style={{ ...mockInputStyle, justifyContent: "space-between" }}>
+            {placeholder("/sitecore/content/…")}
+            <span aria-hidden="true">⌕</span>
+          </span>
+        );
+      case "MultiLineTextField":
+        return (
+          <span
+            style={{
+              ...mockInputStyle,
+              minHeight: 60,
+              alignItems: "flex-start",
+              padding: "8px",
+            }}
+          >
+            {placeholder("(text area)")}
+          </span>
+        );
+      case "InfoText":
+        return placeholder("(read-only info text)");
+      default:
+        // TextField, LinkField, UserPicker, RolePicker, generic
+        return (
+          <span style={mockInputStyle}>
+            {placeholder("(input)")}
+          </span>
+        );
+    }
+  };
+
+  return (
+    <div style={{ maxWidth: 520, margin: "4px 0" }}>
+      <div style={titleBarStyle}>
+        <span>{entry.title}</span>
+        <span style={closeButtonStyle} aria-hidden="true">✕</span>
+      </div>
+      <div style={bodyStyle}>
+        {entry.fields.length === 0 ? (
+          <div style={{ color: colors.textMuted, fontStyle: "italic" }}>
+            (no fields)
+          </div>
+        ) : (
+          entry.fields.map((f, i) => (
+            <div key={i} style={{ marginBottom: 12 }}>
+              <label style={labelStyle}>
+                {f.title}
+                {f.mandatory && (
+                  <span style={{ color: colors.statusError, marginLeft: 4 }}>*</span>
+                )}
+                <span style={{ color: colors.textMuted, marginLeft: 6, fontSize: fontSizes.xs }}>
+                  ${f.name}
+                </span>
+              </label>
+              {renderControl(f.kind)}
+            </div>
+          ))
+        )}
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 8 }}>
+          <span style={disabledButtonStyle}>OK</span>
+          <span style={disabledButtonStyle}>Cancel</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export const DialogEntry = React.memo(function DialogEntry({ entry }: { entry: DialogConsoleEntry }) {
   switch (entry.type) {
     case "dialog-alert":
@@ -207,5 +331,7 @@ export const DialogEntry = React.memo(function DialogEntry({ entry }: { entry: D
       return <ReadVariableDialog entry={entry} />;
     case "dialog-listview":
       return <ListViewDialog entry={entry} />;
+    case "dialog-builder":
+      return <FormDialog entry={entry} />;
   }
 });

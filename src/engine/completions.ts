@@ -34,6 +34,12 @@ export const CMDLET_NAMES = [
   "Write-Output",
   "Get-Alias",
   "Get-Help",
+  "Import-Function",
+  "New-DialogBuilder",
+  "Add-TextField",
+  "Add-Checkbox",
+  "Add-Dropdown",
+  "Invoke-Dialog",
 ];
 
 /** Cmdlet aliases */
@@ -99,6 +105,12 @@ const CMDLET_PARAMS: Record<string, string[]> = {
   "Get-Help": ["-Name", "-Examples", "-Full", "-Parameter"],
   "Find-Item": ["-Index", "-Criteria", "-OrderBy", "-First", "-Skip"],
   "Publish-Item": ["-Path", "-Recurse", "-PublishMode", "-Target", "-Language"],
+  "Import-Function": ["-Name"],
+  "New-DialogBuilder": ["-Title", "-Description", "-Width", "-Height", "-OkButtonName", "-CancelButtonName", "-ShowHints", "-Icon"],
+  "Add-TextField": ["-Name", "-Title", "-Value", "-Tooltip", "-Placeholder", "-Mandatory", "-Tab", "-Columns", "-IsPassword", "-IsEmail", "-IsNumber"],
+  "Add-Checkbox": ["-Name", "-Title", "-Value", "-Tooltip", "-Tab"],
+  "Add-Dropdown": ["-Name", "-Title", "-Options", "-Value", "-Tab"],
+  "Invoke-Dialog": ["-Validator"],
 };
 
 /** .NET type names — short and fully-qualified forms */
