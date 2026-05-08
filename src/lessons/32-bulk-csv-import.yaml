@@ -8,7 +8,7 @@ description: |
   Real-world SPE scripts often boil down to: read a spreadsheet, create or update one item per row. PowerShell makes this a one-liner with `Import-Csv | ForEach-Object { New-Item ... }`.
 
   ```powershell
-  Import-Csv -Path "data\contributors.csv" | ForEach-Object {
+  Import-Csv -Path "$SitecoreDataFolder\contributors.csv" | ForEach-Object {
       New-Item -Path "master:\content\Home\Contributors" `
                -Name $_.Name `
                -ItemType "Sample/Sample Item"
@@ -17,12 +17,14 @@ description: |
 
   Each row becomes an object whose properties are the CSV's column headers. So `$_.Name`, `$_.Email`, `$_.Country` work just like field accessors. From there, every other pipeline cmdlet you've learned applies — `Where-Object` to filter rows, `Sort-Object` to order them, `Measure-Object` to count.
 
-  > [!NOTE] Mock files in the simulator
-  > The simulator ships two example CSVs you can read with `Import-Csv`:
-  > - `data\contributors.csv` (Name, Email, Country)
-  > - `data\articles.csv` (Title, Author, Section, PublishDate)
+  > [!NOTE] Use `$SitecoreDataFolder` instead of hard-coded paths
+  > SPE provides a small set of always-available variables that point to standard Sitecore folders: `$SitecoreDataFolder`, `$SitecoreLogFolder`, `$SitecoreTempFolder`, `$SitecorePackageFolder`, `$SitecoreSerializationFolder`. Scripts that use these survive moving instances or environments without edits.
   >
-  > In real SPE you'd read from any path the script's user has access to.
+  > The simulator ships two example CSVs under `$SitecoreDataFolder`:
+  > - `$SitecoreDataFolder\contributors.csv` (Name, Email, Country)
+  > - `$SitecoreDataFolder\articles.csv` (Title, Author, Section, PublishDate)
+  >
+  > Open the **Variables** tab to see the resolved paths. PowerShell expands `$SitecoreDataFolder` inside double-quoted strings automatically.
 
   Common patterns:
 
@@ -39,7 +41,7 @@ description: |
 
 tasks:
   - instruction: "Read the contributors CSV. Use `Import-Csv -Path \"data\\contributors.csv\"` to load every row."
-    hint: 'Import-Csv -Path "data\contributors.csv"'
+    hint: 'Import-Csv -Path "$SitecoreDataFolder\contributors.csv"'
     nudge: "`Import-Csv -Path <file>` returns one object per CSV row, with the header as property names."
     starterCode: |
       # Read every row from the contributors CSV
@@ -50,7 +52,7 @@ tasks:
 
   - instruction: "Filter to only US-based contributors. Pipe `Import-Csv` into `Where-Object { $_.Country -eq \"US\" }`."
     hint: |
-      Import-Csv -Path "data\contributors.csv" | Where-Object { $_.Country -eq "US" }
+      Import-Csv -Path "$SitecoreDataFolder\contributors.csv" | Where-Object { $_.Country -eq "US" }
     nudge: "`Where-Object { $_.Country -eq \"US\" }`. `$_.Country` reads the row's Country column — same access pattern that works on Sitecore items."
     starterCode: |
       # Filter contributors by country
@@ -61,7 +63,7 @@ tasks:
 
   - instruction: "Print each contributor's email. Use `ForEach-Object` and `Write-Host $_.Email`."
     hint: |
-      Import-Csv -Path "data\contributors.csv" | ForEach-Object { Write-Host $_.Email }
+      Import-Csv -Path "$SitecoreDataFolder\contributors.csv" | ForEach-Object { Write-Host $_.Email }
     nudge: "Inside `ForEach-Object { }`, `$_` is the current row. Use `$_.Email` to read a column."
     starterCode: |
       # Print each contributor's email
@@ -72,7 +74,7 @@ tasks:
 
   - instruction: "Create a Sitecore item for every CSV row. Pipe `Import-Csv` into `ForEach-Object` and call `New-Item -Path \"master:\\content\\Home\" -Name $_.Name -ItemType \"Sample/Sample Item\"`."
     hint: |
-      Import-Csv -Path "data\contributors.csv" | ForEach-Object {
+      Import-Csv -Path "$SitecoreDataFolder\contributors.csv" | ForEach-Object {
           New-Item -Path "master:\content\Home" -Name $_.Name -ItemType "Sample/Sample Item"
       }
     nudge: "Wrap `New-Item -Path <parent> -Name $_.Name -ItemType <template>` in `ForEach-Object { }`. The Path stays the same; the Name varies per row."
@@ -87,7 +89,7 @@ tasks:
     hint: 'Get-ChildItem -Path "master:\content\Home"'
     nudge: "`Get-ChildItem -Path <parent>` lists immediate children of the path. The new contributor items should appear alongside any pre-existing children."
     starterCode: |
-      Import-Csv -Path "data\contributors.csv" | ForEach-Object {
+      Import-Csv -Path "$SitecoreDataFolder\contributors.csv" | ForEach-Object {
           New-Item -Path "master:\content\Home" -Name $_.Name -ItemType "Sample/Sample Item"
       }
 

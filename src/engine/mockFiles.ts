@@ -3,14 +3,22 @@
  * to read in the simulator. Keyed by path string (backslash style).
  */
 
+/**
+ * Files are stored under the resolved value of $SitecoreDataFolder so that
+ * scripts written with the canonical built-in variable
+ * (`Import-Csv -Path "$SitecoreDataFolder\contributors.csv"`) resolve
+ * correctly after the ScriptContext expands $-references.
+ */
+const DATA_FOLDER = "C:\\inetpub\\wwwroot\\sitecore\\App_Data";
+
 export const MOCK_FILES: Record<string, string> = {
-  "data\\contributors.csv": `Name,Email,Country
+  [`${DATA_FOLDER}\\contributors.csv`]: `Name,Email,Country
 Alice,alice@example.com,US
 Bob,bob@example.com,UK
 Carol,carol@example.com,DE
 Dave,dave@example.com,US`,
 
-  "data\\articles.csv": `Title,Author,Section,PublishDate
+  [`${DATA_FOLDER}\\articles.csv`]: `Title,Author,Section,PublishDate
 Welcome,Alice,Home,2024-01-15
 About Us,Bob,Company,2024-02-03
 Latest News,Carol,News,2024-03-20

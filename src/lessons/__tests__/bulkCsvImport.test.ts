@@ -13,7 +13,7 @@ describe("Lesson: bulk-csv-import", () => {
   }
 
   it("Task 1 — Import-Csv reads the contributors mock file", () => {
-    const r = run(`Import-Csv -Path "data\\contributors.csv"`);
+    const r = run(`Import-Csv -Path "$SitecoreDataFolder\\contributors.csv"`);
     expect(r.error).toBeNull();
     expect(r.output).toContain("Alice");
     expect(r.output).toContain("Email"); // header rendered
@@ -21,7 +21,7 @@ describe("Lesson: bulk-csv-import", () => {
 
   it("Task 2 — Where-Object filters rows by column", () => {
     const r = run(
-      `Import-Csv -Path "data\\contributors.csv" | Where-Object { $_.Country -eq "US" }`
+      `Import-Csv -Path "$SitecoreDataFolder\\contributors.csv" | Where-Object { $_.Country -eq "US" }`
     );
     expect(r.output).toContain("Alice");
     expect(r.output).toContain("Dave");
@@ -30,7 +30,7 @@ describe("Lesson: bulk-csv-import", () => {
 
   it("Task 3 — ForEach-Object reads $_.Email", () => {
     const r = run(
-      `Import-Csv -Path "data\\contributors.csv" | ForEach-Object { Write-Host $_.Email }`
+      `Import-Csv -Path "$SitecoreDataFolder\\contributors.csv" | ForEach-Object { Write-Host $_.Email }`
     );
     expect(r.output).toContain("alice@example.com");
     expect(r.output).toContain("bob@example.com");
@@ -38,7 +38,7 @@ describe("Lesson: bulk-csv-import", () => {
 
   it("Task 4 — Bulk-create runs without error", () => {
     const r = run(`
-      Import-Csv -Path "data\\contributors.csv" | ForEach-Object {
+      Import-Csv -Path "$SitecoreDataFolder\\contributors.csv" | ForEach-Object {
         New-Item -Path "master:\\content\\Home" -Name $_.Name -ItemType "Sample/Sample Item"
       }
     `);
@@ -47,7 +47,7 @@ describe("Lesson: bulk-csv-import", () => {
   });
 
   it("Import-Csv on a missing path emits a helpful error listing mock files", () => {
-    const r = run(`Import-Csv -Path "data\\nope.csv"`);
+    const r = run(`Import-Csv -Path "$SitecoreDataFolder\\nope.csv"`);
     expect(r.error).toContain("Cannot find file");
     expect(r.error).toContain("contributors.csv");
   });

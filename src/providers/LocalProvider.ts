@@ -72,6 +72,8 @@ export class LocalProvider implements ExecutionProvider {
     this.ctx.dialogRequests = [];
     if (!opts.keepVariables) {
       this.ctx.variables = {};
+      // Re-seed SPE built-ins so they survive ISE-style "fresh run" wipes
+      this.ctx.seedBuiltIns();
     }
   }
 

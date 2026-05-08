@@ -61,7 +61,7 @@ const LESSON_SECTIONS: Record<string, string[]> = {
   "dialog-builder": ["dialog", "pipeline", "automatics"],
   "search-builder": ["search", "find", "pipeline"],
   "security": ["security", "pipeline"],
-  "bulk-csv-import": ["bulk", "items", "pipeline", "automatics"],
+  "bulk-csv-import": ["bulk", "spevars", "items", "pipeline", "automatics"],
 };
 
 interface Row {
@@ -135,6 +135,22 @@ const SECTIONS: Section[] = [
     ],
   },
   {
+    id: "spevars",
+    title: "SPE built-in variables",
+    rows: [
+      { left: "$SitecoreDataFolder", right: "App_Data folder (use for file I/O)" },
+      { left: "$SitecoreLogFolder", right: "App_Data\\logs" },
+      { left: "$SitecoreTempFolder", right: "App_Data\\temp" },
+      { left: "$SitecorePackageFolder", right: "App_Data\\packages" },
+      { left: "$SitecoreSerializationFolder", right: "App_Data\\serialization" },
+      { left: "$AppPath", right: "Sitecore web root" },
+      { left: "$SitecoreContextItem", right: "current Content Editor item" },
+      { left: "$SitecoreContextDatabase", right: 'usually "master"' },
+      { left: "$SitecoreContextSite", right: "active Sitecore.Context.Site" },
+      { left: "$SitecoreContextUser", right: "logged-in user" },
+    ],
+  },
+  {
     id: "items",
     title: "Item management",
     rows: [
@@ -181,8 +197,11 @@ const SECTIONS: Section[] = [
     id: "bulk",
     title: "Bulk CSV import",
     rows: [
-      { left: 'Import-Csv -Path "data\\contributors.csv"', right: "read every row as an object" },
-      { left: 'Import-Csv … | Where-Object Country -eq "US"', right: "filter rows" },
+      {
+        left: 'Import-Csv -Path "$SitecoreDataFolder\\contributors.csv"',
+        right: "read every row as an object",
+      },
+      { left: 'Import-Csv … | Where-Object { $_.Country -eq "US" }', right: "filter rows" },
       { left: "Import-Csv … | Select-Object Name, Email", right: "pick columns" },
       {
         left: 'Import-Csv … | ForEach-Object { New-Item -Path … -Name $_.Name -ItemType … }',

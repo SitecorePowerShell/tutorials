@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { colors, fonts, fontSizes } from "../theme";
+import { SPE_BUILTIN_NAMES } from "../engine/scriptContext";
 
 interface VariablesPanelProps {
   /** Snapshot of user-defined variables (`$x = ...`). */
@@ -26,7 +27,12 @@ export function VariablesPanel({
 }: VariablesPanelProps) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
-  const userEntries = variables ? Object.entries(variables) : [];
+  // Split the live variable bag into "user-defined" and "SPE built-ins" so
+  // each rendered section reflects something specific. SPE_BUILTIN_NAMES is
+  // the source of truth for what gets seeded by ScriptContext.
+  const allEntries = variables ? Object.entries(variables) : [];
+  const userEntries = allEntries.filter(([name]) => !SPE_BUILTIN_NAMES.has(name));
+  const builtinEntries = allEntries.filter(([name]) => SPE_BUILTIN_NAMES.has(name));
   const hasUserVars = userEntries.length > 0;
 
   const toggle = (key: string) =>
@@ -74,16 +80,18 @@ export function VariablesPanel({
       </Section>
 
       <Section
-        title="Sitecore"
-        subtitle="Resolved in real SPE only — placeholders shown here."
+        title="SPE built-ins"
+        subtitle="Always available — folder paths, current context."
       >
-        <Row
-          name="$SitecoreContextItem"
-          value="(current item from Sitecore.Context)"
-          subtle
-        />
-        <Row name="$me" value="(the Sitecore.Context.User)" subtle />
-        <Row name="$site" value="(the active Sitecore.Context.Site)" subtle />
+        {builtinEntries.map(([name, value]) => (
+          <Row
+            key={name}
+            name={`$${name}`}
+            value={value}
+            isExpanded={!!expanded[name]}
+            onToggle={() => toggle(name)}
+          />
+        ))}
       </Section>
     </div>
   );
