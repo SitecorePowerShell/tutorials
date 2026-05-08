@@ -1,5 +1,5 @@
 id: "string-operations"
-module: "Level 4 – Advanced Techniques"
+module: "Level 4 – Operators & Data Shaping"
 order: 13
 title: "String Operators & Formatting"
 difficulty: "intermediate"

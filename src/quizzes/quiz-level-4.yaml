@@ -1,6 +1,6 @@
 id: "quiz-level-4"
-module: "Level 4 – Advanced Techniques"
-title: "Advanced Techniques Quiz"
+module: "Level 4 – Operators & Data Shaping"
+title: "Operators & Data Shaping Quiz"
 questions:
   - type: "multiple-choice"
     question: "How do you combine multiple conditions in a `Where-Object` filter?"

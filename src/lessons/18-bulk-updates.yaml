@@ -1,5 +1,5 @@
 id: "bulk-updates"
-module: "Level 4 – Advanced Techniques"
+module: "Level 6 – Bulk Operations"
 order: 17
 title: "Bulk Updates with Set-ItemProperty"
 difficulty: "advanced"

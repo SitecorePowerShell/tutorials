@@ -44,13 +44,17 @@ export const LESSONS: Lesson[] = [
   lesson06, lesson07, lesson08,
   // Level 3 – Content Management
   lesson09, lesson10, lesson11, lesson24, lesson25, lesson27,
-  // Level 4 – Advanced Techniques
-  lesson12, lesson13, lesson14, lesson15, lesson16, lesson17, lesson18, lesson32, lesson26, lesson28,
-  // Level 5 – Content Search
+  // Level 4 – Operators & Data Shaping
+  lesson12, lesson13, lesson14, lesson15,
+  // Level 5 – Control Flow & Reliability
+  lesson17, lesson26,
+  // Level 6 – Bulk Operations
+  lesson16, lesson18, lesson32, lesson28,
+  // Level 7 – Content Search
   lesson19, lesson20, lesson21, lesson22,
-  // Level 6 – Interactive Scripts
+  // Level 8 – Interactive Scripts
   lesson29, lesson30,
-  // Level 7 – Security & Access
+  // Level 9 – Security & Access
   lesson31,
   // Playground
   lesson23,

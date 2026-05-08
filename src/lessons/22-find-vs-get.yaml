@@ -1,5 +1,5 @@
 id: "find-item-comparison"
-module: "Level 5 – Content Search"
+module: "Level 7 – Content Search"
 order: 22
 title: "Find-Item vs Get-ChildItem"
 difficulty: "advanced"

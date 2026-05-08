@@ -1,5 +1,5 @@
 id: "bulk-csv-import"
-module: "Level 4 – Advanced Techniques"
+module: "Level 6 – Bulk Operations"
 order: 32
 title: "Bulk Import from CSV"
 difficulty: "advanced"

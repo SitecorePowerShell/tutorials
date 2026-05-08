@@ -94,6 +94,7 @@ interface Rect {
 
 const PADDING = 8;
 const TOOLTIP_WIDTH = 290;
+const TOOLTIP_HEIGHT = 160;
 const ARROW_SIZE = 8;
 
 function getTargetRect(target: string): Rect | null {
@@ -137,13 +138,13 @@ function computeTooltipPosition(
     case "bottom":
       top = rect.top + rect.height + gap;
       left = rect.left + rect.width / 2 - TOOLTIP_WIDTH / 2;
-      if (top + 160 > window.innerHeight) {
+      if (top + TOOLTIP_HEIGHT > window.innerHeight) {
         actualPlacement = "top";
-        top = rect.top - 160 - gap;
+        top = rect.top - TOOLTIP_HEIGHT - gap;
       }
       break;
     case "top":
-      top = rect.top - 160 - gap;
+      top = rect.top - TOOLTIP_HEIGHT - gap;
       left = rect.left + rect.width / 2 - TOOLTIP_WIDTH / 2;
       if (top < 16) {
         actualPlacement = "bottom";
@@ -154,8 +155,10 @@ function computeTooltipPosition(
 
   // Clamp horizontal
   left = Math.max(16, Math.min(left, window.innerWidth - TOOLTIP_WIDTH - 16));
-  // Clamp vertical
-  top = Math.max(16, top);
+  // Clamp vertical — when the target rect spans most of the viewport, both
+  // top and bottom placements push the tooltip off-screen. Clamp so it stays
+  // visible (overlapping the spotlight is preferable to being invisible).
+  top = Math.max(16, Math.min(top, window.innerHeight - TOOLTIP_HEIGHT - 16));
 
   return { top, left, actualPlacement };
 }

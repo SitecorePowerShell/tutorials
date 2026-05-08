@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Lesson, Quiz, QuizResult } from "../types";
 import { colors, gradients, fontSizes, type ThemeMode } from "../theme";
 
@@ -27,13 +27,6 @@ interface ModuleGroup {
   module: string;
   lessons: { lesson: Lesson; index: number }[];
 }
-
-const difficultyColorsDark: Record<string, string> = {
-  intro: "#4caf50",
-  beginner: "#66bb6a",
-  intermediate: "#ffab40",
-  advanced: "#ef5350",
-};
 
 const difficultyColorsLight: Record<string, string> = {
   intro: "#2e7d32",
@@ -85,9 +78,23 @@ export function Sidebar({
   activeQuiz,
 }: SidebarProps) {
   const [confirmReset, setConfirmReset] = useState(false);
-  const [collapsedModules, setCollapsedModules] = useState<Record<string, boolean>>({});
+  const activeModule = lessons[currentLesson]?.module;
+  const [collapsedModules, setCollapsedModules] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    for (const lesson of lessons) {
+      if (lesson.module !== activeModule) initial[lesson.module] = true;
+    }
+    return initial;
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMode, setFilterMode] = useState<"all" | "incomplete" | "completed">("all");
+
+  useEffect(() => {
+    if (!activeModule) return;
+    setCollapsedModules((prev) =>
+      prev[activeModule] ? { ...prev, [activeModule]: false } : prev,
+    );
+  }, [activeModule]);
 
   const isTaskComplete = (lessonIdx: number, taskIdx: number) =>
     completedTasks[`${lessonIdx}-${taskIdx}`];
@@ -356,6 +363,12 @@ export function Sidebar({
             const { total, done } = getModuleProgress(group);
             const moduleComplete = done === total;
             const hasActiveLesson = group.lessons.some(({ index }) => index === currentLesson);
+            const showLine = !searchQuery && filterMode === "all";
+            const moduleQuiz = (quizzes ?? []).find((q) => q.module === group.module);
+            const lastLessonInModule = group.lessons[group.lessons.length - 1];
+            const lastLessonComplete = lastLessonInModule ? isLessonComplete(lastLessonInModule.index) : false;
+            const circleTop = isMobile ? 13 : 9;
+            const circleBottom = isMobile ? 35 : 31;
 
             return (
               <div key={group.module} style={{ marginBottom: 4 }}>
@@ -432,24 +445,20 @@ export function Sidebar({
                           }}
                         />
                       </div>
-                      <span
-                        style={{
-                          fontSize: fontSizes.xs,
-                          color: colors.textMuted,
-                        }}
-                      >
-                        {done}/{total}
-                      </span>
                     </div>
                   </div>
                 </button>
 
                 {/* Lessons within module */}
                 {!isCollapsed &&
-                  (searchQuery || filterMode !== "all" ? groupVisible : group.lessons).map(({ lesson: l, index: li }) => {
+                  (searchQuery || filterMode !== "all" ? groupVisible : group.lessons).map(({ lesson: l, index: li }, posInGroup) => {
                     const complete = isLessonComplete(li);
                     const active = li === currentLesson && !activeQuiz;
                     const difficulty = l.difficulty;
+                    const isFirstInModule = posInGroup === 0;
+                    const isLastLesson = posInGroup === group.lessons.length - 1;
+                    const prevComplete = !isFirstInModule && isLessonComplete(group.lessons[posInGroup - 1].index);
+                    const hasBottomLine = !isLastLesson || !!moduleQuiz;
                     return (
                       <button
                         key={l.id}
@@ -471,18 +480,47 @@ export function Sidebar({
                           color: active ? colors.textPrimary : colors.textSecondary,
                           transition: "all 0.15s",
                           fontFamily: "inherit",
+                          position: "relative",
                         }}
                       >
+                        {showLine && !isFirstInModule && (
+                          <span
+                            aria-hidden
+                            style={{
+                              position: "absolute",
+                              left: 46,
+                              top: 0,
+                              width: 2,
+                              height: circleTop,
+                              background: prevComplete ? colors.statusSuccess : colors.borderDim,
+                              pointerEvents: "none",
+                            }}
+                          />
+                        )}
+                        {showLine && hasBottomLine && (
+                          <span
+                            aria-hidden
+                            style={{
+                              position: "absolute",
+                              left: 46,
+                              top: circleBottom,
+                              bottom: 0,
+                              width: 2,
+                              background: complete ? colors.statusSuccess : colors.borderDim,
+                              pointerEvents: "none",
+                            }}
+                          />
+                        )}
                         <span
                           style={{
-                            width: 20,
-                            height: 20,
+                            width: 22,
+                            height: 22,
                             borderRadius: "50%",
                             border: complete
-                              ? `2px solid ${colors.statusSuccess}`
+                              ? `1.5px solid ${colors.statusSuccess}`
                               : active
-                                ? `2px solid ${colors.accentPrimary}`
-                                : `2px solid ${colors.borderDim}`,
+                                ? `1.5px solid ${colors.accentPrimary}`
+                                : `1.5px solid ${colors.borderDim}`,
                             background: complete ? colors.statusSuccess : "transparent",
                             display: "flex",
                             alignItems: "center",
@@ -505,37 +543,30 @@ export function Sidebar({
                           >
                             {l.title}
                           </div>
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 6,
-                              marginTop: 3,
-                            }}
-                          >
-                            <span
+                          {difficulty && difficultyLabels[difficulty] && (
+                            <div
                               style={{
-                                fontSize: fontSizes.xs,
-                                color: colors.textMuted,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 6,
+                                marginTop: 3,
                               }}
                             >
-                              {l.tasks.length} task{l.tasks.length > 1 ? "s" : ""}
-                            </span>
-                            {difficulty && difficultyLabels[difficulty] && (
                               <span
                                 style={{
                                   fontSize: 10,
-                                  color: (themeMode === "dark" ? difficultyColorsDark : difficultyColorsLight)[difficulty] ?? colors.textMuted,
-                                  border: `1px solid ${(themeMode === "dark" ? difficultyColorsDark : difficultyColorsLight)[difficulty] ?? colors.borderDim}44`,
+                                  fontWeight: 600,
+                                  color: "#fff",
+                                  background: difficultyColorsLight[difficulty] ?? colors.textMuted,
                                   borderRadius: 3,
-                                  padding: "1px 5px",
+                                  padding: "1px 6px",
                                   lineHeight: 1.4,
                                 }}
                               >
                                 {difficultyLabels[difficulty]}
                               </span>
-                            )}
-                          </div>
+                            </div>
+                          )}
                         </div>
                       </button>
                     );
@@ -570,18 +601,33 @@ export function Sidebar({
                           color: isActive ? colors.textPrimary : colors.textSecondary,
                           transition: "all 0.15s",
                           fontFamily: "inherit",
+                          position: "relative",
                         }}
                       >
+                        {showLine && group.lessons.length > 0 && (
+                          <span
+                            aria-hidden
+                            style={{
+                              position: "absolute",
+                              left: 46,
+                              top: 0,
+                              width: 2,
+                              height: circleTop,
+                              background: lastLessonComplete ? colors.statusSuccess : colors.borderDim,
+                              pointerEvents: "none",
+                            }}
+                          />
+                        )}
                         <span
                           style={{
-                            width: 20,
-                            height: 20,
+                            width: 22,
+                            height: 22,
                             borderRadius: 4,
                             border: quizComplete
-                              ? `2px solid ${colors.statusSuccess}`
+                              ? `1.5px solid ${colors.statusSuccess}`
                               : isActive
-                                ? `2px solid ${colors.statusHint}`
-                                : `2px solid ${colors.borderDim}`,
+                                ? `1.5px solid ${colors.statusHint}`
+                                : `1.5px solid ${colors.borderDim}`,
                             background: quizComplete ? colors.statusSuccess : "transparent",
                             display: "flex",
                             alignItems: "center",

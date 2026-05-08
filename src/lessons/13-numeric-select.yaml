@@ -1,5 +1,5 @@
 id: "numeric-select"
-module: "Level 4 – Advanced Techniques"
+module: "Level 4 – Operators & Data Shaping"
 order: 12
 title: "Sorting & Select-Object"
 difficulty: "intermediate"
