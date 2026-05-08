@@ -1242,12 +1242,811 @@ const FULL_HELP_2: CmdletHelp[] = [
 ];
 
 // ============================================================================
+// Help entries — third batch: dialog cmdlets, write streams, DialogBuilder /
+// SearchBuilder modules, and security commands.
+// ============================================================================
+
+const FULL_HELP_3: CmdletHelp[] = [
+  // ---------- Show family (parameter and modal dialogs) ----------
+  {
+    name: "Show-Confirm",
+    synopsis: "Displays a Yes/No confirmation dialog.",
+    description:
+      "Shows a modal Yes/No prompt and returns 'yes' or 'no'. Useful for guarding destructive operations behind explicit user confirmation.",
+    syntax: ["Show-Confirm [-Title] <String>"],
+    parameters: [
+      { name: "Title", type: "String", description: "The prompt text to display.", required: true, position: 0 },
+    ],
+    examples: [
+      {
+        title: "Example 1: Confirm before deleting",
+        code: 'if ((Show-Confirm "Delete the Home item?") -eq "yes") { Remove-Item master:\\content\\Home }',
+        description: "Only proceeds with the destructive operation if the user clicks Yes.",
+      },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Show-Alert", "Show-Input", "Show-YesNoCancel"],
+  },
+  {
+    name: "Show-Input",
+    synopsis: "Displays a single-field text input dialog.",
+    description: "Prompts the user for a string value and returns whatever was typed (or $null if cancelled).",
+    syntax: ["Show-Input [-Prompt] <String> [-DefaultValue <String>]"],
+    parameters: [
+      { name: "Prompt", type: "String", description: "Label shown above the input field.", required: true, position: 0 },
+      { name: "DefaultValue", type: "String", description: "Pre-populated text in the input.", required: false, position: null },
+    ],
+    examples: [
+      {
+        title: "Example 1: Ask for a name",
+        code: '$name = Show-Input "What is the new item name?"',
+        description: "Captures user input into a variable for later use.",
+      },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Show-Confirm", "Read-Variable"],
+  },
+  {
+    name: "Show-YesNoCancel",
+    synopsis: "Displays a Yes/No/Cancel dialog.",
+    description:
+      "A three-way prompt that returns 'yes', 'no', or 'cancel'. Used when the user needs a third option beyond simple confirmation.",
+    syntax: ["Show-YesNoCancel [-Title] <String>"],
+    parameters: [
+      { name: "Title", type: "String", description: "The prompt text to display.", required: true, position: 0 },
+    ],
+    examples: [
+      {
+        title: "Example 1: Save changes prompt",
+        code: 'switch (Show-YesNoCancel "Save before closing?") { "yes" { Save-Item }; "cancel" { return } }',
+        description: "Branches on three possible responses.",
+      },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Show-Confirm", "Show-Alert"],
+  },
+  {
+    name: "Show-FieldEditor",
+    synopsis: "Opens the Sitecore field editor dialog for an item.",
+    description: "Launches Sitecore's standard field-editor UI so the user can edit specific fields of an item interactively.",
+    syntax: ["Show-FieldEditor -Item <Item> [-Name <String[]>]"],
+    parameters: [
+      { name: "Item", type: "Item", description: "The Sitecore item whose fields are being edited.", required: true, position: null },
+      { name: "Name", type: "String[]", description: "Names of the fields to expose; defaults to all editable fields.", required: false, position: null },
+    ],
+    examples: [
+      {
+        title: "Example 1: Edit Title and Body of Home",
+        code: 'Get-Item master:\\content\\Home | Show-FieldEditor -Name "Title", "Body"',
+        description: "Restricts the field editor to the named fields only.",
+      },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Read-Variable", "Set-ItemProperty"],
+  },
+  {
+    name: "Show-ModalDialog",
+    synopsis: "Opens an arbitrary Sitecore modal dialog by URL or XAML control.",
+    description:
+      "Renders a custom modal dialog (typically a Sheer or SPEAK control) and returns the dialog's result string. Used to integrate custom UIs into PowerShell scripts.",
+    syntax: ["Show-ModalDialog -Control <String> [-Parameters <Hashtable>] [-Width <Int>] [-Height <Int>]"],
+    parameters: [
+      { name: "Control", type: "String", description: "The XAML control name or URL to load.", required: true, position: null },
+      { name: "Parameters", type: "Hashtable", description: "Optional key/value pairs passed to the control.", required: false, position: null },
+    ],
+    examples: [
+      {
+        title: "Example 1: Show a custom dialog",
+        code: '$result = Show-ModalDialog -Control "MyDialog" -Parameters @{Mode="Edit"}',
+        description: "Hosts a custom Sheer or SPEAK control as a modal.",
+      },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Show-Alert", "Read-Variable"],
+  },
+
+  // ---------- Write family ----------
+  {
+    name: "Write-Error",
+    synopsis: "Writes a non-terminating error to the error stream.",
+    description:
+      "Emits an error record without halting script execution. The user sees the message in red but the script continues. Use `throw` to terminate instead.",
+    syntax: ["Write-Error [-Message] <String>"],
+    parameters: [
+      { name: "Message", type: "String", description: "The error message text.", required: true, position: 0 },
+    ],
+    examples: [
+      {
+        title: "Example 1: Report a problem and continue",
+        code: 'if (-not (Test-Path $path)) { Write-Error "Path not found: $path"; return }',
+        description: "Surfaces the issue to the user while still letting later cleanup run.",
+      },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Write-Warning", "Write-Host"],
+  },
+  {
+    name: "Write-Warning",
+    synopsis: "Writes a warning message to the warning stream.",
+    description:
+      "Emits a yellow WARNING-prefixed message. Indicates a problem the user should know about that doesn't prevent the script from succeeding.",
+    syntax: ["Write-Warning [-Message] <String>"],
+    parameters: [
+      { name: "Message", type: "String", description: "The warning message text.", required: true, position: 0 },
+    ],
+    examples: [
+      {
+        title: "Example 1: Flag a deprecated path",
+        code: 'Write-Warning "This script will be removed in v9. Use Find-Item instead."',
+        description: "Communicates non-fatal concerns.",
+      },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Write-Error", "Write-Host"],
+  },
+
+  // ---------- DialogBuilder family ----------
+  {
+    name: "Import-Function",
+    synopsis: "Loads a Sitecore PowerShell function library by name.",
+    description:
+      "Loads an SPE script library (DialogBuilder, SearchBuilder, etc.) so its commands become available in the current session. Real SPE resolves the name to a script library item under /sitecore/system/Modules/PowerShell.",
+    syntax: ["Import-Function -Name <String>"],
+    parameters: [
+      { name: "Name", type: "String", description: "The library name to load (e.g. 'DialogBuilder', 'SearchBuilder').", required: true, position: 0 },
+    ],
+    examples: [
+      {
+        title: "Example 1: Load DialogBuilder",
+        code: "Import-Function -Name DialogBuilder",
+        description: "Makes New-DialogBuilder, Add-TextField, Invoke-Dialog, etc. available.",
+      },
+      {
+        title: "Example 2: Load SearchBuilder",
+        code: "Import-Function -Name SearchBuilder",
+        description: "Makes the New-SearchBuilder fluent search API available.",
+      },
+    ],
+    aliases: [],
+    relatedCmdlets: ["New-DialogBuilder", "New-SearchBuilder"],
+  },
+  {
+    name: "New-DialogBuilder",
+    synopsis: "Creates a new DialogBuilder instance for fluent dialog construction.",
+    description:
+      "Returns a builder object that you pipe through Add-* field commands and ultimately into Invoke-Dialog. The builder accumulates fields, layout, and dialog-level options like title and dimensions.",
+    syntax: [
+      "New-DialogBuilder -Title <String> [-Description <String>] [-Width <Int>] [-Height <Int>] [-OkButtonName <String>] [-CancelButtonName <String>] [-ShowHints] [-Icon <String>]",
+    ],
+    parameters: [
+      { name: "Title", type: "String", description: "Dialog title shown in the title bar.", required: true, position: null },
+      { name: "Description", type: "String", description: "Descriptive text shown below the title.", required: false, position: null },
+      { name: "Width", type: "Int32", description: "Dialog width in pixels (default: 500).", required: false, position: null },
+      { name: "Height", type: "Int32", description: "Dialog height in pixels (default: 400).", required: false, position: null },
+      { name: "OkButtonName", type: "String", description: "Custom text for the OK button.", required: false, position: null },
+      { name: "CancelButtonName", type: "String", description: "Custom text for the Cancel button.", required: false, position: null },
+      { name: "ShowHints", type: "SwitchParameter", description: "Show field tooltips when set.", required: false, position: null },
+      { name: "Icon", type: "String", description: 'Sitecore icon path (e.g. "Office/32x32/document.png").', required: false, position: null },
+    ],
+    examples: [
+      {
+        title: "Example 1: Create a dialog and add fields",
+        code: '$dialog = New-DialogBuilder -Title "Content Editor" -ShowHints\n$dialog | Add-TextField -Name "title" -Title "Title" -Mandatory\n$dialog | Invoke-Dialog',
+        description: "Standard fluent flow: create, add fields, invoke.",
+      },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Invoke-Dialog", "Add-TextField", "Add-Checkbox"],
+  },
+  {
+    name: "Invoke-Dialog",
+    synopsis: "Executes a built dialog and returns the result.",
+    description:
+      "Shows the modal dialog described by the upstream builder and returns a result object with .Result ('ok'|'cancel'), .Title, and .FieldCount. Field variables (declared via -Name on each Add-*) are bound in script scope after a successful dismissal.",
+    syntax: ["<DialogBuilder> | Invoke-Dialog [-Validator <ScriptBlock>]"],
+    parameters: [
+      { name: "Validator", type: "ScriptBlock", description: "Optional validation scriptblock; access $variables.<name>.Value and set .Error.", required: false, position: null },
+    ],
+    examples: [
+      {
+        title: "Example 1: Show the dialog and react to the result",
+        code: '$result = $dialog | Invoke-Dialog\nif ($result.Result -eq "ok") { Write-Host "User: $userName" }',
+        description: "Branches on the user's OK / Cancel choice.",
+      },
+    ],
+    aliases: [],
+    relatedCmdlets: ["New-DialogBuilder", "Add-TextField"],
+  },
+  {
+    name: "Add-DialogField",
+    synopsis: "Core DialogBuilder field command with full control over options.",
+    description:
+      "The base command behind every Add-* field shorthand. Use this when you need a parameter that the convenience commands don't expose (custom -Editor, -Source, -Options, etc.).",
+    syntax: ["<DialogBuilder> | Add-DialogField -Name <String> -Title <String> [-Editor <String>] [-Value <Object>] [-Mandatory] [-Tab <String>] [-Columns <Int>] [...]"],
+    parameters: [
+      { name: "Name", type: "String", description: "Variable name (without `$`). Becomes the bound script variable.", required: true, position: null },
+      { name: "Title", type: "String", description: "Field label shown to the user.", required: true, position: null },
+      { name: "Editor", type: "String", description: "Editor type (auto-detected if omitted).", required: false, position: null },
+      { name: "Mandatory", type: "SwitchParameter", description: "Marks the field as required.", required: false, position: null },
+    ],
+    examples: [
+      {
+        title: "Example 1: Custom editor",
+        code: '$dialog | Add-DialogField -Name "code" -Title "Code" -Editor "code" -Lines 10',
+        description: "Falls through to the underlying Read-Variable parameters table.",
+      },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Add-TextField", "Add-Checkbox", "Add-Dropdown"],
+  },
+  {
+    name: "Add-TextField",
+    synopsis: "Adds a single-line text input to the dialog.",
+    description:
+      "The default text field. Use -IsPassword for masked input, -IsEmail for email validation, or -IsNumber to constrain to numeric input.",
+    syntax: ["<DialogBuilder> | Add-TextField -Name <String> -Title <String> [-Value <String>] [-Placeholder <String>] [-Mandatory] [-IsPassword] [-IsEmail] [-IsNumber] [-Tab <String>] [-Columns <Int>]"],
+    parameters: [
+      { name: "Name", type: "String", description: "Bound variable name.", required: true, position: null },
+      { name: "Title", type: "String", description: "Field label.", required: true, position: null },
+      { name: "Value", type: "String", description: "Initial value.", required: false, position: null },
+      { name: "Placeholder", type: "String", description: "Placeholder text shown when empty.", required: false, position: null },
+      { name: "Mandatory", type: "SwitchParameter", description: "Marks the field required.", required: false, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Mandatory user name", code: '$dialog | Add-TextField -Name "userName" -Title "User Name" -Mandatory', description: "Required text field with $userName bound after Invoke-Dialog." },
+      { title: "Example 2: Password field", code: '$dialog | Add-TextField -Name "pwd" -Title "Password" -IsPassword', description: "Masks input with bullets." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Add-MultiLineTextField", "Add-LinkField", "New-DialogBuilder"],
+  },
+  {
+    name: "Add-MultiLineTextField",
+    synopsis: "Adds a multi-line text area to the dialog.",
+    description: "A textarea control. Use -Lines to set the visible row count.",
+    syntax: ["<DialogBuilder> | Add-MultiLineTextField -Name <String> -Title <String> [-Lines <Int>] [-Value <String>] [-Mandatory]"],
+    parameters: [
+      { name: "Name", type: "String", description: "Bound variable name.", required: true, position: null },
+      { name: "Title", type: "String", description: "Field label.", required: true, position: null },
+      { name: "Lines", type: "Int32", description: "Visible rows (default: 4).", required: false, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Notes field", code: '$dialog | Add-MultiLineTextField -Name "notes" -Title "Notes" -Lines 6', description: "Six-row text area." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Add-TextField"],
+  },
+  {
+    name: "Add-LinkField",
+    synopsis: "Adds a URL input field to the dialog.",
+    description: "A single-line text input with URL semantics; bound value is the entered link.",
+    syntax: ["<DialogBuilder> | Add-LinkField -Name <String> -Title <String> [-Value <String>] [-Mandatory]"],
+    parameters: [
+      { name: "Name", type: "String", description: "Bound variable name.", required: true, position: null },
+      { name: "Title", type: "String", description: "Field label.", required: true, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Website URL", code: '$dialog | Add-LinkField -Name "url" -Title "Website"', description: "Captures a URL string into $url." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Add-TextField"],
+  },
+  {
+    name: "Add-Checkbox",
+    synopsis: "Adds a true/false checkbox to the dialog.",
+    description: "A boolean toggle. Bound variable receives $true or $false based on user selection.",
+    syntax: ["<DialogBuilder> | Add-Checkbox -Name <String> -Title <String> [-Value <Bool>] [-Tab <String>]"],
+    parameters: [
+      { name: "Name", type: "String", description: "Bound variable name.", required: true, position: null },
+      { name: "Title", type: "String", description: "Checkbox label.", required: true, position: null },
+      { name: "Value", type: "Boolean", description: "Initial state (default: $false).", required: false, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Publish-after-save toggle", code: '$dialog | Add-Checkbox -Name "publish" -Title "Publish after save"', description: "$publish becomes $true if checked." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Add-TristateCheckbox"],
+  },
+  {
+    name: "Add-TristateCheckbox",
+    synopsis: "Adds a three-state checkbox (true / false / indeterminate).",
+    description: "Like Add-Checkbox but supports an indeterminate middle state for tri-valued logic.",
+    syntax: ["<DialogBuilder> | Add-TristateCheckbox -Name <String> -Title <String> [-Value <String>]"],
+    parameters: [
+      { name: "Name", type: "String", description: "Bound variable name.", required: true, position: null },
+      { name: "Title", type: "String", description: "Checkbox label.", required: true, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Workflow filter", code: '$dialog | Add-TristateCheckbox -Name "approved" -Title "Approved"', description: "Three-way filter: true / false / not specified." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Add-Checkbox"],
+  },
+  {
+    name: "Add-RadioButtons",
+    synopsis: "Adds a radio-button group from an Options hashtable.",
+    description: "Single-selection control. Keys in -Options become bound values; values become labels.",
+    syntax: ["<DialogBuilder> | Add-RadioButtons -Name <String> -Title <String> -Options <Hashtable> [-Value <String>]"],
+    parameters: [
+      { name: "Name", type: "String", description: "Bound variable name.", required: true, position: null },
+      { name: "Title", type: "String", description: "Group label.", required: true, position: null },
+      { name: "Options", type: "Hashtable", description: "@{key=label; ...} option pairs.", required: true, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Color picker", code: '$dialog | Add-RadioButtons -Name "color" -Title "Color" -Options @{red="Red"; blue="Blue"; green="Green"}', description: "$color becomes 'red', 'blue', or 'green'." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Add-Dropdown", "Add-Checklist"],
+  },
+  {
+    name: "Add-Dropdown",
+    synopsis: "Adds a dropdown (combo) selection to the dialog.",
+    description: "Single-selection from a list of options. Same -Options shape as Add-RadioButtons.",
+    syntax: ["<DialogBuilder> | Add-Dropdown -Name <String> -Title <String> -Options <Hashtable> [-Value <String>]"],
+    parameters: [
+      { name: "Name", type: "String", description: "Bound variable name.", required: true, position: null },
+      { name: "Title", type: "String", description: "Field label.", required: true, position: null },
+      { name: "Options", type: "Hashtable", description: "@{key=label; ...} option pairs.", required: true, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Language picker", code: '$dialog | Add-Dropdown -Name "language" -Title "Language" -Options @{en="English"; fr="French"}', description: "$language receives the selected key." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Add-RadioButtons", "Add-Checklist"],
+  },
+  {
+    name: "Add-Checklist",
+    synopsis: "Adds a multi-select checklist from an Options hashtable.",
+    description: "Returns an array of selected keys. Same -Options shape as Add-Dropdown.",
+    syntax: ["<DialogBuilder> | Add-Checklist -Name <String> -Title <String> -Options <Hashtable>"],
+    parameters: [
+      { name: "Name", type: "String", description: "Bound variable name.", required: true, position: null },
+      { name: "Title", type: "String", description: "Field label.", required: true, position: null },
+      { name: "Options", type: "Hashtable", description: "@{key=label; ...} option pairs.", required: true, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Multi-select languages", code: '$dialog | Add-Checklist -Name "languages" -Title "Languages" -Options @{en="English"; fr="French"; de="German"}', description: "$languages is a string array of selected keys." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Add-Dropdown", "Add-RadioButtons"],
+  },
+  {
+    name: "Add-DateTimePicker",
+    synopsis: "Adds a date and/or time picker.",
+    description: "Bound variable receives a [DateTime]. Use -DateOnly for date-without-time.",
+    syntax: ["<DialogBuilder> | Add-DateTimePicker -Name <String> -Title <String> [-DateOnly] [-Value <DateTime>]"],
+    parameters: [
+      { name: "Name", type: "String", description: "Bound variable name.", required: true, position: null },
+      { name: "Title", type: "String", description: "Field label.", required: true, position: null },
+      { name: "DateOnly", type: "SwitchParameter", description: "Hide the time portion.", required: false, position: null },
+      { name: "Value", type: "DateTime", description: "Initial value.", required: false, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Publish date", code: '$dialog | Add-DateTimePicker -Name "publishDate" -Title "Publish Date" -DateOnly', description: "Date-only picker." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Add-TextField"],
+  },
+  {
+    name: "Add-ItemPicker",
+    synopsis: "Adds a Sitecore item-picker control to the dialog.",
+    description: "Lets the user browse the content tree; bound value is the selected Item.",
+    syntax: ["<DialogBuilder> | Add-ItemPicker -Name <String> -Title <String> [-Root <String>] [-Mandatory]"],
+    parameters: [
+      { name: "Name", type: "String", description: "Bound variable name.", required: true, position: null },
+      { name: "Title", type: "String", description: "Field label.", required: true, position: null },
+      { name: "Root", type: "String", description: "Root path for the picker.", required: false, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Pick a content item", code: '$dialog | Add-ItemPicker -Name "target" -Title "Target item" -Root "/sitecore/content"', description: "Returns a Sitecore Item via $target." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Add-Droptree", "Add-TreeList"],
+  },
+  {
+    name: "Add-Droplink",
+    synopsis: "Adds a dropdown that returns a Sitecore Item.",
+    description: "Like Add-ItemPicker but rendered as a dropdown. Use -Source to scope the query.",
+    syntax: ["<DialogBuilder> | Add-Droplink -Name <String> -Title <String> [-Source <String>]"],
+    parameters: [
+      { name: "Name", type: "String", description: "Bound variable name.", required: true, position: null },
+      { name: "Title", type: "String", description: "Field label.", required: true, position: null },
+      { name: "Source", type: "String", description: "Sitecore data source query.", required: false, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Pick a template", code: '$dialog | Add-Droplink -Name "template" -Title "Template" -Source "DataSource=/sitecore/templates"', description: "Returns the selected template Item." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Add-Droptree", "Add-ItemPicker"],
+  },
+  {
+    name: "Add-Droptree",
+    synopsis: "Adds a tree-picker control to the dialog.",
+    description: "Tree-style item picker; bound value is the selected Item. Better than Add-Droplink for large hierarchies.",
+    syntax: ["<DialogBuilder> | Add-Droptree -Name <String> -Title <String> [-Root <String>]"],
+    parameters: [
+      { name: "Name", type: "String", description: "Bound variable name.", required: true, position: null },
+      { name: "Title", type: "String", description: "Field label.", required: true, position: null },
+      { name: "Root", type: "String", description: "Root path for the tree.", required: false, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Pick a content branch", code: '$dialog | Add-Droptree -Name "section" -Title "Section" -Root "/sitecore/content"', description: "Tree picker scoped to /sitecore/content." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Add-ItemPicker", "Add-Droplink"],
+  },
+  {
+    name: "Add-TreeList",
+    synopsis: "Adds a multi-select tree list to the dialog.",
+    description: "Tree-style multi-select picker; bound value is an Item array. Use -WithSearch to enable filter input.",
+    syntax: ["<DialogBuilder> | Add-TreeList -Name <String> -Title <String> [-Root <String>] [-WithSearch]"],
+    parameters: [
+      { name: "Name", type: "String", description: "Bound variable name.", required: true, position: null },
+      { name: "Title", type: "String", description: "Field label.", required: true, position: null },
+      { name: "Root", type: "String", description: "Root path for the tree.", required: false, position: null },
+      { name: "WithSearch", type: "SwitchParameter", description: "Adds a search box above the tree.", required: false, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Multi-select items with search", code: '$dialog | Add-TreeList -Name "items" -Title "Items" -Root "/sitecore/content" -WithSearch', description: "Searchable multi-select tree picker." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Add-MultiList", "Add-ItemPicker"],
+  },
+  {
+    name: "Add-MultiList",
+    synopsis: "Adds a multi-select bucket list to the dialog.",
+    description: "Two-pane available/selected list; bound value is an Item array. Use -WithSearch to add a filter input.",
+    syntax: ["<DialogBuilder> | Add-MultiList -Name <String> -Title <String> [-Root <String>] [-WithSearch]"],
+    parameters: [
+      { name: "Name", type: "String", description: "Bound variable name.", required: true, position: null },
+      { name: "Title", type: "String", description: "Field label.", required: true, position: null },
+      { name: "Root", type: "String", description: "Source root path.", required: false, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Pick contributors", code: '$dialog | Add-MultiList -Name "contributors" -Title "Contributors" -Root "/sitecore/content/Contributors"', description: "Two-pane multi-select." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Add-TreeList"],
+  },
+  {
+    name: "Add-UserPicker",
+    synopsis: "Adds a Sitecore user-picker control to the dialog.",
+    description: "Returns a Sitecore.Security.Accounts.User via the bound variable.",
+    syntax: ["<DialogBuilder> | Add-UserPicker -Name <String> -Title <String> [-Domain <String>]"],
+    parameters: [
+      { name: "Name", type: "String", description: "Bound variable name.", required: true, position: null },
+      { name: "Title", type: "String", description: "Field label.", required: true, position: null },
+      { name: "Domain", type: "String", description: "Optional domain to constrain selection.", required: false, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Pick a Sitecore user", code: '$dialog | Add-UserPicker -Name "owner" -Title "Owner" -Domain "sitecore"', description: "Sitecore-domain users only." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Add-RolePicker", "Get-User"],
+  },
+  {
+    name: "Add-RolePicker",
+    synopsis: "Adds a Sitecore role-picker control to the dialog.",
+    description: "Returns a Sitecore.Security.Accounts.Role via the bound variable.",
+    syntax: ["<DialogBuilder> | Add-RolePicker -Name <String> -Title <String> [-Domain <String>]"],
+    parameters: [
+      { name: "Name", type: "String", description: "Bound variable name.", required: true, position: null },
+      { name: "Title", type: "String", description: "Field label.", required: true, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Pick a role", code: '$dialog | Add-RolePicker -Name "role" -Title "Role"', description: "Returns the selected role." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Add-UserPicker", "Get-Role"],
+  },
+  {
+    name: "Add-InfoText",
+    synopsis: "Adds read-only informational text to the dialog.",
+    description: "Static text shown to the user; not bound to a variable. Useful for instructions or section headers.",
+    syntax: ["<DialogBuilder> | Add-InfoText -Title <String> [-Tab <String>]"],
+    parameters: [
+      { name: "Title", type: "String", description: "The text to display.", required: true, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Section header", code: '$dialog | Add-InfoText -Title "Choose your publishing options:"', description: "Read-only label inside the dialog body." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["New-DialogBuilder"],
+  },
+
+  // ---------- SearchBuilder family ----------
+  {
+    name: "New-SearchBuilder",
+    synopsis: "Creates a SearchBuilder for fluent query construction over Find-Item.",
+    description:
+      "Returns a builder you pipe through Add-* filter commands and finally into Invoke-Search. Wraps the Find-Item -Criteria hashtable model with composable, readable filters.",
+    syntax: ["New-SearchBuilder -Index <String> [-Path <String>] [-First <Int>] [-Skip <Int>] [-MaxResults <Int>] [-OrderBy <String>] [-LatestVersion] [-Strict]"],
+    parameters: [
+      { name: "Index", type: "String", description: "The search index name.", required: true, position: null },
+      { name: "Path", type: "String", description: "Root path scope for the search.", required: false, position: null },
+      { name: "First", type: "Int32", description: "Page size (default: 25).", required: false, position: null },
+      { name: "MaxResults", type: "Int32", description: "Safety cap on total items returned.", required: false, position: null },
+      { name: "OrderBy", type: "String", description: "Field to sort by.", required: false, position: null },
+      { name: "LatestVersion", type: "SwitchParameter", description: "Filter to latest version of each item.", required: false, position: null },
+      { name: "Strict", type: "SwitchParameter", description: "Validate field names against the index schema.", required: false, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Build and run a search", code: '$search = New-SearchBuilder -Index "sitecore_master_index" -First 25 -LatestVersion\n$search | Add-TemplateFilter -Name "Article"\n$results = $search | Invoke-Search', description: "Standard fluent flow." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Invoke-Search", "Add-TemplateFilter", "Find-Item"],
+  },
+  {
+    name: "Invoke-Search",
+    synopsis: "Executes a SearchBuilder query and returns a result object.",
+    description:
+      "Runs the accumulated filters via Find-Item and returns a structured result with .Items, .HasMore, .TotalCount, .PageSize, .IndexName, and .Query. Pagination auto-advances on each call so loops can use `do { ... } while ($results.HasMore)`.",
+    syntax: ["<SearchBuilder> | Invoke-Search"],
+    parameters: [],
+    examples: [
+      { title: "Example 1: Capture and inspect results", code: '$results = $search | Invoke-Search\n$results.Items | ForEach-Object { $_.Name }', description: "Iterate the bound items." },
+      { title: "Example 2: Paginate", code: 'do { $r = $search | Invoke-Search; $all += $r.Items } while ($r.HasMore)', description: "Drains all pages into a single collection." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["New-SearchBuilder", "Reset-SearchBuilder"],
+  },
+  {
+    name: "Reset-SearchBuilder",
+    synopsis: "Rewinds a SearchBuilder's pagination to page 1.",
+    description: "Resets Skip and PageNumber so the next Invoke-Search starts over from the first page.",
+    syntax: ["<SearchBuilder> | Reset-SearchBuilder"],
+    parameters: [],
+    examples: [
+      { title: "Example 1: Re-run from start", code: "$search | Reset-SearchBuilder\n$results = $search | Invoke-Search", description: "Useful when the same query needs to be re-executed." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Invoke-Search"],
+  },
+  {
+    name: "Add-TemplateFilter",
+    synopsis: "Filters search results by template name or ID.",
+    description: "Shorthand for `_templatename Equals <name>` (or `_template Equals <id>`). The most common SearchBuilder filter.",
+    syntax: ["<SearchBuilder> | Add-TemplateFilter -Name <String>", "<SearchBuilder> | Add-TemplateFilter -Id <Guid>"],
+    parameters: [
+      { name: "Name", type: "String", description: "Template name to match.", required: false, position: null },
+      { name: "Id", type: "Guid", description: "Template ID (GUID) to match.", required: false, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Articles only", code: '$search | Add-TemplateFilter -Name "Article"', description: "Restricts results to Article-template items." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Add-FieldEquals", "Add-SearchFilter"],
+  },
+  {
+    name: "Add-FieldContains",
+    synopsis: "Adds a Contains substring filter on a field.",
+    description: "Shorthand for Add-SearchFilter with the Contains filter type.",
+    syntax: ["<SearchBuilder> | Add-FieldContains -Field <String> -Value <String> [-Invert] [-Boost <Double>]"],
+    parameters: [
+      { name: "Field", type: "String", description: "Field name to match.", required: true, position: null },
+      { name: "Value", type: "String", description: "Substring to look for.", required: true, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Title contains 'Welcome'", code: '$search | Add-FieldContains -Field "Title" -Value "Welcome"', description: "Substring match on the Title field." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Add-FieldEquals", "Add-SearchFilter"],
+  },
+  {
+    name: "Add-FieldEquals",
+    synopsis: "Adds an exact-match filter on a field.",
+    description: "Shorthand for Add-SearchFilter with the Equals filter type.",
+    syntax: ["<SearchBuilder> | Add-FieldEquals -Field <String> -Value <String> [-Invert] [-Boost <Double>]"],
+    parameters: [
+      { name: "Field", type: "String", description: "Field name to match.", required: true, position: null },
+      { name: "Value", type: "String", description: "Exact value.", required: true, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Country equals 'US'", code: '$search | Add-FieldEquals -Field "country" -Value "US"', description: "Exact-match filter." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Add-FieldContains", "Add-SearchFilter"],
+  },
+  {
+    name: "Add-DateRangeFilter",
+    synopsis: "Adds a date-range filter using relative or absolute boundaries.",
+    description:
+      "Use -Last with shorthand (`7d`, `2w`, `3m`, `1y`) for relative ranges, or -From / -To for absolute boundaries.",
+    syntax: ["<SearchBuilder> | Add-DateRangeFilter -Field <String> -Last <String>", "<SearchBuilder> | Add-DateRangeFilter -Field <String> -From <DateTime> -To <DateTime>"],
+    parameters: [
+      { name: "Field", type: "String", description: "Indexed date field (e.g. __Updated).", required: true, position: null },
+      { name: "Last", type: "String", description: "Relative range shorthand: NUM + d/w/m/y.", required: false, position: null },
+      { name: "From", type: "DateTime", description: "Absolute start.", required: false, position: null },
+      { name: "To", type: "DateTime", description: "Absolute end.", required: false, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Last 30 days", code: '$search | Add-DateRangeFilter -Field "__Updated" -Last "30d"', description: "Relative window." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Add-SearchFilter"],
+  },
+  {
+    name: "Add-SearchFilter",
+    synopsis: "Low-level filter command supporting any filter type.",
+    description: "Underlies the Add-Field*/Add-TemplateFilter shortcuts. Supports -Invert (NOT), -Boost (relevance weight), and -CaseSensitive.",
+    syntax: ["<SearchBuilder> | Add-SearchFilter -Field <String> -Filter <FilterType> -Value <String> [-Invert] [-Boost <Double>] [-CaseSensitive]"],
+    parameters: [
+      { name: "Field", type: "String", description: "Field name.", required: true, position: null },
+      { name: "Filter", type: "String", description: "Filter type — Equals, Contains, StartsWith, EndsWith, GreaterThan, LessThan, Between, etc.", required: true, position: null },
+      { name: "Value", type: "String", description: "Filter value.", required: true, position: null },
+      { name: "Invert", type: "SwitchParameter", description: "Negate the match (NOT).", required: false, position: null },
+      { name: "Boost", type: "Double", description: "Relevance weight.", required: false, position: null },
+    ],
+    examples: [
+      { title: "Example 1: NOT contains, boosted", code: '$search | Add-SearchFilter -Field "_name" -Filter "Contains" -Value "system" -Invert -Boost 5', description: "Weighted negation." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Add-FieldEquals", "Add-FieldContains", "Get-SearchFilter"],
+  },
+  {
+    name: "Get-SearchFilter",
+    synopsis: "Lists the filter type values valid for Add-SearchFilter.",
+    description: "Run with no parameters to see every supported filter type with a brief description.",
+    syntax: ["Get-SearchFilter"],
+    parameters: [],
+    examples: [
+      { title: "Example 1: Discover available filters", code: "Get-SearchFilter", description: "Prints the full filter-type vocabulary." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Add-SearchFilter"],
+  },
+
+  // ---------- Security family ----------
+  {
+    name: "Get-User",
+    synopsis: "Returns one or more Sitecore users.",
+    description:
+      "Looks up a user by -Identity, runs a wildcard search via -Filter, or returns the current user with -Current. Identity values without a domain prefix default to `sitecore\\`.",
+    syntax: ["Get-User [-Identity] <AccountIdentity>", "Get-User -Filter <String>", "Get-User -Current"],
+    parameters: [
+      { name: "Identity", type: "AccountIdentity", description: "User identifier; e.g. 'admin' or 'sitecore\\admin'.", required: false, position: 0 },
+      { name: "Filter", type: "String", description: "Wildcard pattern; * for all, sitecore\\* for one domain.", required: false, position: null },
+      { name: "Current", type: "SwitchParameter", description: "Returns the user under which the script is running.", required: false, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Look up admin", code: "Get-User -Identity admin", description: "Returns the admin user record." },
+      { title: "Example 2: Filter by domain", code: 'Get-User -Filter "sitecore\\*"', description: "All users in the sitecore domain." },
+      { title: "Example 3: Current user", code: "Get-User -Current", description: "The user the script is running as." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Get-Role", "New-User", "Test-Account"],
+  },
+  {
+    name: "Get-Role",
+    synopsis: "Returns one or more Sitecore roles.",
+    description: "Looks up a role by -Identity or -Filter wildcard.",
+    syntax: ["Get-Role [-Identity] <AccountIdentity>", "Get-Role -Filter <String>"],
+    parameters: [
+      { name: "Identity", type: "AccountIdentity", description: "Role identifier (e.g. 'sitecore\\Developer').", required: false, position: 0 },
+      { name: "Filter", type: "String", description: "Wildcard pattern.", required: false, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Sitecore-domain roles", code: 'Get-Role -Filter "sitecore\\*"', description: "Lists all roles in the sitecore domain." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Get-RoleMember", "New-Role"],
+  },
+  {
+    name: "Get-RoleMember",
+    synopsis: "Returns the users that belong to a role.",
+    description: "Lists all members of the given role. Returns user objects.",
+    syntax: ["Get-RoleMember -Identity <AccountIdentity>"],
+    parameters: [
+      { name: "Identity", type: "AccountIdentity", description: "Role identifier.", required: true, position: 0 },
+    ],
+    examples: [
+      { title: "Example 1: Members of Developer role", code: 'Get-RoleMember -Identity "sitecore\\Developer"', description: "User rows for everyone in the role." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Add-RoleMember", "Get-Role"],
+  },
+  {
+    name: "New-User",
+    synopsis: "Creates a new Sitecore user.",
+    description: "Adds a user to the membership store. -Identity is required; -Email and -FullName are optional metadata.",
+    syntax: ["New-User -Identity <AccountIdentity> [-Email <String>] [-FullName <String>] [-Password <String>] [-Enabled <Bool>]"],
+    parameters: [
+      { name: "Identity", type: "AccountIdentity", description: "Fully-qualified user name.", required: true, position: null },
+      { name: "Email", type: "String", description: "Email address.", required: false, position: null },
+      { name: "FullName", type: "String", description: "Display name.", required: false, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Create a new author", code: 'New-User -Identity "sitecore\\jdoe" -Email "jdoe@example.com" -FullName "Jane Doe"', description: "Adds Jane Doe to the sitecore domain." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Get-User", "New-Role", "Add-RoleMember"],
+  },
+  {
+    name: "New-Role",
+    synopsis: "Creates a new Sitecore role.",
+    description: "Adds a role to the membership store. Pair with Add-RoleMember to assign users.",
+    syntax: ["New-Role -Identity <AccountIdentity> [-Description <String>]"],
+    parameters: [
+      { name: "Identity", type: "AccountIdentity", description: "Fully-qualified role name.", required: true, position: null },
+      { name: "Description", type: "String", description: "Role description.", required: false, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Create an Editors role", code: 'New-Role -Identity "sitecore\\Editors" -Description "Content editors"', description: "Creates the role; members are added separately." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Get-Role", "Add-RoleMember", "New-User"],
+  },
+  {
+    name: "Add-RoleMember",
+    synopsis: "Adds one or more users to a role.",
+    description: "-Members accepts a comma-separated list of user identities. Each member's role membership is updated.",
+    syntax: ["Add-RoleMember -Identity <AccountIdentity> -Members <AccountIdentity[]>"],
+    parameters: [
+      { name: "Identity", type: "AccountIdentity", description: "The role.", required: true, position: null },
+      { name: "Members", type: "AccountIdentity[]", description: "User(s) to add.", required: true, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Add a user", code: 'Add-RoleMember -Identity "sitecore\\Editors" -Members "sitecore\\jdoe"', description: "Single user." },
+      { title: "Example 2: Add multiple users", code: 'Add-RoleMember -Identity "sitecore\\Editors" -Members "sitecore\\jdoe", "sitecore\\michael"', description: "Comma-separated list." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Remove-RoleMember", "Get-RoleMember"],
+  },
+  {
+    name: "Remove-RoleMember",
+    synopsis: "Removes one or more users from a role.",
+    description: "Inverse of Add-RoleMember. Same -Members shape.",
+    syntax: ["Remove-RoleMember -Identity <AccountIdentity> -Members <AccountIdentity[]>"],
+    parameters: [
+      { name: "Identity", type: "AccountIdentity", description: "The role.", required: true, position: null },
+      { name: "Members", type: "AccountIdentity[]", description: "User(s) to remove.", required: true, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Remove a user", code: 'Remove-RoleMember -Identity "sitecore\\Editors" -Members "sitecore\\jdoe"', description: "Revokes membership." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Add-RoleMember"],
+  },
+  {
+    name: "Test-ItemAcl",
+    synopsis: "Tests whether a user has a specific access right on an item.",
+    description:
+      "Returns True if the named user has the requested access right on the target item (resolved by -Path, -Item, or -Id). Common rights: item:read, item:write, item:rename, item:create, item:delete, item:admin, field:read, field:write, language:read, language:write.",
+    syntax: ["Test-ItemAcl -Path <String> -Identity <AccountIdentity> -AccessRight <String>", "Test-ItemAcl -Item <Item> -Identity <AccountIdentity> -AccessRight <String>"],
+    parameters: [
+      { name: "Path", type: "String", description: "Path of the target item.", required: false, position: null },
+      { name: "Item", type: "Item", description: "Target item (pipeline-friendly).", required: false, position: null },
+      { name: "Identity", type: "AccountIdentity", description: "User to test against.", required: true, position: null },
+      { name: "AccessRight", type: "String", description: 'Access right token (e.g. "item:write").', required: true, position: null },
+    ],
+    examples: [
+      { title: "Example 1: Can jdoe edit Home?", code: 'Test-ItemAcl -Path "master:\\content\\Home" -Identity "sitecore\\jdoe" -AccessRight item:write', description: "Returns True/False." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Get-User", "Get-Role"],
+  },
+  {
+    name: "Test-Account",
+    synopsis: "Tests whether a user or role identity exists.",
+    description: "Returns True if the given identity matches an existing user or role; False otherwise.",
+    syntax: ["Test-Account -Identity <AccountIdentity>"],
+    parameters: [
+      { name: "Identity", type: "AccountIdentity", description: "User or role identity to look up.", required: true, position: 0 },
+    ],
+    examples: [
+      { title: "Example 1: Check before creating", code: 'if (-not (Test-Account -Identity "sitecore\\Editors")) { New-Role -Identity "sitecore\\Editors" }', description: "Idempotent role creation." },
+    ],
+    aliases: [],
+    relatedCmdlets: ["Get-User", "Get-Role"],
+  },
+];
+
+// ============================================================================
 // Lookup map (lowercase canonical name → CmdletHelp)
 // ============================================================================
 
 const CMDLET_HELP_MAP: Record<string, CmdletHelp> = {};
 
-for (const entry of [...FULL_HELP, ...FULL_HELP_2]) {
+for (const entry of [...FULL_HELP, ...FULL_HELP_2, ...FULL_HELP_3]) {
   CMDLET_HELP_MAP[entry.name.toLowerCase()] = entry;
 }
 

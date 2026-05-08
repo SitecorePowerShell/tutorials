@@ -196,4 +196,38 @@ describe("Get-Help executor integration", () => {
     expect(result.error).toBeNull();
     expect(result.output).toContain("Get-Item");
   });
+
+  describe("coverage", () => {
+    /**
+     * Every cmdlet the executor dispatches should have a help entry. If this
+     * fails after adding a new cmdlet, add it to FULL_HELP_3 in cmdletHelp.ts.
+     * This guards against the help-button silently being a no-op for new commands.
+     */
+    it("every executor cmdlet has a help entry", () => {
+      // Snapshot of every cmdlet name the executor's switch handles, taken from
+      // src/engine/executor.ts. Update this list when adding a new cmdlet.
+      const executorCmdlets = [
+        "Add-Checkbox", "Add-Checklist", "Add-DateRangeFilter", "Add-DateTimePicker",
+        "Add-DialogField", "Add-Dropdown", "Add-Droplink", "Add-Droptree",
+        "Add-FieldContains", "Add-FieldEquals", "Add-InfoText", "Add-ItemPicker",
+        "Add-LinkField", "Add-MultiLineTextField", "Add-MultiList",
+        "Add-RadioButtons", "Add-RoleMember", "Add-RolePicker", "Add-SearchFilter",
+        "Add-TemplateFilter", "Add-TextField", "Add-TreeList", "Add-TristateCheckbox",
+        "Add-UserPicker", "Close-Window", "ConvertTo-Json", "Copy-Item", "Find-Item",
+        "ForEach-Object", "Format-Table", "Get-Alias", "Get-ChildItem", "Get-Help",
+        "Get-Item", "Get-Location", "Get-Member", "Get-Role", "Get-RoleMember",
+        "Get-SearchFilter", "Get-User", "Group-Object", "Import-Function",
+        "Initialize-Item", "Invoke-Dialog", "Invoke-Search", "Measure-Object",
+        "Move-Item", "New-DialogBuilder", "New-Item", "New-Role", "New-SearchBuilder",
+        "New-User", "Publish-Item", "Read-Variable", "Remove-Item", "Remove-RoleMember",
+        "Rename-Item", "Reset-SearchBuilder", "Select-Object", "Set-ItemProperty",
+        "Set-Location", "Show-Alert", "Show-Confirm", "Show-FieldEditor", "Show-Input",
+        "Show-ListView", "Show-ModalDialog", "Show-YesNoCancel", "Sort-Object",
+        "Test-Account", "Test-ItemAcl", "Where-Object", "Write-Error", "Write-Host",
+        "Write-Output", "Write-Warning",
+      ];
+      const missing = executorCmdlets.filter((name) => !getCmdletHelp(name));
+      expect(missing).toEqual([]);
+    });
+  });
 });
