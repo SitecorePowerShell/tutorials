@@ -1,0 +1,104 @@
+id: "security"
+module: "Level 7 – Security & Access"
+order: 31
+title: "Users, Roles & Access Rights"
+difficulty: "advanced"
+mode: "ise"
+description: |
+  SPE exposes Sitecore's full security model — users, roles, and item ACLs — through a set of `*-User`, `*-Role`, and `*-ItemAcl` commands. This lesson walks through the everyday operations: looking up accounts, creating roles, granting membership, and testing whether a user can perform an operation.
+
+  ```powershell
+  # Who am I running as?
+  Get-User -Current
+
+  # Who's in the Developer role?
+  Get-RoleMember -Identity "sitecore\Developer"
+
+  # Can Jane edit the Home item?
+  Test-ItemAcl -Path "master:\content\Home" `
+               -Identity "sitecore\jdoe" `
+               -AccessRight item:write
+  ```
+
+  Common commands:
+
+  | Command | Purpose |
+  | :--- | :--- |
+  | `Get-User` | Look up users by `-Identity`, `-Filter`, or `-Current` |
+  | `Get-Role` / `Get-RoleMember` | Inspect roles and their members |
+  | `New-User` / `New-Role` | Create accounts |
+  | `Add-RoleMember` / `Remove-RoleMember` | Grant or revoke role membership |
+  | `Test-ItemAcl` | Check a specific access right for a user against an item |
+  | `Test-Account` | Verify whether an identity (user *or* role) exists |
+  | `Get-ItemAcl` / `New-ItemAcl` / `Set-ItemAcl` | Read or write the access rules on an item |
+
+  > [!NOTE] Domains and qualified names
+  > Identity values use a `domain\name` format. If you omit the domain, SPE assumes `sitecore\` — so `Get-User admin` and `Get-User sitecore\admin` are equivalent. Use the full form whenever you cross domains (`extranet\`, `default\`, etc.).
+
+  Common access rights you'll pass to `Test-ItemAcl` / `New-ItemAcl`: `item:read`, `item:write`, `item:rename`, `item:create`, `item:delete`, `item:admin`, `field:read`, `field:write`, `language:read`, `language:write`. See the [Test-ItemAcl docs](https://doc.sitecorepowershell.com/appendix/security/test-itemacl) for the full list.
+
+tasks:
+  - instruction: "Look up the built-in administrator account. Use `Get-User -Identity admin`."
+    hint: "Get-User -Identity admin"
+    nudge: "`Get-User -Identity <name>` returns one user. Without a domain prefix, `sitecore\\` is assumed."
+    starterCode: |
+      # Look up the admin account
+    validation:
+      type: "output"
+      outputContains: "sitecore\\Admin"
+    successMessage: "Admin accounts have IsAdministrator=True, which short-circuits ACL checks — they pass any Test-ItemAcl."
+
+  - instruction: "List every user across all domains. Use `Get-User -Filter *`."
+    hint: "Get-User -Filter *"
+    nudge: "Wildcards work in `-Filter`. Use `*` for all, `sitecore\\*` for one domain, `*@example.com` for an email pattern."
+    starterCode: |
+      # List every user
+    validation:
+      type: "output"
+      outputContains: "extranet\\Anonymous"
+    successMessage: "Real Sitecore installations have separate domains for content authors (sitecore), front-end visitors (extranet), and unauthenticated traffic (default)."
+
+  - instruction: "Show every Sitecore-domain role. Use `Get-Role -Filter \"sitecore\\*\"`."
+    hint: 'Get-Role -Filter "sitecore\*"'
+    nudge: "`Get-Role -Filter <pattern>` mirrors `Get-User -Filter`. `sitecore\\*` scopes to one domain."
+    starterCode: |
+      # List Sitecore-domain roles
+    validation:
+      type: "output"
+      outputContains: "sitecore\\Developer"
+    successMessage: "Roles are the unit of permission assignment in Sitecore — you grant rights to roles, then make users members."
+
+  - instruction: "Create a new role called `sitecore\\Editors` with a description. Use `New-Role -Identity \"sitecore\\Editors\" -Description \"Content editors\"`."
+    hint: |
+      New-Role -Identity "sitecore\Editors" -Description "Content editors"
+    nudge: "`New-Role -Identity <fully-qualified-name> -Description <text>`. The role is created if it doesn't exist."
+    starterCode: |
+      # Create a new role
+    validation:
+      type: "output"
+      outputContains: "Role created: sitecore\\Editors"
+    successMessage: "Role names are typically PascalCase plurals (Editors, Authors, Reviewers). Description is optional but useful for audits."
+
+  - instruction: "Add `sitecore\\michael` to the new `sitecore\\Editors` role. Use `Add-RoleMember -Identity \"sitecore\\Editors\" -Members \"sitecore\\michael\"`."
+    hint: |
+      Add-RoleMember -Identity "sitecore\Editors" -Members "sitecore\michael"
+    nudge: "`Add-RoleMember -Identity <role> -Members <user>`. -Members can be a comma-separated list."
+    starterCode: |
+      New-Role -Identity "sitecore\Editors" -Description "Content editors"
+
+      # Add Michael to the Editors role
+    validation:
+      type: "output"
+      outputContains: "Added sitecore\\michael to sitecore\\Editors"
+    successMessage: "Membership is the bridge between users and rights. After this call, $user.MemberOf includes the new role on the next Get-User."
+
+  - instruction: "Check whether `sitecore\\jdoe` can write to the Home item. Use `Test-ItemAcl -Path \"master:\\content\\Home\" -Identity \"sitecore\\jdoe\" -AccessRight item:write`."
+    hint: |
+      Test-ItemAcl -Path "master:\content\Home" -Identity "sitecore\jdoe" -AccessRight item:write
+    nudge: "`Test-ItemAcl -Path <path> -Identity <user> -AccessRight <right>`. Common rights: `item:read`, `item:write`, `item:create`, `item:delete`."
+    starterCode: |
+      # Test whether jdoe can write to /content/Home
+    validation:
+      type: "output"
+      outputContains: "True"
+    successMessage: "Test-ItemAcl is the right tool for guard rails — wrap risky bulk updates with it so you don't try to write items the runtime user can't actually edit."

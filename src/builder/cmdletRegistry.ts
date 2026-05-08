@@ -164,6 +164,63 @@ export const CMDLET_REGISTRY: Record<string, CmdletDef> = {
     ],
     switches: [],
   },
+  "Get-User": {
+    name: "Get-User",
+    shortLabel: "Get-User",
+    color: "#4db6ac",
+    lightColor: "#00695c",
+    icon: "👤",
+    params: [
+      { name: "Identity", type: "string", placeholder: "sitecore\\admin" },
+      { name: "Filter", type: "string", placeholder: "sitecore\\*" },
+    ],
+    switches: ["Current", "Authenticated"],
+    paramSets: [
+      { label: "By identity", params: ["Identity"], switches: ["Authenticated"] },
+      { label: "By filter", params: ["Filter"], switches: ["Authenticated"] },
+      { label: "Current", params: [], switches: ["Current"] },
+    ],
+  },
+  "Get-Role": {
+    name: "Get-Role",
+    shortLabel: "Get-Role",
+    color: "#ba68c8",
+    lightColor: "#6a1b9a",
+    icon: "🛡️",
+    params: [
+      { name: "Identity", type: "string", placeholder: "sitecore\\Developer" },
+      { name: "Filter", type: "string", placeholder: "sitecore\\*" },
+    ],
+    switches: [],
+    paramSets: [
+      { label: "By identity", params: ["Identity"] },
+      { label: "By filter", params: ["Filter"] },
+    ],
+  },
+  "Get-RoleMember": {
+    name: "Get-RoleMember",
+    shortLabel: "Get-RoleMember",
+    color: "#b39ddb",
+    lightColor: "#4527a0",
+    icon: "👥",
+    params: [
+      { name: "Identity", type: "string", required: true, placeholder: "sitecore\\Developer" },
+    ],
+    switches: [],
+  },
+  "Test-ItemAcl": {
+    name: "Test-ItemAcl",
+    shortLabel: "Test-ItemAcl",
+    color: "#90a4ae",
+    lightColor: "#455a64",
+    icon: "🔐",
+    params: [
+      { name: "Path", type: "string", required: true, placeholder: "master:\\content\\Home" },
+      { name: "Identity", type: "string", required: true, placeholder: "sitecore\\admin" },
+      { name: "AccessRight", type: "string", required: true, placeholder: "item:write" },
+    ],
+    switches: [],
+  },
 };
 
 export const ALL_CMDLET_NAMES = Object.keys(CMDLET_REGISTRY);

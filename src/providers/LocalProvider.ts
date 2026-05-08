@@ -69,28 +69,23 @@ export class LocalProvider implements ExecutionProvider {
     error: string | null
   ): ProviderExecutionResult {
     const entries: ConsoleEntry[] = [];
-
-    // Process dialog requests
     const dialogTypes = new Set(this.ctx.dialogRequests.map((d) => d.type));
 
-    if (output) {
-      if (dialogTypes.has("listview")) {
-        const lv = this.ctx.dialogRequests.find(
-          (d) => d.type === "listview"
-        )!;
-        entries.push({
-          type: "dialog-listview",
-          text: output,
-          title: lv.title || "List View",
-          itemCount: lv.itemCount ?? 0,
-          columns: lv.columns || [],
-          rows: lv.rows || [],
-        });
-      } else if (!dialogTypes.has("alert") && !dialogTypes.has("read-variable")) {
-        entries.push({ type: "output", text: output });
-      }
+    // 1. Listview consumes the output text into the dialog itself
+    if (output && dialogTypes.has("listview")) {
+      const lv = this.ctx.dialogRequests.find((d) => d.type === "listview")!;
+      entries.push({
+        type: "dialog-listview",
+        text: output,
+        title: lv.title || "List View",
+        itemCount: lv.itemCount ?? 0,
+        columns: lv.columns || [],
+        rows: lv.rows || [],
+      });
     }
 
+    // 2. Visual dialogs come first so they're never below the fold under
+    //    a long text-output dump from Add-* commands.
     for (const dr of this.ctx.dialogRequests) {
       if (dr.type === "alert") {
         entries.push({
@@ -113,6 +108,17 @@ export class LocalProvider implements ExecutionProvider {
           fields: dr.fields || [],
         });
       }
+    }
+
+    // 3. Then the regular text output (suppressed for listview, alert,
+    //    read-variable, since those dialogs already convey it).
+    if (
+      output &&
+      !dialogTypes.has("listview") &&
+      !dialogTypes.has("alert") &&
+      !dialogTypes.has("read-variable")
+    ) {
+      entries.push({ type: "output", text: output });
     }
 
     if (error) {

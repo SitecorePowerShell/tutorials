@@ -1,6 +1,69 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import type { ReactElement } from "react";
 import { colors, fonts, fontSizes } from "../theme";
+import { tokenize, renderTokens } from "./HighlightedCode";
+
+function CodeBlock({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+  const onCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard API unavailable (e.g. iframe without permission). Fail silently.
+    }
+  }, [code]);
+
+  return (
+    <div style={{ position: "relative", margin: "8px 0" }}>
+      <pre
+        style={{
+          background: colors.bgOverlay,
+          padding: "12px 16px",
+          paddingRight: 64,
+          borderRadius: 6,
+          overflowX: "auto",
+          margin: 0,
+          fontSize: fontSizes.body,
+          lineHeight: 1.5,
+          border: `1px solid ${colors.borderMedium}`,
+        }}
+      >
+        <code style={{ color: colors.textCode, fontFamily: fonts.mono }}>
+          {renderTokens(tokenize(code))}
+        </code>
+      </pre>
+      <button
+        type="button"
+        onClick={onCopy}
+        aria-label={copied ? "Code copied to clipboard" : "Copy code to clipboard"}
+        title={copied ? "Copied!" : "Copy"}
+        style={{
+          position: "absolute",
+          top: 8,
+          right: 8,
+          background: copied ? colors.statusSuccess : colors.bgPanel,
+          border: `1px solid ${copied ? colors.statusSuccess : colors.borderDim}`,
+          color: copied ? "#fff" : colors.textSecondary,
+          borderRadius: 4,
+          padding: "3px 8px",
+          fontSize: fontSizes.xs,
+          fontFamily: "inherit",
+          cursor: "pointer",
+          opacity: 0.9,
+          transition: "background 0.15s, color 0.15s, border-color 0.15s",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
+        }}
+      >
+        <span aria-hidden="true">{copied ? "✓" : "⧉"}</span>
+        {copied ? "Copied" : "Copy"}
+      </button>
+    </div>
+  );
+}
 
 function processInline(line: string): string {
   return line
@@ -158,28 +221,7 @@ function parseMarkdown(text: string): React.ReactElement {
     if (line.trim().startsWith("```")) {
       if (inCodeBlock) {
         elements.push(
-          <pre
-            key={key++}
-            style={{
-              background: colors.bgOverlay,
-              padding: "12px 16px",
-              borderRadius: 6,
-              overflowX: "auto",
-              margin: "8px 0",
-              fontSize: fontSizes.body,
-              lineHeight: 1.5,
-              border: `1px solid ${colors.borderMedium}`,
-            }}
-          >
-            <code
-              style={{
-                color: colors.textCode,
-                fontFamily: fonts.mono,
-              }}
-            >
-              {codeBuffer.join("\n")}
-            </code>
-          </pre>
+          <CodeBlock key={key++} code={codeBuffer.join("\n")} />
         );
         codeBuffer = [];
         inCodeBlock = false;

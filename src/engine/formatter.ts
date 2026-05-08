@@ -3,8 +3,54 @@ import { getItemProperty } from "./properties";
 import { getPropertyLabel, evaluatePropertySpec } from "./propertySpec";
 import type { ScriptContext } from "./scriptContext";
 
+function formatColumns(headers: string[], rows: string[][]): string {
+  const colWidths = headers.map((h, i) =>
+    Math.max(h.length, ...rows.map((r) => String(r[i]).length))
+  );
+  const sep = colWidths.map((w) => "-".repeat(w)).join(" ");
+  const headerLine = headers.map((h, i) => h.padEnd(colWidths[i])).join(" ");
+  const rowLines = rows.map((r) =>
+    r.map((c, i) => String(c).padEnd(colWidths[i])).join(" ")
+  );
+  return [headerLine, sep, ...rowLines].join("\n");
+}
+
 export function formatItemTable(items: SitecoreItem[]): string {
   if (items.length === 0) return "";
+
+  // User objects (from Get-User / New-User)
+  if ((items[0] as unknown as { _isUser?: boolean })._isUser) {
+    const headers = ["Name", "Domain", "IsAdministrator", "IsAuthenticated"];
+    const rows = items.map((u) => {
+      const user = u as unknown as {
+        Name: string;
+        Domain: string;
+        IsAdministrator: boolean;
+        IsAuthenticated: boolean;
+      };
+      return [
+        user.Name,
+        user.Domain,
+        user.IsAdministrator ? "True" : "False",
+        user.IsAuthenticated ? "True" : "False",
+      ];
+    });
+    return formatColumns(headers, rows);
+  }
+
+  // Role objects (from Get-Role / New-Role)
+  if ((items[0] as unknown as { _isRole?: boolean })._isRole) {
+    const headers = ["Name", "Domain", "IsEveryone"];
+    const rows = items.map((r) => {
+      const role = r as unknown as {
+        Name: string;
+        Domain: string;
+        IsEveryone: boolean;
+      };
+      return [role.Name, role.Domain, role.IsEveryone ? "True" : "False"];
+    });
+    return formatColumns(headers, rows);
+  }
 
   // SearchResultItem (from Find-Item) shows a reduced column set
   if (items[0]._isSearchResult) {

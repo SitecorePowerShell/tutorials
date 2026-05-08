@@ -1,0 +1,122 @@
+id: "search-builder"
+module: "Level 6 – Interactive Scripts"
+order: 30
+title: "Composing Searches with SearchBuilder"
+difficulty: "advanced"
+mode: "ise"
+description: |
+  `Find-Item` is fast, but its `-Criteria` syntax — an array of hashtables — gets noisy quickly. **SearchBuilder** is SPE 9's fluent wrapper: you create a builder, pipe filter commands into it, and call `Invoke-Search`. The library handles the hashtable plumbing, pagination, and result shaping.
+
+  ```powershell
+  Import-Function -Name SearchBuilder
+
+  $search = New-SearchBuilder -Index "sitecore_master_index" -First 25 -LatestVersion
+  $search | Add-TemplateFilter -Name "Article"
+  $search | Add-FieldContains -Field "Title" -Value "Welcome"
+  $results = $search | Invoke-Search
+
+  $results.Items | Initialize-Item | ForEach-Object { $_.Name }
+  ```
+
+  Common filter commands:
+
+  | Command | Adds |
+  | :--- | :--- |
+  | `Add-TemplateFilter` | Items by template `-Name` or `-Id` |
+  | `Add-FieldEquals` / `Add-FieldContains` | Field equality / substring match |
+  | `Add-DateRangeFilter` | Relative (`-Last "7d"`) or absolute (`-From`/`-To`) date range |
+  | `Add-SearchFilter` | Low-level: any `-Filter` operator with `-Invert`, `-Boost`, `-CaseSensitive` |
+
+  > [!NOTE] Why SearchBuilder over raw `Find-Item`?
+  > - **Composable** — each `Add-*` mutates the builder, so you can build queries conditionally (e.g. only add a filter if a parameter is set).
+  > - **Pagination is built in** — `Invoke-Search` advances `Skip` automatically; you check `$results.HasMore` to keep going.
+  > - **Strict mode** validates field names against the index schema before executing.
+  > - **Predicate groups** support OR logic (`New-SearchFilterGroup -Operation Or`) without scriptblocks, which keeps it CLM-safe.
+
+  See the [SearchBuilder documentation](https://doc.sitecorepowershell.com/modules/search-builder) for facets, projections, and filter groups.
+
+tasks:
+  - instruction: "Load the SearchBuilder library so its commands become available."
+    hint: "Import-Function -Name SearchBuilder"
+    nudge: "Use `Import-Function` with `-Name SearchBuilder` (same loader as DialogBuilder)."
+    starterCode: |
+      # Load the SearchBuilder extension library
+    validation:
+      type: "output"
+      outputContains: "Loaded function library: SearchBuilder"
+    successMessage: "SearchBuilder commands are ready. The library wraps Find-Item — every search you build here is a Find-Item call under the hood."
+
+  - instruction: "Create a search builder for `sitecore_master_index`, capped at 25 items per page, and limited to the latest version of each item. Store it in `$search`."
+    hint: |
+      $search = New-SearchBuilder -Index "sitecore_master_index" -First 25 -LatestVersion
+    nudge: "`New-SearchBuilder -Index <name> -First 25 -LatestVersion`. -First sets the page size; -LatestVersion filters out historical versions."
+    starterCode: |
+      Import-Function -Name SearchBuilder
+
+      # Create the builder
+    validation:
+      type: "output"
+      outputContains: 'SearchBuilder created: index "sitecore_master_index"'
+    successMessage: "`$search` now holds a builder. `-LatestVersion` and `-First` apply to all subsequent filters and paging."
+
+  - instruction: "Filter to items whose template is named `Article`. Pipe `$search` into `Add-TemplateFilter`."
+    hint: |
+      $search | Add-TemplateFilter -Name "Article"
+    nudge: "`Add-TemplateFilter -Name \"Article\"` is shorthand for the field filter `_templatename Equals 'Article'`."
+    starterCode: |
+      Import-Function -Name SearchBuilder
+      $search = New-SearchBuilder -Index "sitecore_master_index" -First 25 -LatestVersion
+
+      # Filter by template name
+    validation:
+      type: "output"
+      outputContains: "TemplateFilter: Name = 'Article'"
+    successMessage: "Template filtering is the most common starting point — it's much faster than walking the tree and checking TemplateName per item."
+
+  - instruction: "Add a substring filter on the `Title` field — only items whose title contains `Welcome`."
+    hint: |
+      $search | Add-FieldContains -Field "Title" -Value "Welcome"
+    nudge: "Use `Add-FieldContains -Field <name> -Value <substring>`. For exact matches use `Add-FieldEquals` instead."
+    starterCode: |
+      Import-Function -Name SearchBuilder
+      $search = New-SearchBuilder -Index "sitecore_master_index" -First 25 -LatestVersion
+      $search | Add-TemplateFilter -Name "Article"
+
+      # Add a Title contains filter
+    validation:
+      type: "output"
+      outputContains: "FieldContains: Title contains 'Welcome'"
+    successMessage: "Filters compose with AND by default — every Add-* narrows the result set further."
+
+  - instruction: "Limit results to items updated in the last 30 days. Use `Add-DateRangeFilter` on the `__Updated` field with `-Last \"30d\"`."
+    hint: |
+      $search | Add-DateRangeFilter -Field "__Updated" -Last "30d"
+    nudge: "`Add-DateRangeFilter -Field \"__Updated\" -Last \"30d\"`. Relative shorthand supports d/w/m/y; or use `-From` and `-To` for absolute ranges."
+    starterCode: |
+      Import-Function -Name SearchBuilder
+      $search = New-SearchBuilder -Index "sitecore_master_index" -First 25 -LatestVersion
+      $search | Add-TemplateFilter -Name "Article"
+      $search | Add-FieldContains -Field "Title" -Value "Welcome"
+
+      # Limit to items updated in the last 30 days
+    validation:
+      type: "output"
+      outputContains: "DateRangeFilter: __Updated within last 30d"
+    successMessage: "`__Updated` is a built-in indexed field on every item. Date ranges combine cleanly with template and content filters."
+
+  - instruction: "Run the search. Pipe `$search` into `Invoke-Search` and store the result in `$results`."
+    hint: |
+      $results = $search | Invoke-Search
+    nudge: "`Invoke-Search` runs the accumulated filters via Find-Item and returns a result object with `.Items`, `.HasMore`, `.TotalCount`."
+    starterCode: |
+      Import-Function -Name SearchBuilder
+      $search = New-SearchBuilder -Index "sitecore_master_index" -First 25 -LatestVersion
+      $search | Add-TemplateFilter -Name "Article"
+      $search | Add-FieldContains -Field "Title" -Value "Welcome"
+      $search | Add-DateRangeFilter -Field "__Updated" -Last "30d"
+
+      # Execute the search and capture the results
+    validation:
+      type: "output"
+      outputContains: 'Search "sitecore_master_index" executed'
+    successMessage: "Real SPE returns a populated result object. Loop with `do { ... } while ($results.HasMore)` to page through large result sets — Invoke-Search advances Skip on each call."

@@ -27,6 +27,18 @@ import {
   parseCriteriaHashtables,
 } from "./searchIndex";
 import { getCmdletHelp, formatHelpText, formatCmdletList } from "./cmdletHelp";
+import {
+  findUser,
+  filterUsers,
+  findRole,
+  filterRoles,
+  createUser,
+  createRole,
+  addRoleMember,
+  removeRoleMember,
+  testAccount,
+  testItemAcl,
+} from "./securityStore";
 
 /** Expand a wildcard `*` in a -Property list to all properties of the first item */
 function expandPropertyWildcard(specs: PropertySpec[], pipelineData: SitecoreItem[]): PropertySpec[] {
@@ -558,9 +570,19 @@ export function executeCommandWithContext(
       }
     }
 
-    // Check if the first stage is a variable reference
+    // Check if the first stage is a variable reference, optionally with
+    // dot-property access (e.g. `$results.Items` or `$result.Status.Code`).
     if (i === 0 && stage.cmdlet.startsWith("$")) {
-      const varVal = ctx.getVar(stage.cmdlet.substring(1));
+      const segments = stage.cmdlet.substring(1).split(".");
+      let varVal: unknown = ctx.getVar(segments[0]);
+      for (let j = 1; j < segments.length && varVal != null; j++) {
+        if (typeof varVal === "object") {
+          varVal = (varVal as Record<string, unknown>)[segments[j]];
+        } else {
+          varVal = undefined;
+          break;
+        }
+      }
       if (Array.isArray(varVal)) {
         pipelineData = varVal as SitecoreItem[];
         continue;
@@ -577,6 +599,14 @@ export function executeCommandWithContext(
         "_dialogBuilder" in (varVal as object)
       ) {
         // DialogBuilder marker — flow through pipeline so Add-* cmdlets receive it
+        pipelineData = [varVal as unknown as SitecoreItem];
+        continue;
+      } else if (
+        varVal &&
+        typeof varVal === "object" &&
+        "_searchBuilder" in (varVal as object)
+      ) {
+        // SearchBuilder marker — flow through pipeline so filter cmdlets receive it
         pipelineData = [varVal as unknown as SitecoreItem];
         continue;
       }
@@ -1717,11 +1747,436 @@ export function executeCommandWithContext(
           title: builder.title,
           fields: builder.fields,
         });
-        return { output: "", error: null };
+        // Return a structured result so `$result = $dialog | Invoke-Dialog`
+        // captures an object with .Result / .Title / .FieldCount, matching
+        // real DialogBuilder behavior.
+        const dialogResult = {
+          _dialogResult: true,
+          Result: "ok",
+          Title: builder.title,
+          FieldCount: builder.fields.length,
+        };
+        return {
+          output: "",
+          error: null,
+          pipelineData: [dialogResult] as unknown as SitecoreItemArray,
+        };
+      } else if (cmdLower === "new-searchbuilder") {
+        const index =
+          stage.params.Index || stage.params.index ||
+          (stage.params._positional && stage.params._positional[0]) || "";
+        const first =
+          stage.params.First || stage.params.first || "";
+        const path = stage.params.Path || stage.params.path || "";
+        const orderBy = stage.params.OrderBy || stage.params.orderby || "";
+        const latestVersion = stage.switches.some(
+          (s) => s.toLowerCase() === "latestversion"
+        );
+        const strict = stage.switches.some((s) => s.toLowerCase() === "strict");
+        const builder = {
+          _searchBuilder: true,
+          index: String(index || "sitecore_master_index"),
+          first: first ? Number(first) : 25,
+          path: String(path || ""),
+          orderBy: String(orderBy || ""),
+          latestVersion,
+          strict,
+          filters: [] as import("../types").SearchFilter[],
+        };
+        ctx.outputs.push(
+          `🔍 SearchBuilder created: index "${builder.index}"` +
+            (builder.path ? ` (scope: ${builder.path})` : "") +
+            (latestVersion ? " [LatestVersion]" : "") +
+            (strict ? " [Strict]" : "")
+        );
+        return {
+          output: "",
+          error: null,
+          pipelineData: [builder] as unknown as SitecoreItemArray,
+        };
+      } else if (
+        cmdLower === "add-templatefilter" ||
+        cmdLower === "add-fieldcontains" ||
+        cmdLower === "add-fieldequals" ||
+        cmdLower === "add-searchfilter" ||
+        cmdLower === "add-daterangefilter"
+      ) {
+        const builder =
+          pipelineData &&
+          Array.isArray(pipelineData) &&
+          pipelineData.length > 0 &&
+          (pipelineData[0] as unknown as { _searchBuilder?: boolean })._searchBuilder
+            ? (pipelineData[0] as unknown as {
+                filters: import("../types").SearchFilter[];
+              })
+            : null;
+
+        const invert = stage.switches.some((s) => s.toLowerCase() === "invert");
+        const boost = stage.params.Boost
+          ? Number(stage.params.Boost)
+          : undefined;
+
+        let filter: import("../types").SearchFilter;
+        let line: string;
+
+        if (cmdLower === "add-templatefilter") {
+          const name = stage.params.Name || stage.params.name || "";
+          filter = {
+            kind: "TemplateFilter",
+            field: "_templatename",
+            op: "Equals",
+            value: String(name),
+          };
+          line = `  + TemplateFilter: Name = '${name}'`;
+        } else if (cmdLower === "add-fieldcontains") {
+          const field = stage.params.Field || stage.params.field || "";
+          const value = stage.params.Value || stage.params.value || "";
+          filter = {
+            kind: "FieldContains",
+            field: String(field),
+            op: "Contains",
+            value: String(value),
+          };
+          line = `  + FieldContains: ${field} contains '${value}'`;
+        } else if (cmdLower === "add-fieldequals") {
+          const field = stage.params.Field || stage.params.field || "";
+          const value = stage.params.Value || stage.params.value || "";
+          filter = {
+            kind: "FieldEquals",
+            field: String(field),
+            op: "Equals",
+            value: String(value),
+          };
+          line = `  + FieldEquals: ${field} = '${value}'`;
+        } else if (cmdLower === "add-daterangefilter") {
+          const field = stage.params.Field || stage.params.field || "__Updated";
+          const last = stage.params.Last || stage.params.last;
+          const from = stage.params.From || stage.params.from;
+          const to = stage.params.To || stage.params.to;
+          const range = last
+            ? `within last ${last}`
+            : `from ${from || "?"} to ${to || "?"}`;
+          filter = {
+            kind: "DateRangeFilter",
+            field: String(field),
+            op: "DateRange",
+            value: range,
+          };
+          line = `  + DateRangeFilter: ${field} ${range}`;
+        } else {
+          // add-searchfilter
+          const field = stage.params.Field || stage.params.field || "";
+          const ftype = stage.params.Filter || stage.params.filter || "Equals";
+          const value = stage.params.Value || stage.params.value || "";
+          filter = {
+            kind: "SearchFilter",
+            field: String(field),
+            op: String(ftype),
+            value: String(value),
+          };
+          line = `  + SearchFilter: ${field} ${ftype} '${value}'`;
+        }
+
+        if (invert) {
+          filter.invert = true;
+          line += " [Invert]";
+        }
+        if (boost !== undefined) {
+          filter.boost = boost;
+          line += ` [Boost ${boost}]`;
+        }
+
+        if (builder) builder.filters.push(filter);
+        return { output: line, error: null };
+      } else if (cmdLower === "invoke-search") {
+        const builder =
+          pipelineData &&
+          Array.isArray(pipelineData) &&
+          pipelineData.length > 0 &&
+          (pipelineData[0] as unknown as { _searchBuilder?: boolean })._searchBuilder
+            ? (pipelineData[0] as unknown as {
+                index: string;
+                first: number;
+                path: string;
+                orderBy: string;
+                latestVersion: boolean;
+                filters: import("../types").SearchFilter[];
+              })
+            : null;
+        if (!builder) {
+          return {
+            output: "",
+            error:
+              "Invoke-Search : Pipeline input is not a SearchBuilder. Pipe a value created by New-SearchBuilder.",
+          };
+        }
+        // Build a human-readable query summary, mirroring the format SPE prints
+        const filterParts = builder.filters.map((f) => {
+          let s: string;
+          if (f.op === "DateRange") {
+            s = `${f.field} ${f.value}`;
+          } else {
+            s = `${f.field} ${f.op} '${f.value}'`;
+          }
+          if (f.invert) s = `NOT (${s})`;
+          if (f.boost !== undefined) s += `^${f.boost}`;
+          return s;
+        });
+        const tail: string[] = [];
+        if (builder.path) tail.push(`Path: ${builder.path}`);
+        if (builder.latestVersion) tail.push("LatestVersion");
+        if (builder.orderBy) tail.push(`OrderBy: ${builder.orderBy}`);
+        const querySummary =
+          (filterParts.join(" AND ") || "(no filters)") +
+          (tail.length > 0 ? ` [${tail.join(" | ")}]` : "");
+        // Translate structured SearchBuilder filters into the same
+        // SearchCriteria shape that Find-Item uses, then run the actual
+        // search against the virtual tree. This gives `$results.Items`
+        // real items so users can pipe them through ForEach-Object,
+        // Initialize-Item, etc.
+        const criteria = builder.filters
+          // DateRange uses a synthetic value (`within last 30d`) and the
+          // simulator's index doesn't model dates, so skip it for now —
+          // it still appears in the visual summary.
+          .filter((f) => f.op !== "DateRange")
+          .map((f) => ({
+            Filter: f.op,
+            Field: f.field,
+            Value: f.value,
+            ...(f.invert ? { Invert: true } : {}),
+            ...(f.boost !== undefined ? { Boost: f.boost } : {}),
+          }));
+        const searchIdx = buildSearchIndex(tree);
+        const matched = executeSearch(searchIdx, criteria, {}, tree);
+        const allItems = entriesToItems(matched, tree);
+        const totalCount = allItems.length;
+        const items = allItems.slice(0, builder.first).map((it) => ({
+          ...it,
+          _isSearchResult: true,
+        }));
+
+        const summary =
+          `🔎 Search "${builder.index}" executed: ${totalCount} matching item(s)\n` +
+          `   Query: ${querySummary}`;
+        ctx.outputs.push(summary);
+        // Return a structured result so `$results = $search | Invoke-Search`
+        // captures an object whose .Items / .HasMore / .TotalCount mirror
+        // the real SearchBuilder result.
+        const searchResult = {
+          _searchResult: true,
+          IndexName: builder.index,
+          Items: items,
+          TotalCount: totalCount,
+          PageSize: builder.first,
+          PageNumber: 1,
+          HasMore: totalCount > items.length,
+          Query: querySummary,
+        };
+        return {
+          output: "",
+          error: null,
+          pipelineData: [searchResult] as unknown as SitecoreItemArray,
+        };
+      } else if (cmdLower === "reset-searchbuilder") {
+        return {
+          output: "  ↻ SearchBuilder pagination reset",
+          error: null,
+          pipelineData: pipelineData as SitecoreItemArray | undefined,
+        };
+      } else if (cmdLower === "get-user") {
+        const isCurrent = stage.switches.some((s) => s.toLowerCase() === "current");
+        if (isCurrent) {
+          const u = findUser("admin");
+          pipelineData = u ? ([u] as unknown as SitecoreItemArray) : null;
+        } else if (stage.params.Filter || stage.params.filter) {
+          const pattern = String(stage.params.Filter || stage.params.filter).replace(/['"]/g, "");
+          pipelineData = filterUsers(pattern) as unknown as SitecoreItemArray;
+        } else {
+          const identity = String(
+            stage.params.Identity ||
+              stage.params.identity ||
+              (stage.params._positional && stage.params._positional[0]) ||
+              ""
+          ).replace(/['"]/g, "");
+          if (!identity) {
+            return {
+              output: "",
+              error: "Get-User : -Identity, -Filter, or -Current is required.",
+            };
+          }
+          const u = findUser(identity);
+          if (!u) {
+            return {
+              output: "",
+              error: `Get-User : User '${identity}' not found.`,
+            };
+          }
+          pipelineData = [u] as unknown as SitecoreItemArray;
+        }
+      } else if (cmdLower === "get-role") {
+        if (stage.params.Filter || stage.params.filter) {
+          const pattern = String(stage.params.Filter || stage.params.filter).replace(/['"]/g, "");
+          pipelineData = filterRoles(pattern) as unknown as SitecoreItemArray;
+        } else {
+          const identity = String(
+            stage.params.Identity ||
+              stage.params.identity ||
+              (stage.params._positional && stage.params._positional[0]) ||
+              ""
+          ).replace(/['"]/g, "");
+          if (!identity) {
+            return {
+              output: "",
+              error: "Get-Role : -Identity or -Filter is required.",
+            };
+          }
+          const r = findRole(identity);
+          if (!r) {
+            return {
+              output: "",
+              error: `Get-Role : Role '${identity}' not found.`,
+            };
+          }
+          pipelineData = [r] as unknown as SitecoreItemArray;
+        }
+      } else if (cmdLower === "get-rolemember") {
+        const identity = String(
+          stage.params.Identity ||
+            stage.params.identity ||
+            (stage.params._positional && stage.params._positional[0]) ||
+            ""
+        ).replace(/['"]/g, "");
+        if (!identity) {
+          return { output: "", error: "Get-RoleMember : -Identity is required." };
+        }
+        const r = findRole(identity);
+        if (!r) {
+          return {
+            output: "",
+            error: `Get-RoleMember : Role '${identity}' not found.`,
+          };
+        }
+        // Reuse the user store: members are users who have this role in MemberOf
+        const members = filterUsers("*").filter((u) =>
+          u.MemberOf.some((mr) => mr.Name === r.Name)
+        );
+        pipelineData = members as unknown as SitecoreItemArray;
+      } else if (cmdLower === "new-user") {
+        const identity = String(
+          stage.params.Identity || stage.params.identity || ""
+        ).replace(/['"]/g, "");
+        if (!identity) {
+          return { output: "", error: "New-User : -Identity is required." };
+        }
+        const email = String(stage.params.Email || stage.params.email || "").replace(/['"]/g, "");
+        const fullName = String(stage.params.FullName || stage.params.fullname || "").replace(/['"]/g, "");
+        const u = createUser(identity, email || undefined, fullName || undefined);
+        return {
+          output: `User created: ${u.Name}`,
+          error: null,
+          pipelineData: [u] as unknown as SitecoreItemArray,
+        };
+      } else if (cmdLower === "new-role") {
+        const identity = String(
+          stage.params.Identity ||
+            stage.params.identity ||
+            (stage.params._positional && stage.params._positional[0]) ||
+            ""
+        ).replace(/['"]/g, "");
+        if (!identity) {
+          return { output: "", error: "New-Role : -Identity is required." };
+        }
+        const description = String(
+          stage.params.Description || stage.params.description || ""
+        ).replace(/['"]/g, "");
+        const r = createRole(identity, description || undefined);
+        return {
+          output: `Role created: ${r.Name}`,
+          error: null,
+          pipelineData: [r] as unknown as SitecoreItemArray,
+        };
+      } else if (
+        cmdLower === "add-rolemember" ||
+        cmdLower === "remove-rolemember"
+      ) {
+        const identity = String(
+          stage.params.Identity || stage.params.identity || ""
+        ).replace(/['"]/g, "");
+        const members = String(stage.params.Members || stage.params.members || "").replace(/['"]/g, "");
+        if (!identity || !members) {
+          return {
+            output: "",
+            error: `${stage.cmdlet} : -Identity (role) and -Members (user) are required.`,
+          };
+        }
+        const memberList = members.split(",").map((m) => m.trim()).filter(Boolean);
+        const verb = cmdLower === "add-rolemember" ? "Added" : "Removed";
+        const lines: string[] = [];
+        for (const m of memberList) {
+          const result =
+            cmdLower === "add-rolemember"
+              ? addRoleMember(identity, m)
+              : removeRoleMember(identity, m);
+          if (!result.ok) {
+            return { output: lines.join("\n"), error: result.reason ?? null };
+          }
+          lines.push(
+            `${verb} ${m} ${cmdLower === "add-rolemember" ? "to" : "from"} ${identity}`
+          );
+        }
+        return { output: lines.join("\n"), error: null };
+      } else if (cmdLower === "test-itemacl") {
+        const path = String(
+          stage.params.Path ||
+            stage.params.path ||
+            (stage.params._positional && stage.params._positional[0]) ||
+            ""
+        ).replace(/['"]/g, "");
+        const identity = String(
+          stage.params.Identity || stage.params.identity || ""
+        ).replace(/['"]/g, "");
+        const accessRight = String(
+          stage.params.AccessRight || stage.params.accessright || ""
+        ).replace(/['"]/g, "");
+        if (!path || !identity || !accessRight) {
+          return {
+            output: "",
+            error:
+              "Test-ItemAcl : -Path, -Identity, and -AccessRight are required.",
+          };
+        }
+        const allowed = testItemAcl(path, identity, accessRight);
+        return {
+          output: `${path}  ${accessRight}  ${identity}  ${allowed ? "True" : "False"}`,
+          error: null,
+        };
+      } else if (cmdLower === "test-account") {
+        const identity = String(
+          stage.params.Identity ||
+            stage.params.identity ||
+            (stage.params._positional && stage.params._positional[0]) ||
+            ""
+        ).replace(/['"]/g, "");
+        if (!identity) {
+          return { output: "", error: "Test-Account : -Identity is required." };
+        }
+        return {
+          output: testAccount(identity) ? "True" : "False",
+          error: null,
+        };
+      } else if (cmdLower === "get-searchfilter") {
+        return {
+          output:
+            "Available filter types:\n" +
+            "  Equals, NotEquals, Contains, StartsWith, EndsWith,\n" +
+            "  GreaterThan, GreaterThanEqual, LessThan, LessThanEqual,\n" +
+            "  Between, MatchesRegex, MatchesWildcard, Fuzzy, Like",
+          error: null,
+        };
       } else {
         return {
           output: "",
-          error: `${stage.cmdlet} : The term '${stage.cmdlet}' is not recognized. Supported commands: Get-Item, Get-ChildItem, Set-Location, Where-Object, ForEach-Object, Select-Object, Sort-Object, Group-Object, Measure-Object, Get-Member, Get-Alias, Get-Help, Show-ListView, New-Item, Remove-Item, Move-Item, Copy-Item, Rename-Item, Set-ItemProperty, Format-Table, ConvertTo-Json, Write-Host, Write-Error, Write-Warning, Show-Alert, Read-Variable, Show-Confirm, Show-Input, Show-YesNoCancel, Show-FieldEditor, Show-ModalDialog, Find-Item, Publish-Item, Initialize-Item, Import-Function, New-DialogBuilder, Add-TextField, Add-Checkbox, Add-Dropdown, Invoke-Dialog`,
+          error: `${stage.cmdlet} : The term '${stage.cmdlet}' is not recognized. Supported commands: Get-Item, Get-ChildItem, Set-Location, Where-Object, ForEach-Object, Select-Object, Sort-Object, Group-Object, Measure-Object, Get-Member, Get-Alias, Get-Help, Show-ListView, New-Item, Remove-Item, Move-Item, Copy-Item, Rename-Item, Set-ItemProperty, Format-Table, ConvertTo-Json, Write-Host, Write-Error, Write-Warning, Show-Alert, Read-Variable, Show-Confirm, Show-Input, Show-YesNoCancel, Show-FieldEditor, Show-ModalDialog, Find-Item, Publish-Item, Initialize-Item, Import-Function, New-DialogBuilder, Add-TextField, Add-Checkbox, Add-Dropdown, Invoke-Dialog, New-SearchBuilder, Add-TemplateFilter, Add-FieldContains, Add-FieldEquals, Add-DateRangeFilter, Add-SearchFilter, Invoke-Search, Get-User, Get-Role, Get-RoleMember, New-User, New-Role, Add-RoleMember, Remove-RoleMember, Test-ItemAcl, Test-Account`,
         };
       }
     } catch (err) {

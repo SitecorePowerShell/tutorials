@@ -31,6 +31,8 @@ import lesson26 from "./26-error-handling.yaml";
 import lesson27 from "./27-publishing.yaml";
 import lesson28 from "./28-real-world-scenarios.yaml";
 import lesson29 from "./29-dialog-builder.yaml";
+import lesson30 from "./30-search-builder.yaml";
+import lesson31 from "./31-security.yaml";
 
 export const LESSONS: Lesson[] = [
   // Level 0 – Visual Builder
@@ -46,7 +48,9 @@ export const LESSONS: Lesson[] = [
   // Level 5 – Content Search
   lesson19, lesson20, lesson21, lesson22,
   // Level 6 – Interactive Scripts
-  lesson29,
+  lesson29, lesson30,
+  // Level 7 – Security & Access
+  lesson31,
   // Playground
   lesson23,
 ] as Lesson[];

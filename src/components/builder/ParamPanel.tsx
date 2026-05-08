@@ -3,6 +3,9 @@ import type { PipelineStage } from "../../builder/assembleCommand";
 import { CMDLET_REGISTRY, COMMON_PROPERTIES, FILTER_OPERATORS, FOREACH_OPERATORS, CRITERIA_FILTER_TYPES, INDEX_FIELDS, getCmdletColor } from "../../builder/cmdletRegistry";
 import { colors, fonts, fontSizes } from "../../theme";
 import { getCmdletHelp } from "../../engine/cmdletHelp";
+import { PathInput } from "./PathInput";
+
+const PATH_PARAM_NAMES = new Set(["Path", "Destination"]);
 
 interface ParamPanelProps {
   stage: PipelineStage | null;
@@ -958,6 +961,9 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile, 
           return null;
         }
 
+        const isPathParam =
+          paramDef.type === "string" && PATH_PARAM_NAMES.has(paramDef.name);
+
         return (
           <div key={paramDef.name}>
             <label style={labelStyle}>
@@ -965,16 +971,30 @@ export function ParamPanel({ stage, onUpdateParams, onUpdateSwitches, isMobile, 
               {paramDef.type === "propertyList" && (
                 <span style={{ fontWeight: 400, color: colors.textMuted }}> (comma-separated)</span>
               )}
+              {isPathParam && (
+                <span style={{ fontWeight: 400, color: colors.textMuted }}> (Tab to complete)</span>
+              )}
             </label>
-            <input
-              type="text"
-              aria-label={paramDef.name}
-              value={stage.params[paramDef.name] ?? ""}
-              onChange={(e) => handleParamChange(paramDef.name, e.target.value)}
-              disabled={stage.locked}
-              placeholder={paramDef.placeholder}
-              style={inputStyle}
-            />
+            {isPathParam ? (
+              <PathInput
+                value={stage.params[paramDef.name] ?? ""}
+                onChange={(v) => handleParamChange(paramDef.name, v)}
+                disabled={stage.locked}
+                placeholder={paramDef.placeholder}
+                ariaLabel={paramDef.name}
+                style={inputStyle}
+              />
+            ) : (
+              <input
+                type="text"
+                aria-label={paramDef.name}
+                value={stage.params[paramDef.name] ?? ""}
+                onChange={(e) => handleParamChange(paramDef.name, e.target.value)}
+                disabled={stage.locked}
+                placeholder={paramDef.placeholder}
+                style={inputStyle}
+              />
+            )}
             {(() => {
               const help = getCmdletHelp(stage.cmdlet);
               const paramHelp = help?.parameters.find(

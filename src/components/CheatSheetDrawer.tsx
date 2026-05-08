@@ -59,6 +59,8 @@ const LESSON_SECTIONS: Record<string, string[]> = {
   "publishing": ["items"],
   "real-world-scenarios": [],
   "dialog-builder": ["dialog", "pipeline", "automatics"],
+  "search-builder": ["search", "find", "pipeline"],
+  "security": ["security", "pipeline"],
 };
 
 interface Row {
@@ -183,6 +185,66 @@ const SECTIONS: Section[] = [
       { left: "[Math]::Round($x, 2)", right: "round to 2 decimals" },
       { left: "[guid]::NewGuid()", right: "new GUID" },
       { left: "[string]::IsNullOrEmpty($s)", right: "blank check" },
+    ],
+  },
+  {
+    id: "security",
+    title: "Security & access",
+    rows: [
+      { left: "Get-User -Current", right: "the current user" },
+      { left: 'Get-User -Identity "sitecore\\admin"', right: "look up by name" },
+      { left: 'Get-User -Filter "sitecore\\*"', right: "wildcard search" },
+      { left: 'Get-User $u | Select -ExpandProperty MemberOf', right: "list a user's roles" },
+      { left: 'Get-Role -Filter "sitecore\\*"', right: "list roles in a domain" },
+      { left: 'Get-RoleMember -Identity "sitecore\\Editors"', right: "members of a role" },
+      { left: 'New-Role -Identity "sitecore\\Editors" -Description "..."', right: "create a role" },
+      {
+        left: 'Add-RoleMember -Identity "sitecore\\Editors" -Members "sitecore\\michael"',
+        right: "grant role membership",
+      },
+      {
+        left: 'Test-ItemAcl -Path <path> -Identity <user> -AccessRight item:write',
+        right: "can <user> do <right>?",
+      },
+      {
+        left: "Rights: item:read, item:write, item:rename, item:create, item:delete, item:admin",
+        right: "common access rights",
+      },
+      { left: 'Test-Account -Identity "sitecore\\admin"', right: "does this identity exist?" },
+    ],
+  },
+  {
+    id: "search",
+    title: "SearchBuilder",
+    rows: [
+      { left: "Import-Function -Name SearchBuilder", right: "load the library (once)" },
+      {
+        left: '$search = New-SearchBuilder -Index "sitecore_master_index" -First 25 -LatestVersion',
+        right: "create a builder with paging",
+      },
+      {
+        left: '$search | Add-TemplateFilter -Name "Article"',
+        right: "filter by template name (or -Id)",
+      },
+      {
+        left: '$search | Add-FieldEquals -Field "country" -Value "US"',
+        right: "exact field match",
+      },
+      {
+        left: '$search | Add-FieldContains -Field "Title" -Value "Welcome"',
+        right: "substring / phrase match",
+      },
+      {
+        left: '$search | Add-DateRangeFilter -Field "__Updated" -Last "30d"',
+        right: "relative date (also -From/-To)",
+      },
+      {
+        left: '$search | Add-SearchFilter -Field "x" -Filter "Equals" -Value "y" -Invert -Boost 5',
+        right: "low-level filter (NOT, weight)",
+      },
+      { left: "$results = $search | Invoke-Search", right: "execute; pagination auto-advances" },
+      { left: "$results.Items  /  .HasMore  /  .TotalCount", right: "result properties" },
+      { left: "$search | Reset-SearchBuilder", right: "rewind paging to page 1" },
     ],
   },
   {

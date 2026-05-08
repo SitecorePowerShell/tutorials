@@ -85,6 +85,19 @@ export interface DialogField {
   mandatory?: boolean;
 }
 
+export interface SearchFilter {
+  /** Friendly filter command name — "TemplateFilter", "FieldContains", etc. */
+  kind: string;
+  /** Field being filtered (or "Template" for TemplateFilter) */
+  field: string;
+  /** Filter operator — "Equals", "Contains", "DateRange", etc. */
+  op: string;
+  /** Stringified filter value (or range expression) */
+  value: string;
+  invert?: boolean;
+  boost?: number;
+}
+
 export interface DialogRequest {
   type: "alert" | "read-variable" | "listview" | "dialog-builder";
   message?: string;
